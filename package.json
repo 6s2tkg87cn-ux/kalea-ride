@@ -1,0 +1,15 @@
+{
+  "name": "kalea-ride",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zwift-ähnliche Browser-App mit den Welten Kalea und Ulm (Web Bluetooth: FTMS-Trainer, Zwift Click)",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "serve": "python3 -m http.server 8000 --directory src"
+  },
+  "devDependencies": {
+    "@fontsource/fredoka": "5.3.0",
+    "mqtt": "4.3.7",
+    "three": "0.128.0"
+  }
+}

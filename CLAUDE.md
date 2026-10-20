@@ -1,0 +1,78 @@
+# Kalea Ride – Hinweise für Claude
+
+Zwift-ähnliche Indoor-Radfahr-App im Browser. Ein Smart-Trainer (FTMS, z. B. Wahoo KICKR Core) und ein
+Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (Vulkaninsel, erfunden) und
+**Ulm** (echte Straßen, Höhen und Gebäude). Alles läuft clientseitig, kein Server, kein Framework, kein Bundler.
+
+## Mit wem du arbeitest
+- Felix, Lehrer aus Baden-Württemberg, Rennradfahrer (ca. 70 kg; KICKR Core, Zwift Click v2, Garmin Edge 540
+  mit Powermeter). **Antworte auf Deutsch.** Er ist kein Profi-Entwickler: Ergebnisse kurz und verständlich
+  erklären, keine langen Code-Rundgänge.
+- Er testet am PC (Chrome/Edge) und auf dem iPad mit der App **Bluefy** (Safari kann kein Web Bluetooth).
+
+## Aufbau
+```
+src/index.html            Markup + CSS (Comic-Look, Schrift Fredoka) + <script>-Einbindungen
+src/app.js                das ganze Programm (~2400 Zeilen, in Abschnitte gegliedert, s. u.)
+src/data/ulm-data.js      const ULM_DATA = {origin, grid (EU-DEM-Höhen), roads, river, places, routes[5]}
+src/data/osm-buildings.js const OSM_RAW  = 9336 echte Ulmer Gebäude (OSM, ODbL), kompakt kodiert
+tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
+tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
+tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
+tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
+```
+- **Quelle der Wahrheit ist `src/`.** `dist/` wird nur gebaut (gitignored). Die Datendateien sind riesige
+  Einzeiler – nie komplett lesen oder von Hand bearbeiten, nur per Skript erzeugen.
+- Entwickeln ohne Build: `src/index.html` direkt im Browser öffnen (file:// geht) oder `npm run serve`.
+- Bauen: `npm install` (nur für die Offline-Fassung: three@0.128.0, mqtt@4.3.7, @fontsource/fredoka) und
+  `python3 tools/build.py`. Die gebaute Einzeldatei ist das, was Felix aufs iPad/den PC bekommt.
+
+### Abschnitte in `src/app.js` (Suche nach `/* ===`)
+Einstellungen & Zustand (`S`, `PHYS`, `FEELS`, `loadSettings`/`saveSettings`) · Gelände · Strecke
+(`buildRoute`, `roadAt`, `gradeAt`, `buildCurves`/`curveLimit`) · Three.js-Grundgerüst · WELT ULM
+(`buildRouteUlm`, `buildCityUlm`, Wahrzeichen wie `buildMuenster`, `buildKornhaus` …) · Fahrer-Modelle ·
+**Physik** (`advance`, `stepPhysics`, `trainerGradeCmd`, `SHIFT_FEEL`, `trainerRatio`) · ERG & Workouts ·
+Bergwertung (`KOM`, `stepKom`) · Fahrt-Statistik (`REC`, `rideSummary`, `showStats`, `exportTcx`) ·
+Online (`NET`, MQTT über öffentliche WSS-Broker) · Bluetooth (FTMS, Zwift Click) · Schalten · HUD ·
+Comic-Look (`toonify`, Konturen-Postprocessing) · Karte (`drawMap`) · OSM-Häuser (`buildOsmBuildings`) ·
+Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
+
+## Wichtige Fachlogik
+- **Physik:** `F = m·g·(sin θ + Crr·cos θ) + ½·ρ·CdA·v² + 1,2 N`. Fahrgefühl `S.feel`:
+  `real` (Standard; Crr 0,005, CdA 0,32, +2 kg, ρ nach Höhe, Kurvenbremsen mit 4,2 m/s² Querbeschleunigung,
+  bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `zwift` (CdA 0,27). Abgestimmt auf Felix' echte
+  Edge-540-Fahrten: flach passt die App genau, Zwift ist 4–10 % schneller, echte Abfahrten 45–53 km/h im Rollen.
+- **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
+  `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird automatisch gemessen
+  (`measureTrainerGear`, KICKR rechnet mit 2096 mm). Nach dem Hochschalten 1,8 s weiches Nachziehen (`S.upT`).
+- **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
+  Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
+- **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
+  `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
+- **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
+  `kalea_rides`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+- **Leistung:** iPad/Handy laufen auf Qualität `low`. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
+  in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
+  sonst heiß.
+
+## Konventionen
+- UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
+- three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
+  Offline-Fassung einbetten lassen.
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, W/S Testleistung, Esc Menü.
+- Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus).
+- **Persönliche Fahrdateien (.fit/.tcx) nie einchecken** – sie enthalten GPS-Spuren (s. `.gitignore`).
+
+## Testen
+- Ohne Trainer: im Menü „Ohne Trainer testen“ (`S.sim`), Leistung mit W/S.
+- Automatisiert: Playwright + Chromium (`--use-angle=swiftshader --enable-unsafe-swiftshader`). In der
+  Cloud-Umgebung ist das CDN oft gesperrt → entweder `dist/kalea-ride-offline.html` testen oder
+  `page.route('https://cdnjs.cloudflare.com/**', …)` auf `node_modules/three/build/three.min.js` umleiten.
+  Physik lässt sich ohne Grafik prüfen: `S.sim=true; S.simPower=180;` und `stepPhysics(0.25)` in einer Schleife.
+- Vor dem Abgeben: `python3 tools/build.py` muss ohne Fehler durchlaufen.
+
+## Veröffentlichen
+- Jeder Push auf `main` baut die App per GitHub Actions (`.github/workflows/pages.yml`) und stellt sie auf
+  https://6s2tkg87cn-ux.github.io/kalea-ride/ (Startseite = Offline-Fassung). Das Repository ist öffentlich.
+- Commits mit der anonymen Adresse `343975191+6s2tkg87cn-ux@users.noreply.github.com` als Autor, nie mit Felix'
+  privater E-Mail-Adresse.

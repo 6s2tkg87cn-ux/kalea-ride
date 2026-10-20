@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+# Persönliche Fahrdaten (GPS, Name) nie einchecken
+*.fit
+*.tcx
+*.gpx
+*.npz
+rides/
+ulm-haeuser.json
+.DS_Store
