@@ -1,6 +1,6 @@
 # Kalea Ride – Hinweise für Claude
 
-Zwift-ähnliche Indoor-Radfahr-App im Browser. Ein Smart-Trainer (FTMS, z. B. Wahoo KICKR Core) und ein
+Indoor-Radfahr-App im Browser. Ein Smart-Trainer (FTMS, z. B. Wahoo KICKR Core) und ein
 Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (Vulkaninsel, erfunden) und
 **Ulm** (echte Straßen, Höhen und Gebäude). Alles läuft clientseitig, kein Server, kein Framework, kein Bundler.
 
@@ -40,7 +40,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 ## Wichtige Fachlogik
 - **Physik:** `F = m·g·(sin θ + Crr·cos θ) + ½·ρ·CdA·v² + 1,2 N`. Fahrgefühl `S.feel`:
   `real` (Standard; Crr 0,005, CdA 0,32, +2 kg, ρ nach Höhe, Kurvenbremsen mit 4,2 m/s² Querbeschleunigung,
-  bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `zwift` (CdA 0,27). Abgestimmt auf Felix' echte
+  bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `light` „Leichtlauf“ (CdA 0,27). Abgestimmt auf Felix' echte
   Edge-540-Fahrten: flach passt die App genau, Zwift ist 4–10 % schneller, echte Abfahrten 45–53 km/h im Rollen.
 - **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
   `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird **einmal** gemessen
@@ -64,6 +64,9 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   sonst heiß.
 
 ## Konventionen
+- **Keine Zwift-Namen** in App, Texten und Code (Markenrecht). Neutral: „Click-Schalter“, „Leichtlauf“,
+  „Standard (24 Gänge)“. Erlaubt sind nur der Bluetooth-Namensfilter und ein Kompatibilitätshinweis beim Gerät.
+- **Farben:** Violett `#490cb8`, Lila `#9d20a3`, Pink `#eb567b` (Akzent), Gelb `#f8d74e`, Tinte `#1e0f3a`.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.

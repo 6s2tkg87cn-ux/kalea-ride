@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#1d1b26;--paper:#fffaf0;--paper2:#fff3dc;--acc:#ff7a1a;--acc2:#ffb347;--sun:#ffd23f;--sky:#3ec1d3;--ok:#2fbf62;--warn:#f2a20c;--bad:#e8463c;--mut:#6b6577;--line:#1d1b26;
+:root{--ink:#1e0f3a;--paper:#fffaf0;--paper2:#fdf1e4;--acc:#eb567b;--acc2:#f48fa8;--sun:#f8d74e;--sky:#9d20a3;--violet:#490cb8;--ok:#2fbf62;--warn:#f2a20c;--bad:#e8463c;--mut:#6b5f7d;--line:#1e0f3a;
   --shadow:3px 4px 0 var(--ink);--r:16px;--font:'Fredoka','Baloo 2','Nunito',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#8fd3f4;color:var(--ink);font-family:var(--font)}
+html,body{margin:0;height:100%;overflow:hidden;background:#490cb8;color:var(--ink);font-family:var(--font)}
 canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
 .hidden{display:none!important}
@@ -18,18 +18,18 @@ button{font:inherit;font-weight:600;color:var(--ink);background:#fff;border:2.5p
 button:hover{background:var(--paper2)}
 button:active{transform:translate(2px,3px);box-shadow:0 0 0 var(--ink)}
 button.primary{background:var(--acc);color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.25);font-size:18px;padding:10px 22px}
-button.primary:hover{background:#ff8d36}
+button.primary:hover{background:#f06b8b}
 input[type=number],input[type=text],select{width:100%;font:inherit;font-size:15px;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:10px;padding:6px 9px}
 select option{color:#111}
 input[type=range]{width:100%;accent-color:var(--acc)}
 input[type=checkbox]{accent-color:var(--acc);width:18px;height:18px}
 /* ---------- Startmenü ---------- */
-#setup{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(29,27,38,.35));z-index:20}
+#setup{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(30,15,58,.35));z-index:20}
 .card{width:min(720px,100%);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:6px 8px 0 var(--ink);overflow:hidden}
-.ch{display:flex;align-items:center;gap:14px;padding:14px 20px 12px;background:linear-gradient(180deg,#ffe28a,#ffc94d);border-bottom:3px solid var(--ink)}
-.ch .logo{width:54px;height:54px;flex:none;border-radius:50%;background:var(--acc);border:3px solid var(--ink);display:grid;place-items:center;font-size:28px;box-shadow:2px 3px 0 var(--ink)}
+.ch{display:flex;align-items:center;gap:14px;padding:14px 20px 12px;background:linear-gradient(180deg,#fbe48a,#f8d74e);border-bottom:3px solid var(--ink)}
+.ch .logo{width:54px;height:54px;flex:none;border-radius:50%;background:var(--violet);border:3px solid var(--ink);display:grid;place-items:center;font-size:28px;box-shadow:2px 3px 0 var(--ink)}
 .card h1{margin:0;font-size:32px;line-height:1;letter-spacing:.3px;font-weight:700}.card h1 span{color:var(--acc);-webkit-text-stroke:1px var(--ink)}
-.sub{margin:3px 0 0;color:#4a4456;font-size:14.5px}
+.sub{margin:3px 0 0;color:#4a3d5c;font-size:14.5px}
 .cbody{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:12px 20px 14px}
 .cfoot{border-top:3px solid var(--ink);padding:12px 20px;background:var(--paper2);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .cfoot .hint{flex:1 1 220px;margin:0}
@@ -42,25 +42,25 @@ h2 b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius
 .world.on{background:var(--sun)}
 .routes{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
 .route{position:relative;text-align:left;padding:9px 11px 8px;border-radius:14px;display:flex;flex-direction:column;gap:3px;font-weight:400}
-.route b{font-size:15.5px}.route .rd{font-size:12.5px;color:#4a4456;line-height:1.3}
+.route b{font-size:15.5px}.route .rd{font-size:12.5px;color:#4a3d5c;line-height:1.3}
 .route .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
 .chip{font-size:11.5px;font-weight:600;border:1.8px solid var(--ink);border-radius:999px;padding:0 7px;background:#fff}
 .route canvas{width:100%;height:34px;display:block;margin-top:4px}
-.route.on{background:#dff6fb;outline:3px solid var(--sky);outline-offset:-1px}
-.route.on::after{content:'✔ gewählt';position:absolute;top:-9px;right:10px;font-size:11px;font-weight:700;background:var(--sky);border:2px solid var(--ink);border-radius:999px;padding:0 7px}
+.route.on{background:#f3e3f6;outline:3px solid var(--sky);outline-offset:-1px}
+.route.on::after{content:'✔ gewählt';position:absolute;top:-9px;right:10px;font-size:11px;font-weight:700;background:var(--sky);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:0 7px}
 .dev{display:flex;align-items:center;gap:12px;padding:8px 10px;border:2.5px solid var(--ink);border-radius:14px;margin-bottom:8px;background:#fff}
 .dev div{flex:1}.dev small{display:block;color:var(--mut);font-size:12.5px}
 .dot{width:14px;height:14px;border-radius:50%;background:#c9c4d1;border:2px solid var(--ink);flex:none}
 .dot.on{background:var(--ok)}.dot.busy{background:var(--sun)}.dot.off{background:#c9c4d1}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:10px 0}
-.grid label{font-size:13px;color:#4a4456;display:flex;flex-direction:column;gap:4px;font-weight:500}
+.grid label{font-size:13px;color:#4a3d5c;display:flex;flex-direction:column;gap:4px;font-weight:500}
 .grid label.wide{grid-column:1/-1}
 .grid small{color:var(--mut);font-size:11.5px}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 10px}
 details{border:2.5px solid var(--ink);border-radius:14px;padding:8px 12px;margin:10px 0;font-size:14px;background:#fff}
 details summary{cursor:pointer;font-weight:600;font-size:15.5px}
 details[open] summary{margin-bottom:6px}
-details p{color:#4a4456;font-size:13px}
+details p{color:#4a3d5c;font-size:13px}
 #clickLog{max-height:120px;overflow:auto;background:#f3efe6;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:11.5px;margin:8px 0 0;white-space:pre-wrap}
 #learnState{margin-top:6px;font-size:13px;color:#b06d00}
 .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center}
@@ -70,7 +70,7 @@ table.kt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.kt th{text-align:left;font-size:12px;color:var(--mut);border-bottom:2px solid var(--ink);padding:3px 4px}
 table.kt td{padding:5px 4px;border-bottom:1px dashed #cfc7bb;vertical-align:top}
 table.kt small{display:block;color:var(--mut);font-size:11px}
-#loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#8fd3f4,#c7ecff);font-size:20px;font-weight:600;color:var(--ink);text-align:center;padding:20px}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#490cb8,#9d20a3);font-size:20px;font-weight:600;color:#fff;text-align:center;padding:20px}
 #loading::before{content:'🚴';font-size:56px;animation:bob 0.9s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translateY(-6px) rotate(-4deg)}to{transform:translateY(6px) rotate(4deg)}}
 /* ---------- HUD ---------- */
@@ -82,13 +82,13 @@ table.kt small{display:block;color:var(--mut);font-size:11px}
 .m label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:600}
 .m.big span{font-size:36px;color:var(--acc);-webkit-text-stroke:1px var(--ink)}
 #grade{position:absolute;top:96px;right:16px;padding:4px 14px;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;min-width:110px;transition:background .3s}
-#grade small{display:block;font-size:11.5px;font-weight:600;color:#4a4456;text-align:center}
+#grade small{display:block;font-size:11.5px;font-weight:600;color:#4a3d5c;text-align:center}
 #gearBox{position:absolute;right:16px;top:172px;width:176px;padding:8px 10px 10px;text-align:center;pointer-events:auto}
 #gearBox label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:600}
 #gearNum{font-size:46px;font-weight:700;line-height:1.0;font-variant-numeric:tabular-nums;transition:transform .12s}
 #gearNum.flash{transform:scale(1.3) rotate(-4deg);color:var(--acc)}
 #gearRatio{font-size:12px;color:var(--mut)}
-#gearHint{font-size:12px;font-weight:700;color:#c25a00;min-height:0;margin-top:3px}
+#gearHint{font-size:12px;font-weight:700;color:#9d20a3;min-height:0;margin-top:3px}
 #realGear{font-size:20px;font-weight:700;margin:2px 0 6px;font-variant-numeric:tabular-nums}
 #realGear small{font-size:11px;font-weight:600;color:var(--mut);display:block;letter-spacing:.3px}
 #ringsViz{display:flex;justify-content:center;gap:5px;margin-bottom:6px}
@@ -97,14 +97,14 @@ table.kt small{display:block;color:var(--mut);font-size:11px}
 #casViz{display:flex;gap:2px;height:36px;align-items:center;margin:0 0 6px}
 #casViz i{flex:1;background:#e6dccb;border:1.5px solid var(--ink);border-radius:3px;transition:background .1s}
 #casViz i.a{background:var(--acc)}
-#casViz i.n{background:#ffd2ad}
+#casViz i.n{background:#f9c3d0}
 .gb{display:flex;gap:8px}.gb button{flex:1;padding:2px 0;font-size:22px}
 #riders{position:absolute;left:16px;top:96px;width:224px;padding:6px 10px;font-size:14px}
 #riders .r{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1.5px dashed #e2d8c6}
 #riders .r:last-child{border:0}#riders .me{color:var(--acc);font-weight:700}
 #riders .g{color:var(--mut);font-variant-numeric:tabular-nums;font-weight:600}
 #profileWrap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:min(780px,calc(100% - 32px));padding:5px 10px 7px}
-#profileInfo{font-size:12.5px;font-weight:600;color:#4a4456;display:flex;justify-content:space-between;gap:10px}
+#profileInfo{font-size:12.5px;font-weight:600;color:#4a3d5c;display:flex;justify-content:space-between;gap:10px}
 #profile{width:100%;height:70px;display:block}
 #status{position:absolute;left:16px;bottom:126px;font-size:13.5px;font-weight:600;color:#fff;max-width:320px;text-shadow:1px 1px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink)}
 #simBox{position:absolute;left:16px;bottom:154px;width:224px;padding:6px 10px;font-size:13.5px;pointer-events:auto}
@@ -132,15 +132,15 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 #bigMap{width:100%;height:min(62vh,520px);display:block;border:2.5px solid var(--ink);border-radius:12px;background:#cfe8f3;margin-top:6px}
 @media (max-width:820px){#mapBox{width:150px;height:150px}body.map-on #profileWrap{left:178px}body.map-on #leftCol{max-height:calc(100% - 84px - 300px)}}
 #statBtn{position:absolute;top:12px;left:74px;pointer-events:auto;font-size:18px;padding:5px 10px}
-#statsView{position:fixed;inset:0;z-index:22;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(29,27,38,.35)}
+#statsView{position:fixed;inset:0;z-index:22;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(30,15,58,.35)}
 .sv-card{width:min(1040px,100%);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:6px 8px 0 var(--ink);overflow:hidden}
-.sv-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 18px;background:linear-gradient(180deg,#9ee3f0,#62cde0);border-bottom:3px solid var(--ink)}
-.sv-head h2{margin:0;font-size:26px}.sv-head p{margin:2px 0 0;color:#1d1b26;opacity:.75;font-size:14px}.sv-btns{display:flex;gap:8px;flex-wrap:wrap}
+.sv-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 18px;background:linear-gradient(180deg,#f48fa8,#eb567b);border-bottom:3px solid var(--ink)}
+.sv-head h2{margin:0;font-size:26px}.sv-head p{margin:2px 0 0;color:#1e0f3a;opacity:.75;font-size:14px}.sv-btns{display:flex;gap:8px;flex-wrap:wrap}
 .sv-body{overflow-y:auto;padding:14px 18px 18px;overscroll-behavior:contain}
 .sv-body h3{font-size:17px;margin:16px 0 6px}.sv-body h3 small{font-weight:500;color:var(--mut);font-size:12.5px;margin-left:6px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .kpi{border:2.5px solid var(--ink);border-radius:14px;padding:6px 10px 7px;background:#fff;box-shadow:2px 3px 0 var(--ink);border-top:8px solid var(--kc)}
-.kpi b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.kpi b small{font-size:12px;color:var(--mut);margin-left:3px}.kpi span{font-size:12px;color:#4a4456}
+.kpi b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.kpi b small{font-size:12px;color:var(--mut);margin-left:3px}.kpi span{font-size:12px;color:#4a3d5c}
 .sv-chartwrap{position:relative}#svSeries{width:100%;display:block}
 .sv-tip{position:absolute;min-width:140px;background:#fffaf0;border:2px solid var(--ink);border-radius:10px;padding:5px 8px;font-size:12px;box-shadow:2px 3px 0 var(--ink);pointer-events:none}
 .sv-tip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;border:1px solid var(--ink)}
@@ -161,13 +161,13 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 .osmbox>div{flex:1 1 220px;min-width:0}.osmbox small{display:block;color:var(--mut);font-size:12.5px}
 .obadge{display:inline-block;font-size:11.5px;font-weight:700;padding:0 8px;border:2px solid var(--ink);border-radius:999px;background:#eee;vertical-align:1px}
 .osmbox.on{background:#dff6e6;border-style:solid}.osmbox.on .obadge{background:var(--ok);color:#fff}
-#osmProg{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(29,27,38,.45)}
+#osmProg{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,15,58,.45)}
 .op-card{width:min(480px,100%);background:var(--paper);border:3px solid var(--ink);border-radius:20px;box-shadow:6px 8px 0 var(--ink);padding:16px 20px 18px}
 .op-card h2{margin:0 0 10px;font-size:22px}#osmProg[data-state=ok] h2{color:#1e8e4a}#osmProg[data-state=bad] h2{color:#c0392b}
 .op-steps{display:flex;gap:6px;list-style:none;padding:0;margin:0 0 10px;flex-wrap:wrap}.op-steps li{font-size:12.5px;font-weight:600;padding:1px 10px;border:2px solid var(--ink);border-radius:999px;background:#fff;color:var(--mut)}
 .op-steps li.act{background:var(--sun);color:var(--ink)}.op-steps li.done{background:var(--ok);color:#fff}.op-steps li.done::before{content:'✔ '}
 .op-bar{height:20px;border:2.5px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden;position:relative}
-.op-bar i{display:block;height:100%;width:2%;background:repeating-linear-gradient(45deg,#ff7a1a 0 10px,#ffb347 10px 20px);transition:width .25s}
+.op-bar i{display:block;height:100%;width:2%;background:repeating-linear-gradient(45deg,#eb567b 0 10px,#9d20a3 10px 20px);transition:width .25s}
 .op-bar.indet i{width:100%!important;background-size:28px 28px;animation:opstripe .8s linear infinite}
 #osmProg[data-state=ok] .op-bar i{background:var(--ok);animation:none}#osmProg[data-state=bad] .op-bar i{background:#e8463c;width:100%!important;animation:none}
 @keyframes opstripe{from{background-position:0 0}to{background-position:28px 0}}
@@ -177,12 +177,12 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 #toast.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
 #clickHud{position:absolute;top:16px;left:128px;font-size:13px;font-weight:700;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;box-shadow:2px 2px 0 var(--ink)}#clickHud .ok{color:#1e8e4a}#clickHud .bad{color:#c0392b;text-decoration:line-through}
 /* Bergwertung */
-#komBox{position:absolute;right:204px;top:96px;min-width:190px;padding:6px 12px 8px;background:#fff1d6}
+#komBox{position:absolute;right:204px;top:96px;min-width:190px;padding:6px 12px 8px;background:#fdf3d0}
 #komBox .kn{font-weight:700;font-size:15px}
 #komBox .kt{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px;line-height:1.1}
 #komBox .kd{font-size:16px;padding:0 7px;border-radius:999px;border:2px solid var(--ink)}#komBox .kd.g{background:#bff0cf}#komBox .kd.r{background:#ffd0cb}
-#komBox .ks{font-size:12.5px;color:#4a4456}
-#komBox .kbar{height:9px;border:2px solid var(--ink);border-radius:999px;background:#fff;margin:4px 0;overflow:hidden}#komBox .kbar i{display:block;height:100%;background:repeating-linear-gradient(45deg,#e8463c 0 6px,#ff7a1a 6px 12px)}
+#komBox .ks{font-size:12.5px;color:#4a3d5c}
+#komBox .kbar{height:9px;border:2px solid var(--ink);border-radius:999px;background:#fff;margin:4px 0;overflow:hidden}#komBox .kbar i{display:block;height:100%;background:repeating-linear-gradient(45deg,#9d20a3 0 6px,#eb567b 6px 12px)}
 #komBanner{position:absolute;top:110px;left:50%;transform:translateX(-50%) rotate(-1.5deg);min-width:min(460px,calc(100% - 32px));text-align:center;padding:12px 20px 12px;background:var(--sun);border:3px solid var(--ink);border-radius:20px;box-shadow:6px 7px 0 var(--ink)}
 #komBanner.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes pop{0%{transform:translateX(-50%) scale(.3) rotate(-10deg);opacity:0}100%{transform:translateX(-50%) scale(1) rotate(-1.5deg);opacity:1}}
@@ -191,12 +191,12 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 .kb-time small{font-size:28px}
 .kb-pb{display:inline-block;font-weight:700;font-size:15px;padding:1px 12px;border:2.5px solid var(--ink);border-radius:999px;background:#fff;margin-bottom:6px}.kb-pb.new{background:var(--ok);color:#fff}
 .kb-row{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:14px}.kb-row b{font-size:20px}
-.kb-s{font-size:12.5px;color:#4a4456;margin-top:3px}
-#komBanner.lap{background:#9be3a8}
+.kb-s{font-size:12.5px;color:#4a3d5c;margin-top:3px}
+#komBanner.lap{background:#dcc7f7}
 /* Geräte-Fenster beim Start */
-#devDlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(29,27,38,.35));z-index:21}
+#devDlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(30,15,58,.35));z-index:21}
 #devDlg .card{width:min(560px,100%)}
-.shiftmode{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#4a4456;font-weight:500;margin:4px 0 2px}.shiftmode small{color:var(--mut);font-size:11.5px}
+.shiftmode{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#4a3d5c;font-weight:500;margin:4px 0 2px}.shiftmode small{color:var(--mut);font-size:11.5px}
 body.realshift .vonly{display:none!important}
 @media (max-width:900px){
  #riders{display:none}
@@ -268,7 +268,7 @@ body.realshift .vonly{display:none!important}
     <header class="ch"><div class="logo">🔌</div><div><h1>Geräte <span>verbinden</span></h1><p class="sub">Trainer, Schaltung und Sensoren – sie bleiben verbunden, auch wenn du Welt oder Strecke wechselst.</p></div></header>
     <div class="cbody"><div id="devSlot"></div></div>
     <footer class="cfoot"><button id="devGo" class="primary">Weiter</button><button id="devSim">Ohne Trainer testen</button>
-      <p class="hint">Geräte nicht gleichzeitig mit Zwift oder der Wahoo-App verbinden. Später geht's auch im Menü unter „Geräte“.</p></footer>
+      <p class="hint">Geräte nicht gleichzeitig mit einer anderen Trainings-App verbinden. Später geht's auch im Menü unter „Geräte“.</p></footer>
   </div>
 </div>
 <div id="setup" class="hidden">
@@ -290,8 +290,8 @@ body.realshift .vonly{display:none!important}
         <div id="devSec">
         <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
         <div class="dev"><span class="dot" id="dTrainer"></span><div><b>Smart-Trainer</b> (KICKR Core)<small id="sTrainer">Nicht verbunden</small></div><button id="bTrainer">Verbinden</button></div>
-        <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Zwift Click (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
-        <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Zwift Click</b><small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
+        <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Click-Schalter (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
+        <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Click-Schalter</b> (z. B. Zwift Click v2)<small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dHr"></span><div><b>Pulsgurt</b> (optional)<small id="sHr">Nicht verbunden</small></div><button id="bHr">Verbinden</button></div>
         </div>
@@ -303,7 +303,7 @@ body.realshift .vonly{display:none!important}
         </div>
         <label class="chk"><input type="checkbox" id="iErg"> ERG-Modus beim freien Fahren (Trainer hält die Wattzahl, Gänge egal)</label>
         <div class="grid"><label class="wide">Workout<select id="iWo"></select><small id="vWo"></small></label></div>
-        <canvas id="woPreview" style="width:100%;height:48px;display:block;border-radius:8px;background:#f3efe6;border:2px solid #1d1b26"></canvas>
+        <canvas id="woPreview" style="width:100%;height:48px;display:block;border-radius:8px;background:#f3efe6;border:2px solid #1e0f3a"></canvas>
         <div class="actions"><button id="bWo">Workout starten</button><label class="chk" style="margin:0"><input type="checkbox" id="iWoErg" checked> im ERG fahren</label></div>
       </details>
       <details id="netDet"><summary>🌐 Online fahren – mit Freunden</summary>
@@ -318,7 +318,7 @@ body.realshift .vonly{display:none!important}
         <p id="netState" class="netstate">Offline</p>
         <p class="hint">So geht's: Einer erstellt einen Raum und schickt den Code an die anderen. Alle treten mit dem Code bei – wer auf einer anderen Route ist, wird zum Wechseln aufgefordert. Der Gastgeber startet mit 10-Sekunden-Countdown. Name, Position und Watt laufen über einen öffentlichen Online-Server; trag nichts Privates ein.</p>
       </details>
-      <details id="mapDet"><summary>🗺️ Karte der Strecke</summary><canvas id="bigMap"></canvas><p class="hint">Orange: deine Route · Rot: Bergwertungen · Gelbe Punkte: wichtige Wahrzeichen. Im Fahrbetrieb zeigt die Minikarte unten links die Umgebung; tippen oder Taste M schaltet zwischen Umgebung, ganzer Strecke und aus.</p></details>
+      <details id="mapDet"><summary>🗺️ Karte der Strecke</summary><canvas id="bigMap"></canvas><p class="hint">Pink: deine Route · Rot: Bergwertungen · Gelbe Punkte: wichtige Wahrzeichen. Im Fahrbetrieb zeigt die Minikarte unten links die Umgebung; tippen oder Taste M schaltet zwischen Umgebung, ganzer Strecke und aus.</p></details>
       <details id="komDet"><summary>⛰️ Bergwertungen &amp; Bestzeiten</summary>
         <div id="komTable"></div>
         <div class="actions"><button id="bKomReset">Bestzeiten dieser Welt löschen</button></div>
@@ -330,23 +330,23 @@ body.realshift .vonly{display:none!important}
           <label>Kettenblätter vorne<input id="iRings" type="text" value="50/34" placeholder="z. B. 50/34 oder 40"></label>
           <label>Kassette<select id="iCasPreset"></select></label>
           <label class="wide">Ritzel der Kassette (Zähne, alle einzeln)<input id="iCas" type="text" value="11,12,13,14,15,17,19,21,24,27,30,34"><small id="vCas"></small></label>
-          <label class="vonly">Virtuelle Gänge<select id="iGearMode"><option value="zwift">Zwift-ähnlich (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
-          <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="zwift">Zwift-ähnlich (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
+          <label class="vonly">Virtuelle Gänge<select id="iGearMode"><option value="std">Standard (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
+          <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="light">Leichtlauf (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
           <label class="vonly">Schaltgefühl<select id="iShiftFeel"><option value="soft">Weich (wie draußen, empfohlen)</option><option value="normal">Mittel</option><option value="direct">Direkt (sofort voller Widerstand)</option></select><small>wie schnell der neue Gang „greift“</small></label>
           <label class="vonly">Schaltschritt bei Dauerdruck<select id="iRepeat"><option value="0">aus</option><option value="220">normal</option><option value="140">schnell</option></select></label>
           <label class="vonly">Trainer: Kettenblatt (fester Gang)<input id="iChain" type="number" min="20" max="60" value="50"></label>
           <label class="vonly">Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="17"><small id="vTrainGear">Wird einmal beim Fahren mit Trainer gemessen.</small></label>
           <label>Reifen<select id="iTire"><option value="2.096">700×23C (2096 mm)</option><option value="2.105">700×25C (2105 mm)</option><option value="2.136">700×28C (2136 mm)</option><option value="2.146">700×32C (2146 mm)</option><option value="2.200">700×40C Gravel (2200 mm)</option></select><small>Radumfang für Tempo und Gänge</small></label>
-          <label>Fahrgefühl<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft wie Zwift</option><option value="1">Sehr sanft</option></select><small>glättet kurze Wellen, mehr Schwung</small></label>
+          <label>Fahrgefühl<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft</option><option value="1">Sehr sanft</option></select><small>glättet kurze Wellen, mehr Schwung</small></label>
           <label>Grafikqualität<select id="iQual"><option value="high">Hoch (Schatten, dichtes Gras)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
       </details>
       <details class="vonly">
-        <summary>🎮 Zwift Click: Hilfe, Tasten anlernen &amp; Diagnose</summary>
-        <p><b>Click v2</b> besteht aus zwei Hälften, die im Auswahlfenster beide „Zwift Click“ heißen. Verbinde sie nacheinander: + (rechte Hälfte) schaltet schwerer, − (linke Hälfte) leichter. Auf der rechten Hälfte schaltet zusätzlich <b>Y schwerer</b> und <b>B leichter</b>, damit geht es auch nur mit einer Hälfte.</p>
-      <p>Zwift sperrt beim Click v2 teilweise die Tasten für andere Apps. Kommen nach etwa einer Minute keine Tasten mehr an, koppel den Click einmal kurz in Zwift (kostenloses Konto reicht), schließ Zwift komplett und verbinde ihn dann hier. Das hält ungefähr einen Tag. Der Click darf nicht gleichzeitig mit Zwift oder der Companion-App verbunden sein.</p>
+        <summary>🎮 Click-Schalter: Hilfe, Tasten anlernen &amp; Diagnose</summary>
+        <p><b>Click v2</b> besteht aus zwei Hälften, die im Auswahlfenster beide gleich heißen. Verbinde sie nacheinander: + (rechte Hälfte) schaltet schwerer, − (linke Hälfte) leichter. Auf der rechten Hälfte schaltet zusätzlich <b>Y schwerer</b> und <b>B leichter</b>, damit geht es auch nur mit einer Hälfte.</p>
+      <p>Manche Click v2 sperren die Tasten nach einer Weile für andere Apps. Kommen nach etwa einer Minute keine Tasten mehr an, koppel den Click einmal kurz in der Hersteller-App, schließ diese komplett und verbinde ihn dann hier. Das hält ungefähr einen Tag. Der Click darf nicht gleichzeitig mit einer anderen App verbunden sein.</p>
       <p>Belegung ändern: Button klicken, dann innerhalb von 10 Sekunden die Taste am Click drücken.</p>
         <button id="lUp">Schwerer-Taste anlernen</button> <button id="lDown">Leichter-Taste anlernen</button> <button id="lReset">Zurücksetzen</button>
         <div id="learnState"></div>
@@ -355,7 +355,7 @@ body.realshift .vonly{display:none!important}
     </div>
     <footer class="cfoot">
       <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button>
-      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · Esc Menü. Trainer und Click nicht gleichzeitig mit Zwift oder der Wahoo-App verbinden.</p>
+      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
     </footer>
   </div>
 </div>
