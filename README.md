@@ -20,7 +20,7 @@ Eine Indoor-Radfahr-App, die komplett im Browser läuft – mit Smart-Trainer un
 2. Im Geräte-Fenster Trainer und Click-Schalter verbinden, Welt und Route wählen, losfahren.
 3. Ohne Trainer: **„Ohne Trainer testen“** – Leistung mit den Tasten W/S.
 
-Tasten: ↑/↓ schalten · C Kamera · M Karte · I Statistik · E ERG · Esc Menü
+Tasten: ↑/↓ schalten · C Kamera · M Karte · I Statistik · E ERG · F Vollbild · Esc Menü
 
 ## Selbst bauen
 ```bash

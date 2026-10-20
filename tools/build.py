@@ -64,7 +64,8 @@ def build_offline(html):
 
 def build_artifact(html):
     head = ('<!doctype html>\n<html lang="de">\n<head>\n<meta charset="utf-8">\n'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Kalea Ride</title>\n')
+            '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
+            '<meta name="theme-color" content="#490cb8">\n<title>Kalea Ride</title>\n')
     assert html.startswith(head), 'Kopf von src/index.html hat sich geändert – build_artifact anpassen'
     t = html.replace(head, '<title>Kalea Ride</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n', 1)
     t = t.replace('</head>\n<body>\n', '', 1).replace('</body>\n</html>', '')
