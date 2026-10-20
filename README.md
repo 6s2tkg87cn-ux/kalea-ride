@@ -1,12 +1,12 @@
 # Kalea Ride 🚴
 
-Eine Zwift-ähnliche Radfahr-App, die komplett im Browser läuft – mit Smart-Trainer und Zwift Click.
+Eine Indoor-Radfahr-App, die komplett im Browser läuft – mit Smart-Trainer und Click-Schalter.
 
 - **Zwei Welten:** Kalea (Vulkaninsel) und Ulm mit echten Straßen, Höhen und rund 9 300 echten Häusern
 - **Routen:** flach, mit einem Berg oder die große Runde – in Ulm z. B. Michelsberg, Eselsberg, Kuhberg
 - **Trainer:** FTMS über Bluetooth (z. B. Wahoo KICKR Core), Simulations- und ERG-Modus
-- **Virtuelles Schalten** mit Zwift Click v2, Schaltgefühl und Trainer-Gang werden automatisch abgestimmt
-- **Fahrgefühl:** Realistisch (auf echte Fahrten abgestimmt), Standard oder Zwift-ähnlich
+- **Virtuelles Schalten** mit Click-Schalter (kompatibel mit Zwift Click v2) oder **normale Kassette**, Schaltgefühl und Trainer-Gang werden automatisch abgestimmt
+- **Fahrgefühl:** Realistisch (auf echte Fahrten abgestimmt), Standard oder Leichtlauf
 - **Bergwertung** mit Bestzeiten, **Statistiken** mit Diagrammen und TCX-Export, **Minikarte**
 - **Online-Rennen** gegen Freunde (Raum-Code, ohne eigenen Server)
 - Comic-Look, läuft auch auf dem iPad
@@ -17,7 +17,7 @@ Eine Zwift-ähnliche Radfahr-App, die komplett im Browser läuft – mit Smart-T
 1. Die App bauen (siehe unten) und `dist/kalea-ride.html` – oder `dist/kalea-ride-offline.html` für ganz ohne
    Internet – in **Chrome oder Edge** öffnen. Zum schnellen Ausprobieren geht auch `src/index.html` direkt.
    Auf dem **iPad** die App **Bluefy** nehmen – Safari kann kein Bluetooth.
-2. Im Menü Trainer und Zwift Click verbinden, Welt und Route wählen, losfahren.
+2. Im Geräte-Fenster Trainer und Click-Schalter verbinden, Welt und Route wählen, losfahren.
 3. Ohne Trainer: **„Ohne Trainer testen“** – Leistung mit den Tasten W/S.
 
 Tasten: ↑/↓ schalten · C Kamera · M Karte · I Statistik · E ERG · Esc Menü
