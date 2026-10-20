@@ -5,9 +5,9 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const sat=v=>clamp(v,0,1);
 const sstep=t=>{t=sat(t);return t*t*(3-2*t);};
 const rnd=(a,b)=>a+Math.random()*(b-a);
-const WORLD=(()=>{try{return localStorage.getItem('kalea_world')||'ulm';}catch(e){return 'ulm';}})();
-const IS_ULM=WORLD==='ulm';
-const ROUTE_ID=(()=>{try{return localStorage.getItem('kalea_route_'+WORLD)||'';}catch(e){return '';}})();
+let WORLD=(()=>{try{return localStorage.getItem('kalea_world')||'ulm';}catch(e){return 'ulm';}})();
+let IS_ULM=WORLD==='ulm';
+let ROUTE_ID=(()=>{try{return localStorage.getItem('kalea_route_'+WORLD)||'';}catch(e){return '';}})();
 let ROUTE=null,CLIMBS=[];
 
 /* ================= Einstellungen & Zustand ================= */
@@ -39,8 +39,8 @@ const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
 function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{}');
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(o.trMeas)S.trMeas=o.trMeas;if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({feel:S.feel,trMeas:S.trMeas,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(o.trMeas&&o.trGear){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -166,7 +166,8 @@ function basePR(){const q=S.quality,mx=Math.sqrt(3.7e6/Math.max(1,innerWidth*inn
 function applyQuality(){
   const q=S.quality,hi=q==='high';
   PERF.scale=q==='low'?0.85:1;renderer.setPixelRatio(basePR()*PERF.scale);renderer.setSize(innerWidth,innerHeight);
-  sun.castShadow=hi;if(q!=='high')sun.shadow.mapSize.set(1024,1024);GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;
+  {const ms=hi?2048:1024;if(sun.shadow.mapSize.x!==ms){sun.shadow.mapSize.set(ms,ms);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}}
+  sun.castShadow=hi;if(scene.fog)scene.fog.density=q==='low'?0.00030:0.00021;GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;
 }
 // Auflösung automatisch anpassen, damit es flüssig bleibt (wichtig auf iPad/Tablet)
 function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=now-PERF.t0;if(el<2000)return;
@@ -1125,8 +1126,9 @@ function roadForce(v,grade,mass,draft){const th=Math.atan(grade);
 function advance(v,P,grade,mass,draft,dt){
   // Lager-/Nabenreibung und bei Schritttempo zusätzliches Abbremsen (man hält irgendwann an)
   let F=roadForce(v,grade,mass,draft)+1.2;if(P<5&&v<2.2&&grade<0.01)F+=(2.2-v)*6;
-  // Im sanften Modus wirkt das Rad beim Treten träger (mehr Schwung, Wellen rollt man durch) – beim Ausrollen nicht
-  const inertia=(mass+1.5)*(P>20?1+0.8*S.smooth:1);
+  // Im sanften Modus wirkt das Rad beim Treten träger (mehr Schwung, Wellen rollt man durch) – beim Ausrollen nicht,
+  // und beim Anfahren erst ab etwa 10 km/h, sonst kommt man kaum vom Fleck
+  const inertia=(mass+1.5)*(P>20?1+0.8*S.smooth*sat((v-2.5)/4):1);
   const a=(P/Math.max(v,1.5)-F)/inertia;return Math.max(0,v+a*dt);}
 function stepPhysics(dt){
   const now=performance.now();
@@ -1137,13 +1139,14 @@ function stepPhysics(dt){
   {const tg=GEARS[S.gear],tau=(SHIFT_FEEL[S.shiftFeel]||SHIFT_FEEL.soft).tau;if(!S.gr)S.gr=tg;
     if(Math.abs(S.gr/tg-1)>0.002){S.gr=Math.exp(Math.log(S.gr)+(Math.log(tg)-Math.log(S.gr))*(1-Math.exp(-dt/Math.max(0.01,tau))));if(now-(T.rampSend||0)>110){T.rampSend=now;sendResistance(false);}}else S.gr=tg;}
   updatePedaling(dt);const Peff=T.pedaling?S.power:0;
+  if(T.startSoft>0){const vw=wheelSpeed();if(!T.pedaling||vw===null||vw<=S.v*1.05+0.3||now-T.startT>12000)T.startSoft=Math.max(0,T.startSoft-dt/1.5);}
   if(NET.hold){S.v=0;S.dist=0;S.legPhase+=S.cadence/60*Math.PI*2*dt;return;}
   {const f=FEELS[S.feel]||FEELS.real;if(f.alt)PHYS.rho=1.225*Math.exp(-((IS_ULM?UY0:0)+r.h)/8400);
     S.v=advance(S.v,Peff,gradeAt(S.dist),mass,draftFactor(S.dist,player),dt);
     // Realistisch: vor engen Kurven bremst man – vor allem bergab (draußen fährt man Abfahrten nie voll laufen)
     if(f.curves){const vc=curveLimit(S.dist),vl=Math.min(vc,VCOMF);if(S.v>vl+0.3){S.v=Math.max(vl,S.v-CURVE_DEC*1.4*dt);S.brakeT=now;
       if(vc<VCOMF&&now-(S.brakeMsg||0)>20000&&S.v>9){S.brakeMsg=now;toast('🛑 Kurve – du bremst auf '+Math.round(vl*3.6)+' km/h');}}}}
-  recStep(dt);const prevD=S.dist;S.dist+=S.v*dt;if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);
+  recStep(dt);const prevD=S.dist;S.dist+=S.v*dt;if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
   const h=roadAt(S.dist).h;if(S.lastH!==null&&h>S.lastH)S.climb+=h-S.lastH;S.lastH=h;
   S.legPhase+=S.cadence/60*Math.PI*2*dt;
   const t=performance.now()/1000;
@@ -1155,7 +1158,8 @@ function stepPhysics(dt){
 }
 function trainerGradeCmd(){
   const r={grade:gradeAt(S.dist)},mass=S.mass+PHYS.bike;
-  if(!S.vshift)return {grade:clamp(r.grade*S.diff,-0.10,0.20),crr:0.004,cw:0.51};
+  // Normale Kassette: echte Steigung, der Trainer rechnet Gang und Tempo selbst (Windschatten senkt den Luftwiderstand)
+  if(!S.vshift)return {grade:clamp(gradeAt(S.dist)*S.diff,-0.10,0.20),crr:PHYS.crr,cw:0.51*draftFactor(S.dist,player)};
   const v=Math.max(S.v,0.5),k=curRatio()/trainerRatio(),SF=SHIFT_FEEL[S.shiftFeel]||SHIFT_FEEL.soft;
   // Straßenkraft beim aktuellen Tempo (Steigung, Rollwiderstand, Luftwiderstand mit Windschatten)
   // Trainer-Schwierigkeit wirkt (wie bei Zwift) nur auf den Steigungsanteil, nicht auf Roll- und Luftwiderstand
@@ -1165,9 +1169,13 @@ function trainerGradeCmd(){
   // (kaum Widerstand, man tritt ins Leere → hochschalten). Dreht es schneller, muss man das Rad beschleunigen.
   const vw=wheelSpeed();
   if(!T.pedaling)F=FMIN;
-  // Hinterrad dreht schneller als das Rad rollt (nach dem Hochschalten): sanft nachziehen statt hart bremsen
+  // Hinterrad dreht schneller als das Rad rollt (nach dem Hochschalten oder beim Anfahren): sanft nachziehen statt hart bremsen
   else if(vw!==null&&!(vw>v&&performance.now()-(S.brakeT||-1e9)<1200)){const full=COUPLE*mass*(vw-v);
-    if(vw>v){const w=clamp(1-(performance.now()-(S.upT||-1e9))/1800,0,1);F+=w*Math.min(SF.up*mass*(vw-v),mass*SF.cap)+(1-w)*Math.min(full,mass*2.0);}
+    if(vw>v){const w=clamp(1-(performance.now()-(S.upT||-1e9))/1800,0,1),ws=T.startSoft||0;
+      let add=w*Math.min(SF.up*mass*(vw-v),mass*SF.cap)+(1-w)*Math.min(full,mass*2.0);
+      // Anfahren: Der Avatar steht noch, die Schwungmasse dreht schon – höchstens ca. 4–5 % extra, bis beide gleich schnell sind
+      if(ws>0)add=ws*Math.min(0.3*mass*(vw-v),mass*0.45)+(1-ws)*add;
+      F+=add;}
     else F+=full;}
   F=Math.max(F,FMIN);
   return {grade:clamp(F*k/(mass*PHYS.g)-0.004,-0.10,0.20),crr:0.004,cw:0};
@@ -1177,34 +1185,49 @@ const COUPLE=1/1.0,FMIN=4;
 const SHIFT_FEEL={soft:{tau:0.45,up:0.30,cap:0.45},normal:{tau:0.25,up:0.55,cap:0.9},direct:{tau:0.05,up:1.0,cap:2.0}}; // Kopplungssteifigkeit (1/s) und minimale Bremskraft (N)
 // Tritt-Erkennung: Nach dem Aufhören dreht die Schwungmasse des Trainers weiter. Wird sie gebremst, meldet der Trainer
 // „Scheinleistung“, die den Avatar ewig weiterrollen ließe. Erkannt wird das an Kadenz 0 oder an einer abbremsenden Schwungmasse.
-// Trainer meldet Raddrehzahl (Tempo) und Trittfrequenz → daraus ergibt sich der tatsächlich aufgelegte Gang
-const TG={samples:[],last:0};
+// Trainer meldet Raddrehzahl (Tempo) und Trittfrequenz → daraus ergibt sich der tatsächlich aufgelegte Gang.
+// Gemessen wird nur einmal: bei gleichmäßigem Treten unter Last (kein Freilauf, nicht direkt nach dem Schalten),
+// dann auf ganze Zähne gerundet und gespeichert. Danach bleibt der Wert fest, bis man ihn im Menü löscht.
+const TG={samples:[],last:0,prevC:0,done:false,warned:false};
 function trainerRatio(){return S.trMeas&&S.trMeas>1&&S.trMeas<5?S.trMeas:S.chain/S.cog;}
+// nächster echter Gang (Kettenblatt × Ritzel) zu einer gemessenen Übersetzung, bevorzugt mit dem eingetragenen Kettenblatt
+function snapGear(m){let best=null;const rings=[...new Set([S.chain,...bikeSetup().rings])];
+  for(const r of rings)for(let c=10;c<=36;c++){const e=Math.abs(Math.log(r/c/m))+(r===S.chain?0:0.008);if(!best||e<best.e)best={ring:r,cog:c,ratio:r/c,e};}
+  return best&&best.e<0.025?best:null;}
 function measureTrainerGear(now){
-  if(S.sim||!T.dev||T.speed===null||now-T.speedAt>1500||S.cadence<55||!T.pedaling||now-TG.last<500)return;TG.last=now;
-  const r=T.speed/(S.cadence/60*2.096); // Wahoo rechnet intern mit 2096 mm Radumfang
-  if(r<1||r>5)return;TG.samples.push(r);if(TG.samples.length>120)TG.samples.shift();
-  if(TG.samples.length<30)return;const sorted=TG.samples.slice().sort((a,b)=>a-b),m=sorted[sorted.length>>1],spread=sorted[Math.floor(sorted.length*0.9)]/sorted[Math.floor(sorted.length*0.1)];
-  if(spread>1.06)return; // Werte noch zu unruhig
-  const old=trainerRatio();
-  if(!S.trMeas||Math.abs(m/S.trMeas-1)>0.01){const first=!S.trMeas;S.trMeas=Math.round(m*1000)/1000;saveSettings();
-    if(Math.abs(m/old-1)>0.04)toast(`Trainer-Übersetzung gemessen: ${m.toFixed(2)} statt ${old.toFixed(2)} – wird ab jetzt verwendet`);}
+  if(TG.done||S.sim||!S.vshift||!T.dev||T.speed===null||now-T.speedAt>1500||!T.pedaling||now-TG.last<500)return;TG.last=now;
+  const c=S.cadence,steady=c>=60&&c<=115&&S.power>=80&&Math.abs(T.acc)<0.15&&Math.abs(c/(TG.prevC||c)-1)<0.06&&now-(S.shiftT||-1e9)>4000;TG.prevC=c;
+  if(!steady)return;
+  const r=T.speed/(c/60*2.096); // Wahoo rechnet intern mit 2096 mm Radumfang
+  if(r<1||r>5)return;TG.samples.push(r);if(TG.samples.length>60)TG.samples.shift();
+  if(TG.samples.length<40)return;const sorted=TG.samples.slice().sort((a,b)=>a-b),m=sorted[sorted.length>>1],spread=sorted[Math.floor(sorted.length*0.9)]/sorted[Math.floor(sorted.length*0.1)];
+  if(spread>1.04)return; // Werte noch zu unruhig
+  const g=snapGear(m);TG.samples=[];if(!g)return; // passt zu keinem echten Gang → lieber nichts übernehmen
+  TG.done=true;const name=g.ring+'×'+g.cog;
+  if(!S.trMeas){const old=trainerRatio();S.trMeas=g.ratio;S.trGear=name;saveSettings();
+    if(Math.abs(g.ratio/old-1)>0.01)toast(`Trainer-Gang gemessen: ${g.ring} × ${g.cog} statt ${S.chain} × ${S.cog} – wird ab jetzt fest verwendet`);}
+  else if(Math.abs(g.ratio/S.trMeas-1)>0.01&&!TG.warned){TG.warned=true;
+    status(`Hinweis: Am Trainer liegt offenbar ${g.ring} × ${g.cog} auf, gespeichert ist ${S.trGear}. Falls du umgebaut hast: Menü → Rad, Gänge → „Neu messen“.`);}
   showTrainerGear();}
 function showTrainerGear(){const el=$('vTrainGear');if(!el)return;
-  if(!S.trMeas){el.textContent='Wird beim Fahren mit Trainer automatisch gemessen.';return;}
-  const cog=Math.round(S.chain/S.trMeas);el.innerHTML=`Gemessen: <b>${S.trMeas.toFixed(2)}</b> (≈ ${S.chain}×${cog}) – wird automatisch verwendet. <button id="bTgReset" style="padding:0 8px;font-size:12px">Messung löschen</button>`;
-  $('bTgReset').onclick=()=>{S.trMeas=0;TG.samples=[];saveSettings();showTrainerGear();};}
+  if(!S.trMeas){el.textContent='Wird einmal beim Fahren mit Trainer gemessen (gleichmäßig treten, ab 80 W) und dann fest gespeichert.';return;}
+  el.innerHTML=`Gemessen: <b>${S.trGear.replace('×',' × ')}</b> (Übersetzung ${S.trMeas.toFixed(2)}) – fest gespeichert. <button id="bTgReset" style="padding:0 8px;font-size:12px">Neu messen</button>`;
+  $('bTgReset').onclick=()=>{S.trMeas=0;S.trGear='';TG.samples=[];TG.done=false;TG.warned=false;saveSettings();showTrainerGear();};}
 function updatePedaling(dt){measureTrainerGear(performance.now());
   if(!T.dev||S.sim){T.pedaling=true;return;}
   const now=performance.now();let coasting;
-  if(T.hasCad&&now-T.cadAt<2500)coasting=S.cadence<18;
+  if(T.hasCad&&now-T.cadAt<2500){coasting=S.cadence<18;
+    // Anfahren: Der Trainer meldet die Kadenz erst nach ein paar Kurbelumdrehungen. Leistung bei beschleunigender
+    // Schwungmasse heißt auch ohne Kadenz „tritt“ (beim Ausrollen bremst die Schwungmasse immer ab).
+    if(coasting&&S.power>40&&(T.pedaling?now-T.startT<4000:T.acc>0.08))coasting=false;}
   else{ // ohne Kadenz: Schwungmasse bremst gleichmäßig ab oder die Leistung bricht gegenüber den letzten Sekunden ein
     T.pAvg=(T.pAvg===undefined?S.power:T.pAvg*(1-dt/3)+S.power*(dt/3));
     coasting=S.power<12||(T.pedaling?(T.pAvg>40&&S.power<T.pAvg*0.45&&T.acc<-0.03):T.acc<-0.02);
     if(!T.pedaling&&!coasting)T.pAvg=S.power;}
   T.coastT=coasting?T.coastT+dt:0;
   if(T.pedaling&&T.coastT>(T.hasCad?0.4:0.9))T.pedaling=false;
-  else if(!T.pedaling&&!coasting&&S.power>25&&((T.hasCad&&now-T.cadAt<2500)||T.acc>-0.02))T.pedaling=true;}
+  else if(!T.pedaling&&!coasting&&S.power>25&&((T.hasCad&&now-T.cadAt<2500)||T.acc>-0.02)){T.pedaling=true;T.startT=now;
+    if(S.v<4)T.startSoft=1;}} // aus dem Stand: weich anfahren (s. trainerGradeCmd)
 // Geschwindigkeit des virtuellen Hinterrads (m/s) im gewählten Gang, gemessen am Trainer
 function curRatio(){return S.gr||GEARS[S.gear];}
 function wheelSpeed(){const now=performance.now();
@@ -1324,7 +1347,7 @@ function finishKom(a,t){
   if(isPb)e.pb={...res,splits:a.splits};komSave();REC.koms.push({name:c.name,t:res.t,p:res.p,len:c.len,pb:isPb});showKomBanner(c,res,pb,isPb);}
 function fmtDelta(x){const s=Math.round(Math.abs(x));return (x<0?'−':'+')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function showKomBanner(c,res,pb,isPb){
-  const v=c.len/res.t*3.6,vam=c.gain/res.t*3600,b=$('komBanner');
+  const v=c.len/res.t*3.6,vam=c.gain/res.t*3600,b=$('komBanner');b.classList.remove('lap');
   b.innerHTML=`<div class="kb-t">BERGWERTUNG · ${c.name.toUpperCase()}</div><div class="kb-time">${fmtTime(res.t)}<small>${(res.t%1).toFixed(1).slice(1)}</small></div>
     <div class="kb-pb ${isPb?'new':''}">${isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE ZEIT – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
     <div class="kb-row"><span><b>${res.p}</b> W</span><span><b>${(res.p/S.mass).toFixed(1)}</b> W/kg</span><span><b>${v.toFixed(1)}</b> km/h</span><span><b>${Math.round(vam)}</b> VAM</span>${res.hr?`<span><b>${res.hr}</b> bpm</span>`:''}</div>
@@ -1355,8 +1378,32 @@ function confetti(){const c=$('fx'),x=c.getContext('2d'),W=c.width=innerWidth,H=
   (function anim(now){const t=(now-t0)/1000;x.clearRect(0,0,W,H);for(const p of P){p.vy+=0.35;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;p.r+=0.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.strokeStyle='#1d1b26';x.lineWidth=1.5;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.strokeRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore();}
     if(t<3.5)requestAnimationFrame(anim);else{x.clearRect(0,0,W,H);c.classList.add('hidden');}})(t0);}
 
+/* ================= Runde geschafft (Strecke einmal komplett gefahren) ================= */
+const LAP={act:null,store:null};
+function lapStore(){if(!LAP.store){try{LAP.store=JSON.parse(localStorage.getItem('kalea_laps')||'{}');}catch(e){LAP.store={};}}return LAP.store;}
+function stepLap(cur,dt){let a=LAP.act;
+  if(!a||cur<a.d0-5){LAP.act={d0:Math.floor(Math.max(0,cur)/L)*L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0};return;}
+  a.t+=dt;a.e+=(T.pedaling?S.power:0)*dt;if(S.hr){a.hr+=S.hr*dt;a.hrT+=dt;}if(S.cadence>0){a.cad+=S.cadence*dt;a.cadT+=dt;}a.vmax=Math.max(a.vmax,S.v);
+  if(cur>=a.d0+L){finishLap(a);LAP.act={d0:a.d0+L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0};}}
+function finishLap(a){if(a.t<30)return;
+  const key=WORLD+'_'+ROUTE.id,st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name,world:WORLD,len:L,hist:[]});
+  const res={t:Math.round(a.t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,cad:a.cadT>10?Math.round(a.cad/a.cadT):0,
+    gain:Math.round(S.climb-a.c0),vmax:a.vmax,kj:Math.round(a.e/1000),kg:S.mass,date:Date.now(),sim:S.sim};
+  const pb=e.pb,isPb=!pb||res.t<pb.t;e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb=res;try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
+  const nr=Math.round(a.d0/L)+1;REC.laps.push({n:nr,...res,pb:isPb});
+  if(NET.state==='on'&&NET.info&&NET.info.mode==='race')return; // im Rennen zeigt das Ergebnis-Fenster alles
+  const show=()=>showLapBanner(res,pb,isPb,nr),wait=KOM.shownT?6000-(performance.now()-KOM.shownT):0;
+  if(wait>0)setTimeout(show,wait);else show();}
+function showLapBanner(res,pb,isPb,nr){
+  const v=L/res.t*3.6,b=$('komBanner');b.classList.add('lap');
+  b.innerHTML=`<div class="kb-t">🏁 RUNDE ${nr>1?nr+' ':''}GESCHAFFT · ${ROUTE.name.toUpperCase()}</div><div class="kb-time">${fmtTime(res.t)}<small>${(res.t%1).toFixed(1).slice(1)}</small></div>
+    <div class="kb-pb ${isPb?'new':''}">${isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE RUNDE – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
+    <div class="kb-row"><span><b>${res.p}</b> W</span><span><b>${(res.p/S.mass).toFixed(1)}</b> W/kg</span><span><b>${v.toFixed(1)}</b> km/h</span>${res.hr?`<span><b>${res.hr}</b> bpm</span>`:''}${res.cad?`<span><b>${res.cad}</b> rpm</span>`:''}</div>
+    <div class="kb-s">${(L/1000).toFixed(2)} km · ${res.gain} hm · max. ${(res.vmax*3.6).toFixed(1)} km/h · ${res.kj} kJ</div>`;
+  b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now();confetti();}
+
 /* ================= Fahrt-Statistik ================= */
-const REC={s:[],acc:0,start:Date.now(),koms:[],ended:false};
+const REC={s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false};
 const ZONES=[{n:'Z1 Regeneration',lo:0,hi:0.55,c:'#9aa3ad'},{n:'Z2 Grundlage',lo:0.55,hi:0.75,c:'#3e8fe0'},{n:'Z3 Tempo',lo:0.75,hi:0.90,c:'#2fbf62'},
   {n:'Z4 Schwelle',lo:0.90,hi:1.05,c:'#f2c230'},{n:'Z5 VO2max',lo:1.05,hi:1.20,c:'#ff7a1a'},{n:'Z6 Anaerob',lo:1.20,hi:1.50,c:'#e8463c'},{n:'Z7 Sprint',lo:1.50,hi:99,c:'#9b5de5'}];
 function zoneOf(p){const f=p/S.ftp;return ZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
@@ -1382,13 +1429,14 @@ function rideHistory(){try{return JSON.parse(localStorage.getItem('kalea_rides')
 function endRide(){if(!REC.s.length){status('Noch keine Daten – erst ein Stück fahren.');return;}
   REC.ended=true;S.riding=false;S.paused=true;S.v=0;const sum=rideSummary();saveRideHistory(sum);sendResistance(true);
   if(typeof netEndRide==='function')netEndRide();
-  $('bStart').textContent='Neue Fahrt';$('bStart').onclick=()=>{$('loading').classList.remove('hidden');$('loading').textContent='Neue Fahrt …';setTimeout(()=>location.reload(),60);};$('bEnd').classList.add('hidden');showStats(true);}
+  $('bStart').textContent='Neue Fahrt';$('bStart').onclick=newRide;$('bEnd').classList.add('hidden');showStats(true);}
 function kpi(v,u,l,c){return `<div class="kpi" style="--kc:${c}"><b>${v}<small>${u}</small></b><span>${l}</span></div>`;}
 function showStats(final){
   const sum=rideSummary(),el=$('statsView');$('setup').classList.add('hidden');
   if(!sum){el.innerHTML=`<div class="sv-card"><div class="sv-head"><h2>Statistik</h2><button id="svClose">Schließen</button></div><p class="hint" style="padding:20px">Noch keine Daten – fahr ein Stück, dann erscheinen hier deine Werte und Diagramme.</p></div>`;el.classList.remove('hidden');$('svClose').onclick=closeStats;return;}
   const hh=sum.avgHr>0,wkg=sum.avgP/S.mass;
   const komRows=REC.koms.map(k=>`<tr><td>⛰ ${k.name}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${(k.len/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
+  const lapRows=REC.laps.map(k=>`<tr><td>🏁 Runde ${k.n}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${(L/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
   const hist=rideHistory().slice(final?1:0,8);
   el.innerHTML=`<div class="sv-card">
     <div class="sv-head"><div><h2>${final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${ROUTE.name} · ${new Date(REC.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}</p></div>
@@ -1407,12 +1455,12 @@ function showStats(final){
       </div>
       <div class="sv-two">
         <div><h3>Deine Spur</h3><canvas id="svMap"></canvas></div>
-        <div>${komRows?`<h3>Bergwertungen dieser Fahrt</h3><table class="kt">${komRows}</table>`:'<h3>Bergwertungen</h3><p class="hint">Auf dieser Fahrt noch keine Bergwertung gefahren.</p>'}
+        <div>${lapRows?`<h3>Runden dieser Fahrt</h3><table class="kt">${lapRows}</table>`:''}${komRows?`<h3>Bergwertungen dieser Fahrt</h3><table class="kt">${komRows}</table>`:'<h3>Bergwertungen</h3><p class="hint">Auf dieser Fahrt noch keine Bergwertung gefahren.</p>'}
           ${hist.length?`<h3>Frühere Fahrten</h3><table class="kt"><tr><th>Datum</th><th>Route</th><th>km</th><th>Zeit</th><th>Ø W</th></tr>${hist.map(h=>`<tr><td>${new Date(h.date).toLocaleDateString('de-DE')}</td><td>${h.route}</td><td>${(h.dist/1000).toFixed(1)}</td><td>${fmtTime(h.time)}</td><td>${h.avgP}</td></tr>`).join('')}</table>`:''}</div>
       </div></div></div>`;
   el.classList.remove('hidden');if(!final)S.paused=true;
   $('svClose').onclick=closeStats;if($('svBack'))$('svBack').onclick=()=>{closeStats();};if($('svEnd'))$('svEnd').onclick=endRide;
-  if($('svNew'))$('svNew').onclick=()=>{$('loading').classList.remove('hidden');$('loading').textContent='Neue Fahrt …';setTimeout(()=>location.reload(),60);};
+  if($('svNew'))$('svNew').onclick=newRide;
   $('svTcx').onclick=exportTcx;
   requestAnimationFrame(()=>{drawSeries(sum);drawZones(sum);drawCurve(sum);drawTrack();});}
 function closeStats(){$('statsView').classList.add('hidden');if(REC.ended){openMenu();return;}S.paused=false;}
@@ -1563,7 +1611,7 @@ function showNetBanner(t){const b=$('netBanner');b.innerHTML=t===undefined?'':`<
 function raceRanking(){const rows=[{n:netName()+' (du)',me:true,fin:NET.fin,d:S.dist,col:netCol()}];
   for(const p of NET.peers.values())if(sameTrack(p))rows.push({n:p.n,fin:p.fin,d:p.d,col:p.col});
   return rows.sort((a,b)=>(a.fin&&b.fin)?a.fin-b.fin:a.fin?-1:b.fin?1:b.d-a.d);}
-function showRaceResult(){const r=raceRanking(),b=$('komBanner');
+function showRaceResult(){const r=raceRanking(),b=$('komBanner');b.classList.remove('lap');
   b.innerHTML=`<div class="kb-t">ZIEL · ${ROUTE.name.toUpperCase()}</div><div class="kb-time">${fmtTime(NET.fin)}</div><div class="kb-pb new">Platz ${r.findIndex(x=>x.me)+1} von ${r.length}</div>
     <table class="kt" style="margin-top:6px;background:#fff;border-radius:8px">${r.map((x,i)=>`<tr><td>${i+1}.</td><td>${x.n}</td><td><b>${x.fin?fmtTime(x.fin):'unterwegs · '+(x.d/1000).toFixed(1)+' km'}</b></td></tr>`).join('')}</table>`;
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now()+6000;confetti();}
@@ -1605,7 +1653,7 @@ function setDot(k,state,text){$('d'+k).className='dot '+state;$('s'+k).textConte
 function status(msg){$('status').textContent=msg||'';}
 
 // ---- Trainer (FTMS bevorzugt, sonst Cycling Power) ----
-const T={speed:null,speedAt:0,acc:0,hasCad:false,cadAt:0,pedaling:true,coastT:0,dev:null,cp:null,mode:null,lastData:0,lastSent:null,lastSendT:0,crank:null,retries:0};
+const T={speed:null,speedAt:0,acc:0,hasCad:false,cadAt:0,pedaling:true,coastT:0,startT:-1e9,startSoft:0,dev:null,cp:null,mode:null,lastData:0,lastSent:null,lastSendT:0,crank:null,retries:0};
 async function connectTrainer(){
   if(!navigator.bluetooth)return;
   try{setDot('Trainer','busy','Gerät auswählen …');
@@ -1751,7 +1799,7 @@ async function setupClick(pad){
   try{const bs=await server.getPrimaryService('battery_service'),bl=await bs.getCharacteristic('battery_level'),v=await bl.readValue();pad.batt=v.getUint8(0);clickLog('Akku: '+pad.batt+' %');
     try{await bl.startNotifications();bl.addEventListener('characteristicvaluechanged',e=>{pad.batt=e.target.value.getUint8(0);clickStatus();});}catch(e){}}catch(e){}
   clickStatus('drück + zum Testen');
-  S.vshift=true;$('iVshift').checked=true;saveSettings();
+  if(!S.vshift){S.vshift=true;applyShiftMode();saveSettings();}
 }
 async function onClickLost(pad){pad.connected=false;clickStatus('eine Hälfte getrennt – verbinde neu …');
   const nm=pad.side?'Zwift Click ('+pad.side+')':'Zwift Click';status(nm+' getrennt – verbinde neu …'+(pad.batt!=null&&pad.batt<25?' Akku war bei '+pad.batt+' %.':''));if(typeof toast==='function')toast('⚠️ '+nm+' getrennt');
@@ -1810,7 +1858,9 @@ setInterval(()=>{const now=performance.now();for(const p of Z.pads){if(p.connect
   status('Zwift Click'+(p.side?' ('+p.side+')':'')+' sendet seit 45 s nichts mehr. Batterie leer oder von Zwift gesperrt? Siehe Hilfe im Menü.');}}},5000);
 /* ================= Schalten ================= */
 let flashT=0;
-function shift(d){if(ergActive()){ergNudge(d);if(!shift.ergHint){shift.ergHint=1;status('ERG ist an: Die Schalttasten ändern jetzt die Wattzahl, nicht den Gang. Taste E schaltet ERG aus.');setTimeout(()=>status(''),7000);}return;}const g=clamp(S.gear+d,0,GEARS.length-1);if(g===S.gear)return;S.gear=g;if(d>0)S.upT=performance.now();
+function shift(d){if(ergActive()){ergNudge(d);if(!shift.ergHint){shift.ergHint=1;status('ERG ist an: Die Schalttasten ändern jetzt die Wattzahl, nicht den Gang. Taste E schaltet ERG aus.');setTimeout(()=>status(''),7000);}return;}
+  if(!S.vshift&&!S.sim){if(!shift.realHint){shift.realHint=1;status('Du fährst mit normaler Kassette – geschaltet wird am Rad. (Umstellen: Menü → Geräte → Schalten)');setTimeout(()=>status(''),7000);}return;}
+  const g=clamp(S.gear+d,0,GEARS.length-1);if(g===S.gear)return;S.gear=g;S.shiftT=performance.now();if(d>0)S.upT=S.shiftT;
   sendResistance(true);updateGear();
   const el=$('gearNum');el.classList.add('flash');clearTimeout(flashT);flashT=setTimeout(()=>el.classList.remove('flash'),120);}
 // Dauerdruck: nach kurzer Pause weiter schalten, solange die Taste gehalten wird
@@ -1844,6 +1894,7 @@ function rebuildGears(keepRatio){
     (S.gearMode==='bike'?' · ergibt '+GEARS.length+' virtuelle Gänge':'');
   updateGear();}
 function updateGear(){
+  if(!S.vshift&&!S.sim){updateRealGear(performance.now(),true);return;}
   const ratio=GEARS[S.gear],cb=GEAR_COMBO[S.gear];
   $('gearNum').textContent=S.gear+1;
   $('gearRatio').textContent='Übersetzung '+ratio.toFixed(2)+' · Entfaltung '+(ratio*PHYS.circ).toFixed(1)+' m';
@@ -1851,6 +1902,26 @@ function updateGear(){
     $('realGear').innerHTML=`${approx?'≈ ':''}${cb.r} × ${cb.c}<small>Blatt ${cb.ri+1} · Ritzel ${cogs.length-cb.ci}/${cogs.length}${cb.cross?' · Kreuzgang':''}</small>`;
     for(const e of $('ringsViz').children)e.className=+e.dataset.r===cb.r?'a':'';
     for(const e of $('casViz').children){const c=+e.dataset.c;e.className=c===cb.c?'a':'';}}}
+
+// Normale Kassette: Schalten oder virtuell (Zwift Click). Ohne virtuelles Schalten schickt die App die echte Steigung.
+function applyShiftMode(){document.body.classList.toggle('realshift',!S.vshift);const sel=$('iShiftMode');if(sel)sel.value=S.vshift?'click':'real';
+  $('vShiftMode').textContent=S.vshift?'Das Rad bleibt am Trainer in einem festen Gang (z. B. Zwift Cog). Geschaltet wird mit dem Click oder den Tasten ↑/↓.'
+    :'Du schaltest ganz normal am Rad. Die App schickt die Steigung, der Trainer rechnet den Widerstand selbst. Der aufgelegte Gang wird angezeigt.';
+  RGEAR.r.length=0;updateGear();}
+// aufgelegten Gang aus Trainer-Tempo ÷ Trittfrequenz erkennen (nur Anzeige)
+const RGEAR={r:[]};
+function updateRealGear(now,force){
+  let cb=null,m=0;
+  if(T.speed!==null&&now-T.speedAt<2500&&T.pedaling&&S.cadence>=40){RGEAR.r.push(T.speed/(S.cadence/60*2.096));if(RGEAR.r.length>6)RGEAR.r.shift();
+    m=RGEAR.r.slice().sort((a,b)=>a-b)[RGEAR.r.length>>1];cb=nearestCombo(m);}
+  else RGEAR.r.length=0;
+  const key=cb?cb.r+'x'+cb.c:'';if(!force&&key===RGEAR.key)return;RGEAR.key=key;
+  const {cogs}=bikeSetup();
+  $('gearNum').textContent=cb?cogs.length-cb.ci:'–';
+  $('realGear').innerHTML=cb?`${cb.r} × ${cb.c}<small>Blatt ${cb.ri+1} · Ritzel ${cogs.length-cb.ci}/${cogs.length}</small>`:'–<small>Gang wird beim Treten erkannt</small>';
+  $('gearRatio').textContent=cb?'Übersetzung '+cb.ratio.toFixed(2)+' · Entfaltung '+(cb.ratio*PHYS.circ).toFixed(1)+' m':'Schalten am Rad';
+  for(const e of $('ringsViz').children)e.className=cb&&+e.dataset.r===cb.r?'a':'';
+  for(const e of $('casViz').children)e.className=cb&&+e.dataset.c===cb.c?'a':'';}
 
 /* ================= HUD ================= */
 function fmtTime(s){s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0');}
@@ -1863,7 +1934,8 @@ function updateHud(now){
   const gp=r.grade*100,ge=$('grade'),ef=gradeAt(S.dist)*100,fmt=x=>(x>=0?'':'−')+Math.abs(x).toFixed(1)+'%';
   ge.innerHTML=fmt(gp)+(S.smooth&&Math.abs(ef-gp)>0.4?`<small>gefühlt ${fmt(ef)}</small>`:'');
   ge.style.background=gp>8?'#ff8a80':gp>4?'#ffb35c':gp>1?'#ffe98a':gp<-1?'#a8e3ff':'#fffaf0';
-  {const vw=S.sim?null:wheelSpeed();$('gearHint').textContent=(vw!==null&&T.pedaling&&S.v>4&&vw<S.v*0.85)?'Freilauf – hochschalten ↑':'';}
+  {const vw=S.sim||!S.vshift?null:wheelSpeed();$('gearHint').textContent=(vw!==null&&T.pedaling&&S.v>4&&vw<S.v*0.85)?'Freilauf – hochschalten ↑':'';}
+  if(!S.vshift&&!S.sim)updateRealGear(now);
   updateKomHud(now);if(now-ridersT>500){ridersT=now;updateRiders();drawProfile();updateErgUi();updateWorkoutHud();}
 }
 function updateRiders(){
@@ -2163,7 +2235,7 @@ async function osmDownload(){
         (ok?'Sie sind gespeichert und werden ab jetzt bei jedem Start genutzt – auch ohne Internet.':'<b>Achtung:</b> Speichern hat nicht geklappt (privater Modus?). Die Häuser gelten nur bis zum Neuladen.'),
         btns:'<button id="opBuild" class="primary">Welt jetzt neu bauen</button>'});
       if(!ok)OSM.data=slim;
-      $('opBuild').onclick=()=>{$('osmProg').classList.add('hidden');if(ok){$('loading').classList.remove('hidden');$('loading').textContent='Baue Ulm mit '+slim.b.length.toLocaleString('de-DE')+' echten Häusern …';setTimeout(()=>location.reload(),60);}};
+      $('opBuild').onclick=()=>{$('osmProg').classList.add('hidden');if(ok){$('loading').classList.remove('hidden');$('loading').textContent='Baue Ulm mit '+slim.b.length.toLocaleString('de-DE')+' echten Häusern …';rebuildWorld(WORLD,ROUTE.id,$('loading').textContent);}};
       wireOsm();return;}
     catch(e){clearInterval(tick);if(e.name==='AbortError')lastErr='Zeitüberschreitung';else{lastErr=e.message;if(/Failed to fetch|NetworkError|Load failed|blocked/i.test(e.message))blocked++;}}}
   const hint=blocked===OVERPASS.length?'Keiner der Server war erreichbar. Entweder fehlt die Internetverbindung, oder diese Ansicht darf keine fremden Server abfragen (z. B. die Vorschau im Claude-Chat). Öffne die Datei direkt im Browser bzw. in Bluefy.':
@@ -2236,7 +2308,7 @@ function safeCol(s,fb,kind){try{const c=new THREE.Color(),h={};c.set(s.trim().to
 function winTile(){const t=canvasTex(64,64,(x,w,h)=>{x.fillStyle='#ffffff';x.fillRect(0,0,w,h);x.fillStyle='#e8e2d4';x.fillRect(0,h-4,w,4);
   const g=x.createLinearGradient(0,14,0,48);g.addColorStop(0,'#3d4f61');g.addColorStop(1,'#7690a6');x.fillStyle='#d6d0c2';x.fillRect(17,11,30,38);x.fillStyle=g;x.fillRect(20,14,24,32);
   x.fillStyle='rgba(255,255,255,.35)';x.fillRect(31,14,2,32);x.fillRect(20,26,24,2);},true);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
-async function osmClear(){await idbDel(osmKey());$('vOsm').textContent='Gelöscht – Welt wird neu gebaut …';setTimeout(()=>location.reload(),400);}
+async function osmClear(){await idbDel(osmKey());$('vOsm').textContent='Gelöscht – Welt wird neu gebaut …';rebuildWorld(WORLD,ROUTE.id,'Welt wird neu gebaut …');}
 function wireOsm(){if(!IS_ULM){$('osmBox').classList.add('hidden');return;}
   const on=!!OSM.data,n=on?OSM.data.b.length:0;$('osmBox').classList.toggle('on',on);
   $('vOsmBadge').textContent=on?'✔ aktiv':'aus';
@@ -2274,6 +2346,7 @@ function updateEnv(dt,t){
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
+  if(REBUILD)return;
   const idle=!S.started||S.paused||!$('setup').classList.contains('hidden')||!$('statsView').classList.contains('hidden'),cap=idle?30:(S.fps||60);
   if(now-PERF.lastF<1000/cap-1.5)return;PERF.lastF=now;perfTick(now);const dt=Math.min(0.1,(now-last)/1000);last=now;const t=now/1000;
   if(S.riding&&!S.paused)stepPhysics(dt);
@@ -2288,18 +2361,17 @@ function frame(now){
 function openMenu(){$('setup').classList.remove('hidden');if(S.started)S.paused=true;}
 function closeMenu(){$('setup').classList.add('hidden');S.paused=false;}
 function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp(+$('iChain').value||50,20,60);S.cog=clamp(+$('iCog').value||17,10,36);
-  S.diff=(+$('iDiff').value)/100;S.vshift=$('iVshift').checked;
+  S.diff=(+$('iDiff').value)/100;
   S.rings=$('iRings').value;S.cassette=$('iCas').value;S.gearMode=$('iGearMode').value;S.repeat=+$('iRepeat').value;S.smooth=+$('iSmooth').value;applyQuality();rebuildGears();saveSettings();sendResistance(true);}
 function startRide(sim){
-  readInputs();S.sim=sim;$('simBox').classList.toggle('hidden',!sim);
+  readInputs();S.sim=sim;$('simBox').classList.toggle('hidden',!sim);updateGear();
   if(!S.started){S.started=true;S.riding=true;const r=roadAt(-7);camPos.set(r.x,r.h+3,r.z);camLook.set(r.x,r.h,r.z);}
   $('hud').classList.remove('hidden');$('bStart').textContent='Weiterfahren';$('bSim').classList.add('hidden');$('bStats').classList.remove('hidden');$('bEnd').classList.remove('hidden');closeMenu();
   if(!sim&&!T.dev)status('Kein Trainer verbunden – Menü (☰) öffnen oder „Ohne Trainer testen“ wählen.');
   else if(!sim&&!T.cp)status('Trainer liefert nur Daten, Widerstand kann nicht gesteuert werden.');else status('');
   sendResistance(true);
 }
-function switchTo(world,route){try{localStorage.setItem('kalea_world',world);if(route)localStorage.setItem('kalea_route_'+world,route);}catch(e){}
-  $('loading').classList.remove('hidden');$('loading').textContent=world!==WORLD?'Welt wird gewechselt …':'Route wird gebaut …';setTimeout(()=>location.reload(),60);}
+function switchTo(world,route){rebuildWorld(world,route,world!==WORLD?'Welt wird gewechselt …':'Route wird gebaut …');}
 function routeInfos(){
   if(IS_ULM)return ULM.routes.map(r=>({id:r.id,name:r.name,desc:r.desc,len:r.len,gain:r.gain,climbs:r.climbs.length,h:r.h}));
   return KALEA_ROUTES.map(def=>{const g=def===ROUTE?{L,gain:LAPCLIMB,RH}:kaleaGeom(def);return {id:def.id,name:def.name,desc:def.desc,len:g.L,gain:g.gain,climbs:def===ROUTE?CLIMBS.length:null,h:Array.from(g.RH)};});}
@@ -2315,22 +2387,24 @@ function buildRouteMenu(){
       x.fillStyle='#ffb347';x.fill();x.lineWidth=2;x.strokeStyle='#1d1b26';x.stroke();});});}
 function wireUi(){
   if(!navigator.bluetooth)$('bleWarn').classList.remove('hidden');
-  $('iWeight').value=S.mass;$('iChain').value=S.chain;$('iCog').value=S.cog;$('iDiff').value=Math.round(S.diff*100);$('vDiff').textContent=Math.round(S.diff*100)+' %';$('iVshift').checked=S.vshift;$('iQual').value=S.quality;
+  $('iWeight').value=S.mass;$('iChain').value=S.chain;$('iCog').value=S.cog;$('iDiff').value=Math.round(S.diff*100);$('vDiff').textContent=Math.round(S.diff*100)+' %';$('iQual').value=S.quality;
   $('iRings').value=S.rings;$('iCas').value=S.cassette;$('iGearMode').value=S.gearMode;$('iRepeat').value=String(S.repeat);$('iSmooth').value=String(S.smooth);
   $('iCasPreset').innerHTML='<option value="">Eigene Eingabe</option>'+CAS_PRESETS.map(([n,v],i)=>`<option value="${i}">${n}</option>`).join('');
   {const i=CAS_PRESETS.findIndex(x=>x[1]===S.cassette);$('iCasPreset').value=i<0?'':String(i);}
   $('iCasPreset').onchange=()=>{const v=$('iCasPreset').value;if(v!==''){$('iCas').value=CAS_PRESETS[+v][1];readInputs();}};
   $('iCas').oninput=()=>{const i=CAS_PRESETS.findIndex(x=>x[1]===$('iCas').value.replace(/\s/g,''));$('iCasPreset').value=i<0?'':String(i);};
   $('iDiff').oninput=()=>{$('vDiff').textContent=$('iDiff').value+' %';};
-  ['iWeight','iChain','iCog','iDiff','iVshift','iRings','iCas','iGearMode','iRepeat','iSmooth'].forEach(id=>$(id).onchange=readInputs);
-  $('iQual').onchange=()=>{S.quality=$('iQual').value;if(IS_MOBILE)S.qualitySetOnMobile=true;saveSettings();$('loading').classList.remove('hidden');$('loading').textContent='Grafik wird angepasst …';setTimeout(()=>location.reload(),60);};
+  ['iWeight','iChain','iCog','iDiff','iRings','iCas','iGearMode','iRepeat','iSmooth'].forEach(id=>$(id).onchange=readInputs);
+  $('iQual').onchange=()=>{S.quality=$('iQual').value;if(IS_MOBILE)S.qualitySetOnMobile=true;saveSettings();CHUNK=S.quality==='low'?900:500;rebuildWorld(WORLD,ROUTE.id,'Grafik wird angepasst …');};
+  $('iShiftMode').onchange=()=>{S.vshift=$('iShiftMode').value==='click';saveSettings();applyShiftMode();sendResistance(true);};
+  $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
   $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('gUp').onclick=()=>shift(1);$('gDown').onclick=()=>shift(-1);
   $('lUp').onclick=()=>startLearn('up');$('lDown').onclick=()=>startLearn('down');
   $('lReset').onclick=()=>{Z.learned={up:null,down:null};saveSettings();$('learnState').textContent='Zuordnung zurückgesetzt.';};
   $('simPow').oninput=()=>{S.simPower=+$('simPow').value;$('simPowV').textContent=S.simPower;};
-  rebuildGears(ZWIFT_GEARS[12]);
+  rebuildGears(ZWIFT_GEARS[12]);applyShiftMode();
   buildRouteMenu();wireNet();wireOsm();
   $('bStats').onclick=()=>showStats(REC.ended);$('statBtn').onclick=()=>showStats(REC.ended);$('bEnd').onclick=endRide;
   try{const mm=localStorage.getItem('kalea_map');if(mm)MAP.mode=mm;}catch(e){}applyMapMode();
@@ -2342,7 +2416,7 @@ function wireUi(){
   $('iFps').value=String(S.fps);$('iFps').onchange=()=>{S.fps=+$('iFps').value;saveSettings();};
   $('iFeel').value=S.feel;$('iFeel').onchange=()=>{S.feel=$('iFeel').value;applyFeel();saveSettings();};
   $('iShiftFeel').value=S.shiftFeel;$('iShiftFeel').onchange=()=>{S.shiftFeel=$('iShiftFeel').value;saveSettings();};
-  $('iToon').value=S.toon?'1':'0';$('iToon').onchange=()=>{S.toon=$('iToon').value==='1';saveSettings();$('loading').classList.remove('hidden');$('loading').textContent='Grafik wird angepasst …';setTimeout(()=>location.reload(),60);};
+  $('iToon').value=S.toon?'1':'0';$('iToon').onchange=()=>{S.toon=$('iToon').value==='1';saveSettings();};
   $('iFtp').value=S.ftp;$('iErgW').value=S.ergW;$('iErg').checked=S.erg;
   $('iWo').innerHTML=WORKOUTS.map(w=>`<option value="${w.id}">${w.cat}: ${w.name} (${Math.round(woDuration(w)/60)} min)</option>`).join('');
   const prev=()=>{const wo=WORKOUTS.find(w=>w.id===$('iWo').value);$('vWo').textContent=wo.desc;drawWorkoutOn($('woPreview'),wo,null,0);};
@@ -2363,8 +2437,60 @@ function wireUi(){
     else if(k==='m'||k==='M')cycleMap();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}
-    else if(k==='Escape'){if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});
+    else if(k==='Escape'){if(!$('devDlg').classList.contains('hidden')){closeDevices();return;}if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});
 }
+
+/* ================= Welt/Route wechseln ohne Neuladen (Bluetooth-Geräte bleiben verbunden) ================= */
+let REBUILD=false,SCENE_BASE=null;
+function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.isInstancedMesh&&c.dispose)c.dispose();
+  for(const m of c.material?(Array.isArray(c.material)?c.material:[c.material]):[]){
+    for(const k in m){const v=m[k];if(v&&v.isTexture)v.dispose();}
+    if(m.uniforms)for(const k in m.uniforms){const v=m.uniforms[k]&&m.uniforms[k].value;if(v&&v.isTexture)v.dispose();}m.dispose();}});}
+// alles, was beim Bauen einer Welt angelegt wird, wieder zurücksetzen (Lichter und Kamera bleiben)
+function clearWorld(){
+  for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
+  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];
+  BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
+  CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
+  RIV=null;VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
+  LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;
+  OSM.data=null;OSM.built=0;OSM.embedded=false;
+  for(const p of NET.peers.values())p.obj=null;}
+async function buildWorld(){
+  buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();
+  $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';}
+// Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
+function resetRide(){
+  if(W.active)stopWorkout();
+  Object.assign(S,{dist:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
+  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});
+  KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
+  BOTS.forEach((b,k)=>{b.dist=(k-3)*14;b.v=7;});
+  $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
+  $('bStart').textContent='Losfahren';$('bStart').onclick=()=>startRide(false);$('bSim').classList.remove('hidden');$('bStats').classList.add('hidden');$('bEnd').classList.add('hidden');}
+function newRide(){resetRide();openMenu();}
+async function rebuildWorld(world,route,msg){
+  if(REBUILD)return;REBUILD=true;
+  try{localStorage.setItem('kalea_world',world);if(route)localStorage.setItem('kalea_route_'+world,route);}catch(e){}
+  $('loading').textContent=msg||'Welt wird gebaut …';$('loading').classList.remove('hidden');
+  await new Promise(r=>setTimeout(r,60));
+  // angefangene Fahrt nicht verlieren: in „Frühere Fahrten“ übernehmen
+  if(!REC.ended&&REC.s.length>=60){const sum=rideSummary();if(sum)saveRideHistory(sum);}
+  resetRide();
+  WORLD=world;IS_ULM=world==='ulm';ROUTE_ID=route||(()=>{try{return localStorage.getItem('kalea_route_'+world)||'';}catch(e){return '';}})();
+  try{clearWorld();await buildWorld();}
+  catch(e){console.error(e);$('loading').textContent='Fehler beim Bauen der Welt – Seite wird neu geladen …';setTimeout(()=>location.reload(),1500);return;}
+  if(NET.state==='on')BOTS.forEach(b=>b.obj.visible=$('iNetBots').checked);
+  buildRouteMenu();wireOsm();$('komTable').innerHTML=komTable();updateNetUi();
+  if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));
+  REBUILD=false;PERF.t0=0;PERF.frames=0;
+  $('loading').classList.add('hidden');openMenu();
+  const on=[T.dev&&'Trainer',Z.pads.some(p=>p.connected)&&'Click',HR.dev&&'Pulsgurt',CS.dev&&'Trittfrequenz'].filter(Boolean);
+  if(on.length)toast('🔗 Weiter verbunden: '+on.join(', '));}
+
+// Geräte-Fenster beim Start: derselbe Geräte-Abschnitt wie im Menü, nur vorübergehend in das Fenster verschoben
+function openDevices(){$('devSlot').appendChild($('devSec'));$('setup').classList.add('hidden');$('devDlg').classList.remove('hidden');}
+function closeDevices(){$('devHome').after($('devSec'));$('devDlg').classList.add('hidden');openMenu();}
 
 /* ================= Start ================= */
 function decorate(){
@@ -2379,9 +2505,8 @@ function decorate(){
     sheep(50,(x,z)=>{const h=rawHeight(x,z);return h>12&&h<60&&slopeY(x,z)>0.92&&Math.hypot(x-VOLC.x,z-VOLC.z)>700;});}
 }
 async function boot(){
-  loadSettings();CHUNK=S.quality==='low'?900:500;initScene();buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();wireUi();
-  $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';
-  $('loading').classList.add('hidden');$('setup').classList.remove('hidden');
+  loadSettings();CHUNK=S.quality==='low'?900:500;initScene();SCENE_BASE=new Set(scene.children);await buildWorld();wireUi();
+  $('loading').classList.add('hidden');openDevices();
   if(OSM.built)toast('🏠 '+OSM.built.toLocaleString('de-DE')+' echte Häuser aus OpenStreetMap sind aktiv');
   requestAnimationFrame(frame);
 }
