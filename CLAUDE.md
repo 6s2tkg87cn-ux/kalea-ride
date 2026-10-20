@@ -70,7 +70,9 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, W/S Testleistung, Esc Menü.
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, W/S Testleistung, Esc Menü.
+- **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
+  (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
 - Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus).
 - **Persönliche Fahrdateien (.fit/.tcx) nie einchecken** – sie enthalten GPS-Spuren (s. `.gitignore`).
 

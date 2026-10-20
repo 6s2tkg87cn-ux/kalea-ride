@@ -2358,7 +2358,17 @@ function frame(now){
 }
 
 /* ================= UI-Verdrahtung ================= */
-function openMenu(){$('setup').classList.remove('hidden');if(S.started)S.paused=true;}
+function openMenu(){$('setup').classList.remove('hidden');if(S.started)S.paused=true;requestAnimationFrame(drawRouteCards);}
+// Vollbild (Fullscreen-API; das iPhone erlaubt Webseiten kein echtes Vollbild)
+function fsActive(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+function toggleFullscreen(){const d=document.documentElement,req=d.requestFullscreen||d.webkitRequestFullscreen;
+  if(fsActive()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
+  const no=()=>toast(/iPhone|iPod/.test(navigator.userAgent)?'📱 Das iPhone erlaubt Webseiten kein Vollbild. Tipp: Handy quer halten, dann werden die Browser-Leisten kleiner.':'Dieser Browser unterstützt keinen Vollbildmodus.');
+  if(!req){no();return;}
+  try{const r=req.call(d,{navigationUI:'hide'});if(r&&r.catch)r.catch(no);}catch(e){no();}}
+function updateFsUi(){const on=fsActive();document.body.classList.toggle('fs',on);
+  for(const id of ['fsBtn','bFs']){const b=$(id);if(b)b.title=on?'Vollbild beenden (F)':'Vollbild (F)';}
+  $('bFs').textContent=on?'Vollbild beenden':'Vollbild';}
 function closeMenu(){$('setup').classList.add('hidden');S.paused=false;}
 function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp(+$('iChain').value||50,20,60);S.cog=clamp(+$('iCog').value||17,10,36);
   S.diff=(+$('iDiff').value)/100;
@@ -2380,11 +2390,15 @@ function buildRouteMenu(){
   const list=routeInfos();
   $('routeList').innerHTML=list.map(r=>`<button class="route ${r.id===ROUTE.id?'on':''}" data-id="${r.id}"><b>${r.name}</b><span class="rd">${r.desc}</span>
     <span class="chips"><span class="chip">${(r.len/1000).toFixed(1)} km</span><span class="chip">${Math.round(r.gain)} hm</span>${r.climbs!==null?`<span class="chip">${r.climbs?r.climbs+(r.climbs>1?' Anstiege':' Anstieg'):'flach'}</span>`:''}</span><canvas></canvas></button>`).join('');
-  document.querySelectorAll('.route').forEach((b,k)=>{b.onclick=()=>{if(b.dataset.id!==ROUTE.id)switchTo(WORLD,b.dataset.id);};
-    requestAnimationFrame(()=>{const c=b.querySelector('canvas'),h=list[k].h,dpr=Math.min(devicePixelRatio,2),W=c.clientWidth,H=c.clientHeight;if(!W)return;c.width=W*dpr;c.height=H*dpr;
+  document.querySelectorAll('.route').forEach(b=>{b.onclick=()=>{if(b.dataset.id!==ROUTE.id)switchTo(WORLD,b.dataset.id);};});
+  ROUTE_H=list.map(r=>r.h);requestAnimationFrame(drawRouteCards);}
+// Mini-Höhenprofile der Routen (nur zeichenbar, wenn das Menü sichtbar ist)
+let ROUTE_H=[];
+function drawRouteCards(){document.querySelectorAll('.route').forEach((b,k)=>{
+    {const c=b.querySelector('canvas'),h=ROUTE_H[k],dpr=Math.min(devicePixelRatio,2),W=c.clientWidth,H=c.clientHeight;if(!W||!h)return;c.width=W*dpr;c.height=H*dpr;
       const x=c.getContext('2d');x.scale(dpr,dpr);let mn=1e9,mx=-1e9;for(const v of h){mn=Math.min(mn,v);mx=Math.max(mx,v);}const rng=Math.max(60,mx-mn);
       x.beginPath();x.moveTo(0,H);const st=Math.max(1,Math.floor(h.length/W));for(let i=0;i<h.length;i+=st)x.lineTo(i/h.length*W,H-2-(h[i]-mn)/rng*(H-5));x.lineTo(W,H);x.closePath();
-      x.fillStyle='#f48fa8';x.fill();x.lineWidth=2;x.strokeStyle='#1e0f3a';x.stroke();});});}
+      x.fillStyle='#f48fa8';x.fill();x.lineWidth=2;x.strokeStyle='#1e0f3a';x.stroke();}});}
 function wireUi(){
   if(!navigator.bluetooth)$('bleWarn').classList.remove('hidden');
   $('iWeight').value=S.mass;$('iChain').value=S.chain;$('iCog').value=S.cog;$('iDiff').value=Math.round(S.diff*100);$('vDiff').textContent=Math.round(S.diff*100)+' %';$('iQual').value=S.quality;
@@ -2400,7 +2414,9 @@ function wireUi(){
   $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
   $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
-  $('menuBtn').onclick=openMenu;$('gUp').onclick=()=>shift(1);$('gDown').onclick=()=>shift(-1);
+  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('bFs').onclick=toggleFullscreen;
+  document.addEventListener('fullscreenchange',updateFsUi);document.addEventListener('webkitfullscreenchange',updateFsUi);
+  addEventListener('resize',()=>{if(!$('setup').classList.contains('hidden'))requestAnimationFrame(drawRouteCards);});$('gUp').onclick=()=>shift(1);$('gDown').onclick=()=>shift(-1);
   $('lUp').onclick=()=>startLearn('up');$('lDown').onclick=()=>startLearn('down');
   $('lReset').onclick=()=>{Z.learned={up:null,down:null};saveSettings();$('learnState').textContent='Zuordnung zurückgesetzt.';};
   $('simPow').oninput=()=>{S.simPower=+$('simPow').value;$('simPowV').textContent=S.simPower;};
@@ -2435,6 +2451,7 @@ function wireUi(){
     else if((k==='s'||k==='S')&&S.sim){S.simPower=clamp(S.simPower-10,0,600);$('simPow').value=S.simPower;$('simPowV').textContent=S.simPower;}
     else if(k==='c'||k==='C')S.cam=(S.cam+1)%VIEWS.length;
     else if(k==='m'||k==='M')cycleMap();
+    else if(k==='f'||k==='F')toggleFullscreen();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}
     else if(k==='Escape'){if(!$('devDlg').classList.contains('hidden')){closeDevices();return;}if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});

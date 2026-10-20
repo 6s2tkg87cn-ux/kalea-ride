@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#490cb8">
 <title>Kalea Ride</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -175,7 +176,7 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 @media (prefers-reduced-motion:reduce){.op-bar.indet i{animation:none}}
 #toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:45;background:var(--ok);color:#fff;font-weight:700;font-size:16px;padding:8px 18px;border:3px solid var(--ink);border-radius:999px;box-shadow:3px 4px 0 var(--ink);max-width:calc(100% - 32px);text-align:center}
 #toast.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
-#clickHud{position:absolute;top:16px;left:128px;font-size:13px;font-weight:700;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;box-shadow:2px 2px 0 var(--ink)}#clickHud .ok{color:#1e8e4a}#clickHud .bad{color:#c0392b;text-decoration:line-through}
+#clickHud{position:absolute;top:16px;left:182px;font-size:13px;font-weight:700;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;box-shadow:2px 2px 0 var(--ink)}#clickHud .ok{color:#1e8e4a}#clickHud .bad{color:#c0392b;text-decoration:line-through}
 /* Bergwertung */
 #komBox{position:absolute;right:204px;top:96px;min-width:190px;padding:6px 12px 8px;background:#fdf3d0}
 #komBox .kn{font-weight:700;font-size:15px}
@@ -208,7 +209,116 @@ body.realshift .vonly{display:none!important}
  .grid{grid-template-columns:1fr}.worlds{grid-template-columns:1fr}
  .card h1{font-size:26px}.ch{padding:10px 14px}.cbody{padding:10px 14px}.cfoot{padding:10px 14px}
 }
+#fsBtn{position:absolute;top:12px;left:128px;pointer-events:auto;padding:5px 11px;line-height:0;height:41px}
+#fsBtn svg{display:block}.fs-out,body.fs .fs-in{display:none!important}body.fs .fs-out{display:block!important}
+#hud{inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 @media (max-height:640px){#riders{display:none}#casViz{display:none}#gearRatio{display:none}.ch .logo{display:none}.ch{padding:8px 14px}.sub{display:none}}
+/* ---------- iPhone & kleine Handys: Hochformat ---------- */
+@media (max-width:520px){
+ #hud .top,#grade,#gearBox,#profileWrap,#simBox,#ergBox,#woBox,#komBox,#mapBox{border-width:2px;box-shadow:2px 3px 0 var(--ink);border-radius:12px}
+ #menuBtn,#statBtn,#fsBtn{font-size:15px;padding:0;width:36px;height:32px;line-height:1;border-width:2px;box-shadow:2px 2px 0 var(--ink);border-radius:10px;display:grid;place-items:center}
+ .m{min-width:0;padding:0 2px}.m small{font-size:9.5px;margin-left:1px}.m label{font-size:8.5px;letter-spacing:.3px}
+ .m span{font-size:17px}.m.big span{font-size:20px;-webkit-text-stroke:.5px var(--ink)}
+ #grade{font-size:18px;padding:2px 6px;min-width:0}#grade small{font-size:9.5px}
+ #gearBox{padding:3px 6px 6px}#gearBox label{font-size:9px}#gearNum{font-size:30px}
+ #realGear{font-size:14px;margin:0 0 4px}#realGear small,#ringsViz,#casViz,#gearRatio{display:none}
+ .gb{gap:5px}.gb button{font-size:17px;padding:0;border-width:2px;box-shadow:1px 2px 0 var(--ink)}#gearHint{font-size:10px}
+ #ergBox{padding:4px 6px 6px}#ergBox label{font-size:9px}#ergBox .eh b{font-size:10px;padding:0 6px}
+ #ergBox .ev{margin:2px 0}#ergBox .ev span{font-size:20px}#ergBox .ev button{width:30px;font-size:15px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
+ #ergSub{display:none}#ergToggle{font-size:12px;padding:2px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
+ #simBox{font-size:11.5px;padding:4px 6px}#simBox small{display:none}
+ #komBox{min-width:0;padding:4px 6px}#komBox .kn{font-size:12px}#komBox .kt{font-size:18px}#komBox .ks{font-size:10.5px}#komBox .kd{font-size:11px}
+ #profileInfo{font-size:10px;gap:6px}#profileInfo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+ #mapMode{font-size:9.5px;padding:0 6px}
+ #clickHud{font-size:11px;padding:1px 8px}
+ #woBox{min-width:0;padding:4px 8px}#woBox .wt span{font-size:10.5px}#woSeg{font-size:13px}#woLeft,#woPow{font-size:15px}#woChart{height:28px}#woNext{font-size:10.5px}#woBox label{font-size:8.5px}
+ #komBanner{min-width:0;padding:8px 12px;border-width:2.5px;box-shadow:4px 5px 0 var(--ink)}
+ .kb-t{font-size:12px}.kb-time{font-size:36px;-webkit-text-stroke:1.5px var(--ink);text-shadow:2px 3px 0 var(--ink)}.kb-time small{font-size:18px}
+ .kb-pb{font-size:11.5px;margin-bottom:4px}.kb-row{gap:8px;font-size:11px}.kb-row b{font-size:15px}.kb-s{font-size:10.5px}
+ #netBanner b{font-size:64px;-webkit-text-stroke:3px var(--ink)}
+ #toast{font-size:13px;padding:6px 12px;border-width:2.5px}
+ #status{font-size:12px}
+ /* Menü, Geräte-Fenster, Statistik */
+ #setup,#devDlg,#statsView{padding:6px}
+ .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
+ .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
+ #setup .cfoot .hint{display:none}
+ button.primary{font-size:16px;padding:7px 16px}
+ h2{font-size:16px}.world{padding:6px 10px}.world i{font-size:22px}.world small{font-size:11px}
+ .route{padding:7px 9px 6px}.route b{font-size:14px}.route .rd{font-size:11.5px}.chip{font-size:10.5px}
+ .dev{padding:6px 8px;gap:8px}.dev button{padding:4px 10px;font-size:13px}
+ .sv-head{padding:8px 12px}.sv-head h2{font-size:20px}.sv-head p{font-size:12px}.sv-btns button{font-size:13px;padding:4px 10px}
+ .sv-body{padding:10px 12px 14px}.kpis{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}.kpi{padding:4px 7px 5px}.kpi b{font-size:18px}.kpi span{font-size:10.5px}
+
+ #menuBtn{top:8px;left:8px}#statBtn{top:46px;left:8px}#fsBtn{top:84px;left:8px}
+ #hud .top{left:52px;right:8px;top:8px;width:auto;transform:none;flex-wrap:wrap;justify-content:center;gap:2px 0;padding:3px 4px}
+ .m{flex:1 0 25%;border:0}
+ #leftCol,body.map-on #leftCol{top:124px;bottom:auto;left:8px;width:138px;gap:6px;max-height:calc(100% - 124px - 200px)}
+ #rightCol{top:88px;bottom:auto;right:8px;width:100px;gap:6px}
+ #profileWrap,body.map-on #profileWrap{left:8px;right:8px;bottom:8px;width:auto;max-width:none;transform:none;padding:3px 6px 4px}
+ #profile{height:40px}
+ #mapBox{left:8px;bottom:78px;width:108px;height:108px}
+ #status{left:8px;right:8px;bottom:192px;max-width:none}
+ #clickHud{left:auto;right:8px;top:auto;bottom:192px}
+ #woBox{top:auto;bottom:192px;left:8px;right:8px;width:auto;transform:none}
+ #komBanner{top:84px;width:calc(100% - 24px)}
+ .routes{grid-template-columns:1fr 1fr;gap:8px}.route .rd{display:none}.worlds{gap:8px}
+ .cfoot button{font-size:13.5px;padding:6px 10px}.cfoot button.primary{font-size:15px;padding:6px 12px}
+ .sv-btns{gap:6px}.sv-btns button{font-size:12px;padding:3px 8px}
+ #ergBox .ev small{display:none}
+}
+/* ---------- Handys im Querformat ---------- */
+@media (max-height:500px){
+ #hud .top,#grade,#gearBox,#profileWrap,#simBox,#ergBox,#woBox,#komBox,#mapBox{border-width:2px;box-shadow:2px 3px 0 var(--ink);border-radius:12px}
+ #menuBtn,#statBtn,#fsBtn{font-size:15px;padding:0;width:36px;height:32px;line-height:1;border-width:2px;box-shadow:2px 2px 0 var(--ink);border-radius:10px;display:grid;place-items:center}
+ .m{min-width:0;padding:0 2px}.m small{font-size:9.5px;margin-left:1px}.m label{font-size:8.5px;letter-spacing:.3px}
+ .m span{font-size:17px}.m.big span{font-size:20px;-webkit-text-stroke:.5px var(--ink)}
+ #grade{font-size:18px;padding:2px 6px;min-width:0}#grade small{font-size:9.5px}
+ #gearBox{padding:3px 6px 6px}#gearBox label{font-size:9px}#gearNum{font-size:30px}
+ #realGear{font-size:14px;margin:0 0 4px}#realGear small,#ringsViz,#casViz,#gearRatio{display:none}
+ .gb{gap:5px}.gb button{font-size:17px;padding:0;border-width:2px;box-shadow:1px 2px 0 var(--ink)}#gearHint{font-size:10px}
+ #ergBox{padding:4px 6px 6px}#ergBox label{font-size:9px}#ergBox .eh b{font-size:10px;padding:0 6px}
+ #ergBox .ev{margin:2px 0}#ergBox .ev span{font-size:20px}#ergBox .ev button{width:30px;font-size:15px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
+ #ergSub{display:none}#ergToggle{font-size:12px;padding:2px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
+ #simBox{font-size:11.5px;padding:4px 6px}#simBox small{display:none}
+ #komBox{min-width:0;padding:4px 6px}#komBox .kn{font-size:12px}#komBox .kt{font-size:18px}#komBox .ks{font-size:10.5px}#komBox .kd{font-size:11px}
+ #profileInfo{font-size:10px;gap:6px}#profileInfo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+ #mapMode{font-size:9.5px;padding:0 6px}
+ #clickHud{font-size:11px;padding:1px 8px}
+ #woBox{min-width:0;padding:4px 8px}#woBox .wt span{font-size:10.5px}#woSeg{font-size:13px}#woLeft,#woPow{font-size:15px}#woChart{height:28px}#woNext{font-size:10.5px}#woBox label{font-size:8.5px}
+ #komBanner{min-width:0;padding:8px 12px;border-width:2.5px;box-shadow:4px 5px 0 var(--ink)}
+ .kb-t{font-size:12px}.kb-time{font-size:36px;-webkit-text-stroke:1.5px var(--ink);text-shadow:2px 3px 0 var(--ink)}.kb-time small{font-size:18px}
+ .kb-pb{font-size:11.5px;margin-bottom:4px}.kb-row{gap:8px;font-size:11px}.kb-row b{font-size:15px}.kb-s{font-size:10.5px}
+ #netBanner b{font-size:64px;-webkit-text-stroke:3px var(--ink)}
+ #toast{font-size:13px;padding:6px 12px;border-width:2.5px}
+ #status{font-size:12px}
+ /* Menü, Geräte-Fenster, Statistik */
+ #setup,#devDlg,#statsView{padding:6px}
+ .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
+ .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
+ #setup .cfoot .hint{display:none}
+ button.primary{font-size:16px;padding:7px 16px}
+ h2{font-size:16px}.world{padding:6px 10px}.world i{font-size:22px}.world small{font-size:11px}
+ .route{padding:7px 9px 6px}.route b{font-size:14px}.route .rd{font-size:11.5px}.chip{font-size:10.5px}
+ .dev{padding:6px 8px;gap:8px}.dev button{padding:4px 10px;font-size:13px}
+ .sv-head{padding:8px 12px}.sv-head h2{font-size:20px}.sv-head p{font-size:12px}.sv-btns button{font-size:13px;padding:4px 10px}
+ .sv-body{padding:10px 12px 14px}.kpis{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}.kpi{padding:4px 7px 5px}.kpi b{font-size:18px}.kpi span{font-size:10.5px}
+
+ #menuBtn,#statBtn,#fsBtn{top:6px}#menuBtn{left:8px}#statBtn{left:50px}#fsBtn{left:92px}
+ #hud .top{left:136px;right:8px;top:6px;width:auto;transform:none;flex-wrap:nowrap;justify-content:space-between;padding:2px 4px}
+ .m{flex:1 1 0;border-right:1.5px dashed #e2d8c6}
+ .m span{font-size:16px}.m.big span{font-size:19px}.m label{font-size:8px}
+ #leftCol,body.map-on #leftCol{top:50px;bottom:auto;left:8px;width:148px;gap:6px;max-height:calc(100% - 50px - 120px)}
+ #rightCol{top:50px;bottom:auto;right:8px;width:104px;gap:6px}
+ #mapBox{left:8px;bottom:8px;width:100px;height:100px}
+ #profileWrap,body.map-on #profileWrap{left:116px;right:8px;bottom:8px;width:auto;max-width:none;transform:none;padding:2px 6px 3px}
+ #profile{height:34px}
+ #status{left:116px;bottom:66px;max-width:50%}
+ #clickHud{left:auto;right:8px;top:auto;bottom:66px}
+ #woBox{top:50px;width:min(340px,calc(100% - 300px))}
+ #komBanner{top:46px;width:min(420px,calc(100% - 300px))}
+ .worlds{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
@@ -217,7 +327,7 @@ body.realshift .vonly{display:none!important}
 <div id="loading">Welt wird gebaut …</div>
 
 <div id="hud" class="hidden">
-  <button id="menuBtn" title="Menü (Esc)">☰</button><span id="clickHud" class="hidden"></span><button id="statBtn" title="Statistik (S-Taste: Sim-Leistung, daher Taste I)">📊</button>
+  <button id="menuBtn" title="Menü (Esc)">☰</button><span id="clickHud" class="hidden"></span><button id="statBtn" title="Statistik (I)">📊</button><button id="fsBtn" title="Vollbild (F)"><svg class="fs-in" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="fs-out" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button>
   <div class="top">
     <div class="m big"><span id="hPow">0</span><small>W</small><label>Leistung</label></div>
     <div class="m"><span id="hCad">0</span><small>rpm</small><label>Kadenz</label></div>
@@ -354,8 +464,8 @@ body.realshift .vonly{display:none!important}
       </details>
     </div>
     <footer class="cfoot">
-      <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button>
-      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
+      <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button><button id="bFs" title="Vollbild (F)">Vollbild</button>
+      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · F Vollbild · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
     </footer>
   </div>
 </div>
