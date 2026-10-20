@@ -192,6 +192,12 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 .kb-pb{display:inline-block;font-weight:700;font-size:15px;padding:1px 12px;border:2.5px solid var(--ink);border-radius:999px;background:#fff;margin-bottom:6px}.kb-pb.new{background:var(--ok);color:#fff}
 .kb-row{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:14px}.kb-row b{font-size:20px}
 .kb-s{font-size:12.5px;color:#4a4456;margin-top:3px}
+#komBanner.lap{background:#9be3a8}
+/* Geräte-Fenster beim Start */
+#devDlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(29,27,38,.35));z-index:21}
+#devDlg .card{width:min(560px,100%)}
+.shiftmode{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#4a4456;font-weight:500;margin:4px 0 2px}.shiftmode small{color:var(--mut);font-size:11.5px}
+body.realshift .vonly{display:none!important}
 @media (max-width:900px){
  #riders{display:none}
 }
@@ -239,7 +245,7 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
     <div id="casViz"></div>
     <div id="gearRatio">2.61</div>
     <div id="gearHint"></div>
-    <div class="gb"><button id="gDown" title="leichter (↓)">−</button><button id="gUp" title="schwerer (↑)">+</button></div>
+    <div class="gb vonly"><button id="gDown" title="leichter (↓)">−</button><button id="gUp" title="schwerer (↑)">+</button></div>
   </div>
   </div>
   <div id="mapBox"><canvas id="mapC"></canvas><button id="mapMode" title="Karte umschalten (M)">Umgebung</button></div>
@@ -257,11 +263,18 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 <div id="osmProg" class="hidden" data-state="busy"><div class="op-card"><h2 id="opTitle">Echte Häuser laden</h2>
   <ol class="op-steps"><li id="ops1">Anfrage</li><li id="ops2">Download</li><li id="ops3">Verarbeiten</li><li id="ops4">Speichern</li></ol>
   <div id="opBar" class="op-bar indet"><i></i></div><p id="opText"></p><div id="opBtns" class="actions"></div></div></div>
+<div id="devDlg" class="hidden">
+  <div class="card">
+    <header class="ch"><div class="logo">🔌</div><div><h1>Geräte <span>verbinden</span></h1><p class="sub">Trainer, Schaltung und Sensoren – sie bleiben verbunden, auch wenn du Welt oder Strecke wechselst.</p></div></header>
+    <div class="cbody"><div id="devSlot"></div></div>
+    <footer class="cfoot"><button id="devGo" class="primary">Weiter</button><button id="devSim">Ohne Trainer testen</button>
+      <p class="hint">Geräte nicht gleichzeitig mit Zwift oder der Wahoo-App verbinden. Später geht's auch im Menü unter „Geräte“.</p></footer>
+  </div>
+</div>
 <div id="setup" class="hidden">
   <div class="card">
     <header class="ch"><div class="logo">🚴</div><div><h1 id="title">Kalea <span>Ride</span></h1><p class="sub">Indoor-Radfahren mit Smart-Trainer und virtuellem Schalten</p></div></header>
     <div class="cbody">
-      <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
       <section>
         <h2><b>1</b> Welt &amp; Route</h2>
         <div class="worlds">
@@ -270,14 +283,18 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
         </div>
         <div id="routeList" class="routes"></div>
         <div id="osmBox" class="osmbox"><div><b>🏠 Echte Häuser aus OpenStreetMap</b> <span id="vOsmBadge" class="obadge">aus</span><small id="vOsm"></small></div><button id="bOsm">Echte Häuser laden</button><button id="bOsmDel" class="hidden">Löschen</button></div>
-        <p class="hint">Welt oder Route zuerst wählen: Ein Wechsel lädt die Strecke neu, verbundene Geräte musst du danach neu verbinden.</p>
+        <p class="hint">Ein Wechsel baut die Strecke neu – verbundene Geräte bleiben verbunden. Eine angefangene Fahrt landet in „Frühere Fahrten“.</p>
       </section>
       <section>
-        <h2><b>2</b> Geräte</h2>
+        <h2 id="devHome"><b>2</b> Geräte</h2>
+        <div id="devSec">
+        <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
         <div class="dev"><span class="dot" id="dTrainer"></span><div><b>Smart-Trainer</b> (KICKR Core)<small id="sTrainer">Nicht verbunden</small></div><button id="bTrainer">Verbinden</button></div>
-        <div class="dev"><span class="dot" id="dClick"></span><div><b>Zwift Click</b><small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
+        <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Zwift Click (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
+        <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Zwift Click</b><small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dHr"></span><div><b>Pulsgurt</b> (optional)<small id="sHr">Nicht verbunden</small></div><button id="bHr">Verbinden</button></div>
+        </div>
       </section>
       <details id="trainDet"><summary>🏋️ Training: ERG-Modus &amp; Workouts</summary>
         <div class="grid">
@@ -313,21 +330,20 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
           <label>Kettenblätter vorne<input id="iRings" type="text" value="50/34" placeholder="z. B. 50/34 oder 40"></label>
           <label>Kassette<select id="iCasPreset"></select></label>
           <label class="wide">Ritzel der Kassette (Zähne, alle einzeln)<input id="iCas" type="text" value="11,12,13,14,15,17,19,21,24,27,30,34"><small id="vCas"></small></label>
-          <label>Virtuelle Gänge<select id="iGearMode"><option value="zwift">Zwift-ähnlich (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
+          <label class="vonly">Virtuelle Gänge<select id="iGearMode"><option value="zwift">Zwift-ähnlich (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
           <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="zwift">Zwift-ähnlich (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
-          <label>Schaltgefühl<select id="iShiftFeel"><option value="soft">Weich (wie draußen, empfohlen)</option><option value="normal">Mittel</option><option value="direct">Direkt (sofort voller Widerstand)</option></select><small>wie schnell der neue Gang „greift“</small></label>
-          <label>Schaltschritt bei Dauerdruck<select id="iRepeat"><option value="0">aus</option><option value="220">normal</option><option value="140">schnell</option></select></label>
-          <label>Trainer: Kettenblatt (fester Gang)<input id="iChain" type="number" min="20" max="60" value="50"></label>
-          <label>Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="17"><small id="vTrainGear">Wird beim Fahren mit Trainer automatisch nachgemessen.</small></label>
+          <label class="vonly">Schaltgefühl<select id="iShiftFeel"><option value="soft">Weich (wie draußen, empfohlen)</option><option value="normal">Mittel</option><option value="direct">Direkt (sofort voller Widerstand)</option></select><small>wie schnell der neue Gang „greift“</small></label>
+          <label class="vonly">Schaltschritt bei Dauerdruck<select id="iRepeat"><option value="0">aus</option><option value="220">normal</option><option value="140">schnell</option></select></label>
+          <label class="vonly">Trainer: Kettenblatt (fester Gang)<input id="iChain" type="number" min="20" max="60" value="50"></label>
+          <label class="vonly">Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="17"><small id="vTrainGear">Wird einmal beim Fahren mit Trainer gemessen.</small></label>
           <label>Reifen<select id="iTire"><option value="2.096">700×23C (2096 mm)</option><option value="2.105">700×25C (2105 mm)</option><option value="2.136">700×28C (2136 mm)</option><option value="2.146">700×32C (2146 mm)</option><option value="2.200">700×40C Gravel (2200 mm)</option></select><small>Radumfang für Tempo und Gänge</small></label>
           <label>Fahrgefühl<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft wie Zwift</option><option value="1">Sehr sanft</option></select><small>glättet kurze Wellen, mehr Schwung</small></label>
           <label>Grafikqualität<select id="iQual"><option value="high">Hoch (Schatten, dichtes Gras)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
-        <label class="chk"><input type="checkbox" id="iVshift" checked> Virtuelles Schalten (bleib in einem festen Gang, der Trainer simuliert den gewählten)</label>
       </details>
-      <details>
+      <details class="vonly">
         <summary>🎮 Zwift Click: Hilfe, Tasten anlernen &amp; Diagnose</summary>
         <p><b>Click v2</b> besteht aus zwei Hälften, die im Auswahlfenster beide „Zwift Click“ heißen. Verbinde sie nacheinander: + (rechte Hälfte) schaltet schwerer, − (linke Hälfte) leichter. Auf der rechten Hälfte schaltet zusätzlich <b>Y schwerer</b> und <b>B leichter</b>, damit geht es auch nur mit einer Hälfte.</p>
       <p>Zwift sperrt beim Click v2 teilweise die Tasten für andere Apps. Kommen nach etwa einer Minute keine Tasten mehr an, koppel den Click einmal kurz in Zwift (kostenloses Konto reicht), schließ Zwift komplett und verbinde ihn dann hier. Das hält ungefähr einen Tag. Der Click darf nicht gleichzeitig mit Zwift oder der Companion-App verbunden sein.</p>

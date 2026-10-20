@@ -43,14 +43,22 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `zwift` (CdA 0,27). Abgestimmt auf Felix' echte
   Edge-540-Fahrten: flach passt die App genau, Zwift ist 4–10 % schneller, echte Abfahrten 45–53 km/h im Rollen.
 - **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
-  `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird automatisch gemessen
-  (`measureTrainerGear`, KICKR rechnet mit 2096 mm). Nach dem Hochschalten 1,8 s weiches Nachziehen (`S.upT`).
+  `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird **einmal** gemessen
+  (`measureTrainerGear`, KICKR rechnet mit 2096 mm), auf ganze Zähne gerundet (`snapGear`) und dann fest gespeichert
+  (`S.trMeas`/`S.trGear`, „Neu messen“ im Menü). Nach dem Hochschalten 1,8 s weiches Nachziehen (`S.upT`), beim
+  Anfahren aus dem Stand weiches Nachziehen bis Rad und Avatar gleich schnell sind (`T.startSoft`).
+- **Normale Kassette** (`S.vshift=false`, Auswahl „Schalten“ bei den Geräten): echte Steigung an den Trainer, keine
+  virtuellen Gänge; der aufgelegte Gang wird nur angezeigt (`updateRealGear`).
+- **Geräte-Fenster** beim Start (`openDevices`/`closeDevices` verschieben `#devSec` zwischen Fenster und Menü).
+- **Welt-/Routenwechsel ohne Neuladen** (`rebuildWorld` → `clearWorld` + `buildWorld`), damit Bluetooth verbunden
+  bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
+- **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
-  `kalea_rides`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+  `kalea_rides`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
 - **Leistung:** iPad/Handy laufen auf Qualität `low`. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
   in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
   sonst heiß.
