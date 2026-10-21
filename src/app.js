@@ -1970,7 +1970,7 @@ function drawProfile(){
 /* ================= Töne: Fahrgeräusche (eigene Aufnahmen) & dezente Umgebung ================= */
 // Rad: Schaltwerk, Umwerfer, Kette beim Treten, Freilauf beim Rollen (src/data/sounds.js). Umgebung wird erzeugt:
 // Fahrtwind, Vögel, Wasser (Meer/Donau), Stadtrauschen in Ulm. Browser erlauben Ton erst nach einer Berührung/Taste.
-const SND={ctx:null,ok:false,buf:{},bus:{},loops:{},nextBird:0,last:0,shiftT:0};
+const SND={ctx:null,ok:false,buf:{},bus:{},loops:{},nextBird:0,last:0,shiftT:0,cobble:0,lastD:null,nextStroke:0};
 function sndB64(u){const b=atob(u.slice(u.indexOf(',')+1)),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer;}
 function sndDecode(ab){return new Promise((res,rej)=>{try{const p=SND.ctx.decodeAudioData(ab,res,rej);if(p&&p.catch)p.catch(rej);}catch(e){rej(e);}});}
 function sndNoise(brown){const c=SND.ctx,b=c.createBuffer(1,c.sampleRate*3,c.sampleRate),d=b.getChannelData(0);let br=0,mx=0;
@@ -1985,8 +1985,13 @@ function sndInit(){
   SND.bus.master.connect(c.destination);SND.bus.bike.connect(SND.bus.master);SND.bus.amb.connect(SND.bus.master);
   const loop=(buf,type,f,bus,q)=>{const s=c.createBufferSource();s.buffer=buf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q||0.7;
     const g=gain(0);s.connect(fl);fl.connect(g);g.connect(bus);s.start(0,Math.random()*buf.duration);return {s,f:fl,g};};
-  const white=sndNoise(false),brown=sndNoise(true);
-  SND.loops.wind=loop(white,'bandpass',500,SND.bus.amb,0.6);SND.loops.water=loop(brown,'lowpass',700,SND.bus.amb);SND.loops.city=loop(brown,'lowpass',260,SND.bus.amb);
+  const white=sndNoise(false),brown=sndNoise(true);SND.white=white;
+  SND.loops.wind=loop(white,'bandpass',500,SND.bus.amb,0.6);
+  SND.loops.roll=loop(white,'bandpass',400,SND.bus.bike,0.7); // Abrollen der Reifen
+  // Kopfsteinpflaster: Rauschen, im Takt der Steine (ca. 14 cm) moduliert → Rattern
+  {const src=c.createBufferSource();src.buffer=white;src.loop=true;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=1100;
+    const am=gain(0.5),lvl=gain(0),o=c.createOscillator(),od=gain(0.5);o.type='sawtooth';o.frequency.value=40;o.connect(od);od.connect(am.gain);
+    src.connect(f);f.connect(am);am.connect(lvl);lvl.connect(SND.bus.bike);src.start();o.start();SND.loops.cobble={o,g:lvl};}SND.loops.water=loop(brown,'lowpass',700,SND.bus.amb);SND.loops.city=loop(brown,'lowpass',260,SND.bus.amb);
   if(typeof SOUNDS!=='undefined')Promise.all(Object.entries(SOUNDS).map(([k,u])=>sndDecode(sndB64(u)).then(b=>{SND.buf[k]=b;}).catch(()=>{}))).then(()=>{
     if(SND.buf.drive)SND.loops.drive=loop(SND.buf.drive,'lowpass',7000,SND.bus.bike);
     if(SND.buf.free)SND.loops.free=loop(SND.buf.free,'lowpass',4500,SND.bus.bike);});
@@ -2004,6 +2009,16 @@ function sndPlay(name,vol,rate){const b=SND.buf[name];if(!b||!SND.ok||SND.ctx.st
 function sndShift(from,to){const now=performance.now(),quick=now-SND.shiftT<300;SND.shiftT=now;
   const a=GEAR_COMBO[from],b=GEAR_COMBO[to],ring=a&&b&&a.r!==b.r;
   sndPlay(ring?(b.r>a.r?'ringbig':'ringsmall'):(to>from?'up':'down')+(Math.random()<0.5?1:2),(ring?0.75:0.6)*(quick?0.6:1),0.96+Math.random()*0.08);}
+// kurzes gefiltertes Rauschen mit fallender Tonhöhe: „Wusch“ (Vorbeifahren, kräftiger Tritt)
+function sndBurst(t0,dur,f0,f1,vol,pan,bus){if(vol<0.002)return;const c=SND.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();
+  s.buffer=SND.white;f.type='bandpass';f.Q.value=1.1;f.frequency.setValueAtTime(f0,t0);f.frequency.exponentialRampToValueAtTime(f1,t0+dur);
+  g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+dur*0.4);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  s.connect(f);f.connect(g);if(pan&&c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=pan;g.connect(p);p.connect(bus);}else g.connect(bus);
+  s.start(t0,Math.random()*2,dur+0.05);}
+// Vorbeifahren an Leitpfosten (alle 50 m, beide Seiten) und Ulmer Laternen (alle 32 m, abwechselnd) – kurz vor dem Objekt auslösen
+function sndPassBy(d0,d1,v){const W=(pan,vol)=>sndBurst(SND.ctx.currentTime+0.01,clamp(2.4/v,0.16,0.4),2400,650,vol*sat((v-4)/10),pan,SND.bus.amb);
+  const ps=Math.round(50/ds);for(let k=Math.ceil(d0/(ps*ds));k*ps*ds<=d1;k++){const i=(k*ps)%N;if(IS_ULM&&riverDist(RX[i],RZ[i]).d<RIVER_HW+10)continue;W(-0.75,0.05);W(0.75,0.05);}
+  if(IS_ULM){const ls=Math.round(32/ds);for(let k=Math.ceil(d0/(ls*ds));k*ls*ds<=d1;k++){const i=(k*ls)%N;if(ulmZone(RX[i],RZ[i]).d<0.3)continue;W((Math.floor(i/ls)%2)?0.8:-0.8,0.07);}}}
 function sndBirds(){const c=SND.ctx,t0=c.currentTime+0.05,n=2+Math.floor(Math.random()*4),f0=rnd(2600,4200),g=c.createGain();g.gain.value=0.07;
   if(c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=rnd(-0.8,0.8);g.connect(p);p.connect(SND.bus.amb);}else g.connect(SND.bus.amb);
   for(let i=0;i<n;i++){const o=c.createOscillator(),e=c.createGain(),st=t0+i*rnd(0.12,0.22),d=rnd(0.05,0.11),f=f0*rnd(0.9,1.15);
@@ -2011,16 +2026,35 @@ function sndBirds(){const c=SND.ctx,t0=c.currentTime+0.05,n=2+Math.floor(Math.ra
     e.gain.setValueAtTime(0,st);e.gain.linearRampToValueAtTime(1,st+0.01);e.gain.exponentialRampToValueAtTime(0.001,st+d);
     o.connect(e);e.connect(g);o.start(st);o.stop(st+d+0.02);}}
 // alle 100 ms: Lautstärke und Tonhöhe der Schleifen an Tempo, Treten und Umgebung anpassen (weich überblendet)
-function sndStep(now){if(!SND.ok||now-SND.last<100||SND.ctx.state!=='running')return;SND.last=now;
-  const t=SND.ctx.currentTime,L=SND.loops,set=(p,v,tc)=>p.setTargetAtTime(v,t,tc||0.25);
+function sndStep(now){if(now-SND.last<100)return;SND.last=now;
   const live=S.started&&S.riding&&!S.paused&&!REBUILD&&!!player&&$('setup').classList.contains('hidden')&&$('statsView').classList.contains('hidden');
+  // Kopfsteinpflaster in der Ulmer Altstadt (auch für das Rubbeln der Kamera)
+  {const zn=live&&IS_ULM?ulmZone(player.position.x,player.position.z):null,cb=zn&&zn.t==='alt'?sat((zn.d-0.8)/0.15):0;SND.cobble+=(cb-SND.cobble)*0.3;}
+  if(!SND.ok||SND.ctx.state!=='running'){SND.lastD=null;return;}
+  const t=SND.ctx.currentTime,L=SND.loops,set=(p,v,tc)=>p.setTargetAtTime(v,t,tc||0.25);
   const v=live?S.v:0,ped=live&&T.pedaling&&S.power>5&&(S.sim||S.cadence>15);
+  // Abrollgeräusch: höher und lauter mit dem Tempo; auf Pflaster stattdessen Rattern im Takt der Steine
+  set(L.roll.g.gain,0.1*sat(v/3)*(0.35+0.65*sat(v/15))*(1-0.6*SND.cobble),0.2);set(L.roll.f.frequency,260+v*32,0.3);
+  set(L.cobble.g.gain,0.09*SND.cobble*sat(v/3),0.3);set(L.cobble.o.frequency,Math.max(8,v/0.14),0.2);
+  // Kräftiges Treten: bei jedem Tritt (zwei pro Kurbelumdrehung) ein kurzes „Wusch“ der Reifen
+  const hard=ped?sat((S.power/Math.max(120,S.ftp)-0.75)/0.6)*sat((v-2)/5):0;
+  if(hard>0.02&&S.cadence>30){const per=30/S.cadence;
+    if(!SND.nextStroke||SND.nextStroke<t)SND.nextStroke=t+0.02+(Math.PI-(S.legPhase%Math.PI))/Math.PI*per;
+    while(SND.nextStroke<t+0.2){sndBurst(SND.nextStroke,Math.min(0.32,per*0.75),900+v*25,350+v*12,0.13*hard,0,SND.bus.bike);SND.nextStroke+=per;}}
+  else SND.nextStroke=0;
+  // Vorbeifahren: Leitpfosten, Laternen, andere Fahrer
+  if(live&&SND.lastD!==null&&S.dist>SND.lastD&&S.dist-SND.lastD<60&&v>4)sndPassBy(SND.lastD+v*0.15,S.dist+v*0.15,v);
+  SND.lastD=live?S.dist:null;
+  if(live){const pass=(o,d,lat,ov)=>{const g=d-S.dist,pg=o._sg;o._sg=g;
+      if(pg!==undefined&&(pg>0)!==(g>0)&&Math.abs(g)<5&&Math.abs(lat-0.8)<4)sndBurst(t+0.01,0.35,1700,500,0.11*(0.3+sat(Math.abs(ov-S.v)/3)),clamp((lat-0.8)/3,-0.9,0.9),SND.bus.amb);};
+    for(const b of BOTS)if(b.obj.visible)pass(b,b.dist,b.lat,b.v);
+    for(const q of NET.peers.values())if(q.obj)pass(q,q.disp,q.lat,q.v||0);}
   if(L.drive){set(L.drive.g.gain,ped?0.18*sat(v/2.5)*(0.7+0.3*sat(v/12)):0,0.2);set(L.drive.s.playbackRate,clamp((S.cadence>20?S.cadence:85)/88,0.65,1.35),0.3);}
   if(L.free){const on=live&&!ped&&v>1.2;set(L.free.g.gain,on?0.1*sat((v-1.2)/5):0,on?0.35:0.12);set(L.free.s.playbackRate,clamp(v/11,0.45,1.3),0.3);}
   const ws=sat((v-2)/16);set(L.wind.g.gain,0.5*ws*ws,0.4);set(L.wind.f.frequency,350+v*45,0.4);
   let water=0,city=0;
   if(live){const p=player.position;
-    if(IS_ULM){water=sat(1-(riverDist(p.x,p.z).d-RIVER_HW)/150)*0.5;city=sat(ulmZone(p.x,p.z).d)*0.35;}
+    if(IS_ULM){water=sat(1-(riverDist(p.x,p.z).d-RIVER_HW)/150)*0.5;city=sat(ulmZone(p.x,p.z).d)*0.12;}
     else{let w=0;for(let k=0;k<8;k++){const a=k*Math.PI/4;if(rawHeight(p.x+Math.cos(a)*120,p.z+Math.sin(a)*120)<0)w++;}water=sat(w/3)*0.6;}}
   set(L.water.g.gain,water*(IS_ULM?1:0.6+0.4*Math.sin(t*0.9)*Math.sin(t*0.37)),0.8);set(L.city.g.gain,city,1.0);
   if(live&&t>SND.nextBird){SND.nextBird=t+rnd(4,11);if(city<0.2&&Math.random()<0.8)sndBirds();}}
@@ -2049,12 +2083,18 @@ function initPost(){
   const rtB=new THREE.WebGLRenderTarget(size.x,size.y,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:false});
   const vs='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}';
   const edge=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,
-    uniforms:{tCol:{value:rtA.texture},tDep:{value:dt},px:{value:new THREE.Vector2(1/size.x,1/size.y)},near:{value:camera.near},far:{value:camera.far},ink:{value:new THREE.Color(0x1e0f3a)},thick:{value:1}},
+    uniforms:{tCol:{value:rtA.texture},tDep:{value:dt},px:{value:new THREE.Vector2(1/size.x,1/size.y)},near:{value:camera.near},far:{value:camera.far},ink:{value:new THREE.Color(0x1e0f3a)},thick:{value:1},spd:{value:0},tm:{value:0},asp:{value:1}},
     vertexShader:vs,fragmentShader:`#include <packing>
-      uniform sampler2D tCol,tDep;uniform vec2 px;uniform float near,far,thick;uniform vec3 ink;varying vec2 vUv;
+      uniform sampler2D tCol,tDep;uniform vec2 px;uniform float near,far,thick,spd,tm,asp;uniform vec3 ink;varying vec2 vUv;
       float Z(vec2 uv){return -perspectiveDepthToViewZ(texture2D(tDep,uv).x,near,far);}
+      float h1(float n){return fract(sin(n*12.9898)*43758.5453);}
+      // Comic-Speed-Linien: helle Striche zum Bildrand hin, die 14-mal pro Sekunde neu ausgewürfelt werden
+      vec3 speedLines(vec3 col){if(spd<0.01)return col;vec2 q=vUv-0.5;q.x*=asp;float r=length(q),a=atan(q.y,q.x)/6.2832*120.0;
+        float b=floor(a),f=fract(a),k=floor(tm*14.0),n=h1(b+k*37.1);if(n<1.0-0.5*spd)return col;
+        float w=0.12+0.2*h1(b*3.7+k),l=(1.0-smoothstep(w*0.5,w*0.5+0.06,abs(f-0.5)))*smoothstep(0.30+0.2*h1(b*7.3+k*1.7),0.46+0.2*h1(b*7.3+k*1.7),r);
+        return mix(col,vec3(1.0),l*0.55*spd);}
       void main(){vec4 c=texture2D(tCol,vUv);float z=Z(vUv);
-        if(z>far*0.7){gl_FragColor=vec4(c.rgb,1.0);return;}
+        if(z>far*0.7){gl_FragColor=vec4(speedLines(c.rgb),1.0);return;}
         vec2 o=px*thick;float wc=1.0/z;
         float wl=1.0/Z(vUv-vec2(o.x,0.0)),wr=1.0/Z(vUv+vec2(o.x,0.0)),wu=1.0/Z(vUv+vec2(0.0,o.y)),wd=1.0/Z(vUv-vec2(0.0,o.y));
         float wl2=1.0/Z(vUv+o*vec2(-1.0,1.0)),wr2=1.0/Z(vUv+o),wu2=1.0/Z(vUv-o),wd2=1.0/Z(vUv+o*vec2(1.0,-1.0));
@@ -2063,7 +2103,7 @@ function initPost(){
         float sil=smoothstep(0.035,0.11,-min(lap,lap2*0.5));
         float crease=smoothstep(0.012,0.04,abs(lap))*smoothstep(0.012,0.04,abs(lap2)*0.5)*0.55;
         float e=max(sil,crease)*(1.0-smoothstep(500.0,2600.0,z));
-        gl_FragColor=vec4(mix(c.rgb,ink,e*0.92),1.0);}`});
+        gl_FragColor=vec4(speedLines(mix(c.rgb,ink,e*0.92)),1.0);}`});
   const fxaa=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tDiffuse:{value:rtB.texture},px:{value:new THREE.Vector2(1/size.x,1/size.y)}},vertexShader:vs,
     fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 px;varying vec2 vUv;
       void main(){vec3 nw=texture2D(tDiffuse,vUv+vec2(-1.0,-1.0)*px).rgb,ne=texture2D(tDiffuse,vUv+vec2(1.0,-1.0)*px).rgb,sw=texture2D(tDiffuse,vUv+vec2(-1.0,1.0)*px).rgb,se=texture2D(tDiffuse,vUv+vec2(1.0,1.0)*px).rgb,m=texture2D(tDiffuse,vUv).rgb;
@@ -2086,6 +2126,7 @@ function renderFrame(){
   if(!POST){initPost();resizePost();}
   const s=renderer.getDrawingBufferSize(new THREE.Vector2());if(POST.rtA.width!==s.x||POST.rtA.height!==s.y)resizePost();
   POST.edge.uniforms.near.value=camera.near;POST.edge.uniforms.far.value=camera.far;
+  {const u=POST.edge.uniforms,tg=S.started&&!S.paused?sat((S.v*3.6-32)/28):0;u.spd.value+=(tg-u.spd.value)*0.05;u.tm.value=performance.now()/1000;u.asp.value=s.x/s.y;}
   renderer.setRenderTarget(POST.rtA);renderer.render(scene,camera);
   const fx=S.quality!=='low';POST.quad.material=POST.edge;renderer.setRenderTarget(fx?POST.rtB:null);renderer.render(POST.qs,POST.cam);
   if(fx){POST.quad.material=POST.fxaa;renderer.setRenderTarget(null);renderer.render(POST.qs,POST.cam);}}
@@ -2384,8 +2425,13 @@ function updateCamera(dt){
   if(S.cam===3){tl.set(r.x+rx*0.8,r.h+1.0,r.z+rz*0.8);}
   const k=1-Math.exp(-dt*5);camPos.lerp(tp,k);camLook.lerp(tl,k);
   const groundH=finalHeight(camPos.x,camPos.z)+0.8;if(camPos.y<groundH)camPos.y=groundH;
-  camera.position.copy(camPos);camera.lookAt(camLook);
-  const fov=58+clamp(S.v*3.6-25,0,35)*0.18;if(Math.abs(camera.fov-fov)>0.05){camera.fov+=(fov-camera.fov)*k;camera.updateProjectionMatrix();}
+  camera.position.copy(camPos);
+  // Tempo-Gefühl: leichtes Rubbeln der Straße ab ca. 20 km/h, auf Pflaster deutlich mehr
+  {const kmh=S.v*3.6,t=performance.now()/1000,a=(0.012*sat((kmh-20)/30)+0.015*SND.cobble*sat(kmh/15))*(S.paused?0:1);
+    if(a>0.0005){camera.position.y+=a*(Math.sin(t*71)+0.6*Math.sin(t*113+1.3));camera.position.x+=a*0.5*Math.sin(t*89+0.7);camera.position.z+=a*0.5*Math.sin(t*97+2.1);}}
+  camera.lookAt(camLook);
+  // Sichtfeld weitet sich mit dem Tempo (bei 50 km/h ca. 9°, bei 65 km/h ca. 13° mehr)
+  const fov=58+clamp(S.v*3.6-18,0,47)*0.28;if(Math.abs(camera.fov-fov)>0.05){camera.fov+=(fov-camera.fov)*k;camera.updateProjectionMatrix();}
 }
 function updateEnv(dt,t){
   water.material.uniforms.time.value=t;
