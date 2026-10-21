@@ -16,6 +16,7 @@ src/index.html            Markup + CSS (Comic-Look, Schrift Fredoka) + <script>-
 src/app.js                das ganze Programm (~2400 Zeilen, in Abschnitte gegliedert, s. u.)
 src/data/ulm-data.js      const ULM_DATA = {origin, grid (EU-DEM-Höhen), roads, river, places, routes[5]}
 src/data/osm-buildings.js const OSM_RAW  = 9336 echte Ulmer Gebäude (OSM, ODbL), kompakt kodiert
+src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tools/sounds_build.py)
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
 tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
@@ -52,6 +53,10 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Geräte-Fenster** beim Start (`openDevices`/`closeDevices` verschieben `#devSec` zwischen Fenster und Menü).
 - **Welt-/Routenwechsel ohne Neuladen** (`rebuildWorld` → `clearWorld` + `buildWorld`), damit Bluetooth verbunden
   bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
+- **Töne** (`SND`, `sndStep`, `sndShift`): Schalt-/Ketten-/Freilaufgeräusche aus Felix' Aufnahmen in
+  `src/data/sounds.js` (erzeugt mit `tools/sounds_build.py`; die Original-Aufnahmen enthalten Sprache und kommen
+  nicht ins Repo). Umgebung (Wind, Vögel, Wasser, Stadt) wird per Web Audio erzeugt. Lautstärken `S.sndBike`,
+  `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
 - **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
@@ -70,7 +75,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, W/S Testleistung, Esc Menü.
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
 - Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus).
