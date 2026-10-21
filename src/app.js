@@ -1989,7 +1989,7 @@ function sndInit(){
   SND.loops.wind=loop(white,'bandpass',500,SND.bus.amb,0.6);SND.loops.water=loop(brown,'lowpass',700,SND.bus.amb);SND.loops.city=loop(brown,'lowpass',260,SND.bus.amb);
   if(typeof SOUNDS!=='undefined')Promise.all(Object.entries(SOUNDS).map(([k,u])=>sndDecode(sndB64(u)).then(b=>{SND.buf[k]=b;}).catch(()=>{}))).then(()=>{
     if(SND.buf.drive)SND.loops.drive=loop(SND.buf.drive,'lowpass',7000,SND.bus.bike);
-    if(SND.buf.free)SND.loops.free=loop(SND.buf.free,'lowpass',5500,SND.bus.bike);});
+    if(SND.buf.free)SND.loops.free=loop(SND.buf.free,'lowpass',4500,SND.bus.bike);});
   SND.ok=true;sndVolume();}
 function sndUnlock(){sndInit();if(SND.ctx&&SND.ctx.state==='suspended'&&!document.hidden)SND.ctx.resume().catch(()=>{});}
 ['pointerdown','touchend','keydown'].forEach(e=>addEventListener(e,sndUnlock,{capture:true,passive:true}));
@@ -2015,8 +2015,8 @@ function sndStep(now){if(!SND.ok||now-SND.last<100||SND.ctx.state!=='running')re
   const t=SND.ctx.currentTime,L=SND.loops,set=(p,v,tc)=>p.setTargetAtTime(v,t,tc||0.25);
   const live=S.started&&S.riding&&!S.paused&&!REBUILD&&!!player&&$('setup').classList.contains('hidden')&&$('statsView').classList.contains('hidden');
   const v=live?S.v:0,ped=live&&T.pedaling&&S.power>5&&(S.sim||S.cadence>15);
-  if(L.drive){set(L.drive.g.gain,ped?0.55*sat(v/2.5)*(0.7+0.3*sat(v/12)):0,0.2);set(L.drive.s.playbackRate,clamp((S.cadence>20?S.cadence:85)/88,0.65,1.35),0.3);}
-  if(L.free){const on=live&&!ped&&v>1.2;set(L.free.g.gain,on?0.32*sat((v-1.2)/5):0,on?0.35:0.12);set(L.free.s.playbackRate,clamp(v/11,0.45,1.3),0.3);}
+  if(L.drive){set(L.drive.g.gain,ped?0.18*sat(v/2.5)*(0.7+0.3*sat(v/12)):0,0.2);set(L.drive.s.playbackRate,clamp((S.cadence>20?S.cadence:85)/88,0.65,1.35),0.3);}
+  if(L.free){const on=live&&!ped&&v>1.2;set(L.free.g.gain,on?0.1*sat((v-1.2)/5):0,on?0.35:0.12);set(L.free.s.playbackRate,clamp(v/11,0.45,1.3),0.3);}
   const ws=sat((v-2)/16);set(L.wind.g.gain,0.5*ws*ws,0.4);set(L.wind.f.frequency,350+v*45,0.4);
   let water=0,city=0;
   if(live){const p=player.position;
