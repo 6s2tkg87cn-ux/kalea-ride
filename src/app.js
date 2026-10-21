@@ -33,14 +33,14 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:50,cog:17,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:50,cog:17,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
 function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{}');
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(o.trMeas&&o.trGear){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -1860,7 +1860,7 @@ setInterval(()=>{const now=performance.now();for(const p of Z.pads){if(p.connect
 let flashT=0;
 function shift(d){if(ergActive()){ergNudge(d);if(!shift.ergHint){shift.ergHint=1;status('ERG ist an: Die Schalttasten ändern jetzt die Wattzahl, nicht den Gang. Taste E schaltet ERG aus.');setTimeout(()=>status(''),7000);}return;}
   if(!S.vshift&&!S.sim){if(!shift.realHint){shift.realHint=1;status('Du fährst mit normaler Kassette – geschaltet wird am Rad. (Umstellen: Menü → Geräte → Schalten)');setTimeout(()=>status(''),7000);}return;}
-  const g=clamp(S.gear+d,0,GEARS.length-1);if(g===S.gear)return;S.gear=g;S.shiftT=performance.now();if(d>0)S.upT=S.shiftT;
+  const g=clamp(S.gear+d,0,GEARS.length-1);if(g===S.gear)return;sndShift(S.gear,g);S.gear=g;S.shiftT=performance.now();if(d>0)S.upT=S.shiftT;
   sendResistance(true);updateGear();
   const el=$('gearNum');el.classList.add('flash');clearTimeout(flashT);flashT=setTimeout(()=>el.classList.remove('flash'),120);}
 // Dauerdruck: nach kurzer Pause weiter schalten, solange die Taste gehalten wird
@@ -1966,6 +1966,64 @@ function drawProfile(){
   $('pRight').textContent=inC?`${inC.name}: noch ${((inC.len-(((d-inC.start)%L+L)%L))/1000).toFixed(2)} km · ${elev} m ü. NN`:
     nx?`${nx.c.name} in ${(nx.dd/1000).toFixed(1)} km (${(nx.c.len/1000).toFixed(1)} km, Ø ${(+nx.c.avg).toFixed(1)} %) · ${elev} m ü. NN`:`flach · ${elev} m ü. NN`;
 }
+
+/* ================= Töne: Fahrgeräusche (eigene Aufnahmen) & dezente Umgebung ================= */
+// Rad: Schaltwerk, Umwerfer, Kette beim Treten, Freilauf beim Rollen (src/data/sounds.js). Umgebung wird erzeugt:
+// Fahrtwind, Vögel, Wasser (Meer/Donau), Stadtrauschen in Ulm. Browser erlauben Ton erst nach einer Berührung/Taste.
+const SND={ctx:null,ok:false,buf:{},bus:{},loops:{},nextBird:0,last:0,shiftT:0};
+function sndB64(u){const b=atob(u.slice(u.indexOf(',')+1)),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer;}
+function sndDecode(ab){return new Promise((res,rej)=>{try{const p=SND.ctx.decodeAudioData(ab,res,rej);if(p&&p.catch)p.catch(rej);}catch(e){rej(e);}});}
+function sndNoise(brown){const c=SND.ctx,b=c.createBuffer(1,c.sampleRate*3,c.sampleRate),d=b.getChannelData(0);let br=0,mx=0;
+  for(let i=0;i<d.length;i++){const w=Math.random()*2-1;br=(br+0.02*w)/1.02;d[i]=brown?br:w;mx=Math.max(mx,Math.abs(d[i]));}
+  for(let i=0;i<d.length;i++)d[i]*=0.5/mx;return b;}
+function sndInit(){
+  if(SND.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  try{if(navigator.audioSession)navigator.audioSession.type='ambient';}catch(e){} // iPhone: Musik läuft weiter
+  try{SND.ctx=new AC();}catch(e){return;}
+  const c=SND.ctx,gain=v=>{const n=c.createGain();n.gain.value=v;return n;};
+  SND.bus.master=gain(0);SND.bus.bike=gain(0);SND.bus.amb=gain(0);
+  SND.bus.master.connect(c.destination);SND.bus.bike.connect(SND.bus.master);SND.bus.amb.connect(SND.bus.master);
+  const loop=(buf,type,f,bus,q)=>{const s=c.createBufferSource();s.buffer=buf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q||0.7;
+    const g=gain(0);s.connect(fl);fl.connect(g);g.connect(bus);s.start(0,Math.random()*buf.duration);return {s,f:fl,g};};
+  const white=sndNoise(false),brown=sndNoise(true);
+  SND.loops.wind=loop(white,'bandpass',500,SND.bus.amb,0.6);SND.loops.water=loop(brown,'lowpass',700,SND.bus.amb);SND.loops.city=loop(brown,'lowpass',260,SND.bus.amb);
+  if(typeof SOUNDS!=='undefined')Promise.all(Object.entries(SOUNDS).map(([k,u])=>sndDecode(sndB64(u)).then(b=>{SND.buf[k]=b;}).catch(()=>{}))).then(()=>{
+    if(SND.buf.drive)SND.loops.drive=loop(SND.buf.drive,'lowpass',7000,SND.bus.bike);
+    if(SND.buf.free)SND.loops.free=loop(SND.buf.free,'lowpass',5500,SND.bus.bike);});
+  SND.ok=true;sndVolume();}
+function sndUnlock(){sndInit();if(SND.ctx&&SND.ctx.state==='suspended'&&!document.hidden)SND.ctx.resume().catch(()=>{});}
+['pointerdown','touchend','keydown'].forEach(e=>addEventListener(e,sndUnlock,{capture:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else SND.ctx.resume().catch(()=>{});});
+function sndVolume(){const b=$('sndBtn');if(b){b.textContent=S.mute?'🔇':'🔊';b.title=S.mute?'Ton an (T)':'Ton aus (T)';}
+  if(!SND.ok)return;const t=SND.ctx.currentTime;
+  SND.bus.master.gain.setTargetAtTime(S.mute?0:1,t,0.05);SND.bus.bike.gain.setTargetAtTime(S.sndBike,t,0.05);SND.bus.amb.gain.setTargetAtTime(S.sndAmb,t,0.05);}
+function toggleMute(){S.mute=!S.mute;saveSettings();sndVolume();}
+function sndPlay(name,vol,rate){const b=SND.buf[name];if(!b||!SND.ok||SND.ctx.state!=='running')return;
+  const s=SND.ctx.createBufferSource(),g=SND.ctx.createGain();s.buffer=b;s.playbackRate.value=rate||1;g.gain.value=vol;s.connect(g);g.connect(SND.bus.bike);s.start();}
+// Schalten: hinten hoch/runter (je zwei Aufnahmen im Wechsel), beim Wechsel des Kettenblatts der Umwerfer
+function sndShift(from,to){const now=performance.now(),quick=now-SND.shiftT<300;SND.shiftT=now;
+  const a=GEAR_COMBO[from],b=GEAR_COMBO[to],ring=a&&b&&a.r!==b.r;
+  sndPlay(ring?(b.r>a.r?'ringbig':'ringsmall'):(to>from?'up':'down')+(Math.random()<0.5?1:2),(ring?0.75:0.6)*(quick?0.6:1),0.96+Math.random()*0.08);}
+function sndBirds(){const c=SND.ctx,t0=c.currentTime+0.05,n=2+Math.floor(Math.random()*4),f0=rnd(2600,4200),g=c.createGain();g.gain.value=0.07;
+  if(c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=rnd(-0.8,0.8);g.connect(p);p.connect(SND.bus.amb);}else g.connect(SND.bus.amb);
+  for(let i=0;i<n;i++){const o=c.createOscillator(),e=c.createGain(),st=t0+i*rnd(0.12,0.22),d=rnd(0.05,0.11),f=f0*rnd(0.9,1.15);
+    o.frequency.setValueAtTime(f,st);o.frequency.exponentialRampToValueAtTime(f*rnd(1.2,1.6),st+d*0.6);o.frequency.exponentialRampToValueAtTime(f*0.85,st+d);
+    e.gain.setValueAtTime(0,st);e.gain.linearRampToValueAtTime(1,st+0.01);e.gain.exponentialRampToValueAtTime(0.001,st+d);
+    o.connect(e);e.connect(g);o.start(st);o.stop(st+d+0.02);}}
+// alle 100 ms: Lautstärke und Tonhöhe der Schleifen an Tempo, Treten und Umgebung anpassen (weich überblendet)
+function sndStep(now){if(!SND.ok||now-SND.last<100||SND.ctx.state!=='running')return;SND.last=now;
+  const t=SND.ctx.currentTime,L=SND.loops,set=(p,v,tc)=>p.setTargetAtTime(v,t,tc||0.25);
+  const live=S.started&&S.riding&&!S.paused&&!REBUILD&&!!player&&$('setup').classList.contains('hidden')&&$('statsView').classList.contains('hidden');
+  const v=live?S.v:0,ped=live&&T.pedaling&&S.power>5&&(S.sim||S.cadence>15);
+  if(L.drive){set(L.drive.g.gain,ped?0.55*sat(v/2.5)*(0.7+0.3*sat(v/12)):0,0.2);set(L.drive.s.playbackRate,clamp((S.cadence>20?S.cadence:85)/88,0.65,1.35),0.3);}
+  if(L.free){const on=live&&!ped&&v>1.2;set(L.free.g.gain,on?0.32*sat((v-1.2)/5):0,on?0.35:0.12);set(L.free.s.playbackRate,clamp(v/11,0.45,1.3),0.3);}
+  const ws=sat((v-2)/16);set(L.wind.g.gain,0.5*ws*ws,0.4);set(L.wind.f.frequency,350+v*45,0.4);
+  let water=0,city=0;
+  if(live){const p=player.position;
+    if(IS_ULM){water=sat(1-(riverDist(p.x,p.z).d-RIVER_HW)/150)*0.5;city=sat(ulmZone(p.x,p.z).d)*0.35;}
+    else{let w=0;for(let k=0;k<8;k++){const a=k*Math.PI/4;if(rawHeight(p.x+Math.cos(a)*120,p.z+Math.sin(a)*120)<0)w++;}water=sat(w/3)*0.6;}}
+  set(L.water.g.gain,water*(IS_ULM?1:0.6+0.4*Math.sin(t*0.9)*Math.sin(t*0.37)),0.8);set(L.city.g.gain,city,1.0);
+  if(live&&t>SND.nextBird){SND.nextBird=t+rnd(4,11);if(city<0.2&&Math.random()<0.8)sndBirds();}}
 
 /* ================= Comic-Look: Toon-Materialien, Konturen, Wolken & Details ================= */
 let TOON_GRAD=null;
@@ -2346,7 +2404,7 @@ function updateEnv(dt,t){
 let last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
-  if(REBUILD)return;
+  sndStep(now);if(REBUILD)return;
   const idle=!S.started||S.paused||!$('setup').classList.contains('hidden')||!$('statsView').classList.contains('hidden'),cap=idle?30:(S.fps||60);
   if(now-PERF.lastF<1000/cap-1.5)return;PERF.lastF=now;perfTick(now);const dt=Math.min(0.1,(now-last)/1000);last=now;const t=now/1000;
   if(S.riding&&!S.paused)stepPhysics(dt);
@@ -2414,7 +2472,10 @@ function wireUi(){
   $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
   $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
-  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('bFs').onclick=toggleFullscreen;
+  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
+  $('iSndBike').value=Math.round(S.sndBike*100);$('iSndAmb').value=Math.round(S.sndAmb*100);sndVolume();
+  $('iSndBike').oninput=()=>{S.sndBike=$('iSndBike').value/100;sndVolume();};$('iSndAmb').oninput=()=>{S.sndAmb=$('iSndAmb').value/100;sndVolume();};
+  $('iSndBike').onchange=$('iSndAmb').onchange=()=>{saveSettings();if(S.sndBike>0)sndPlay('up1',0.6,1);};$('bFs').onclick=toggleFullscreen;
   document.addEventListener('fullscreenchange',updateFsUi);document.addEventListener('webkitfullscreenchange',updateFsUi);
   addEventListener('resize',()=>{if(!$('setup').classList.contains('hidden'))requestAnimationFrame(drawRouteCards);});$('gUp').onclick=()=>shift(1);$('gDown').onclick=()=>shift(-1);
   $('lUp').onclick=()=>startLearn('up');$('lDown').onclick=()=>startLearn('down');
@@ -2452,6 +2513,7 @@ function wireUi(){
     else if(k==='c'||k==='C')S.cam=(S.cam+1)%VIEWS.length;
     else if(k==='m'||k==='M')cycleMap();
     else if(k==='f'||k==='F')toggleFullscreen();
+    else if(k==='t'||k==='T')toggleMute();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}
     else if(k==='Escape'){if(!$('devDlg').classList.contains('hidden')){closeDevices();return;}if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});
