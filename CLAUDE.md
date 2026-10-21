@@ -46,7 +46,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
   `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird **einmal** gemessen
   (`measureTrainerGear`, KICKR rechnet mit 2096 mm), auf ganze Zähne gerundet (`snapGear`) und dann fest gespeichert
-  (`S.trMeas`/`S.trGear`, „Neu messen“ im Menü). Nach dem Hochschalten 1,8 s weiches Nachziehen (`S.upT`), beim
+  (`S.trMeas`/`S.trGear`, „Neu messen“ im Menü). Vorgabe Trainer-Gang **34 × 14** (festes Trainer-Ritzel mit
+  14 Zähnen, Felix fährt vorne meist 34); alte Einstellungen mit 50 × 17 werden einmalig umgestellt (`sv`). Nach dem Hochschalten 1,8 s weiches Nachziehen (`S.upT`), beim
   Anfahren aus dem Stand weiches Nachziehen bis Rad und Avatar gleich schnell sind (`T.startSoft`).
 - **Normale Kassette** (`S.vshift=false`, Auswahl „Schalten“ bei den Geräten): echte Steigung an den Trainer, keine
   virtuellen Gänge; der aufgelegte Gang wird nur angezeigt (`updateRealGear`).
