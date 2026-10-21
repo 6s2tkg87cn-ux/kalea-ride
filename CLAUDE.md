@@ -55,7 +55,10 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
 - **Töne** (`SND`, `sndStep`, `sndShift`): Schalt-/Ketten-/Freilaufgeräusche aus Felix' Aufnahmen in
   `src/data/sounds.js` (erzeugt mit `tools/sounds_build.py`; die Original-Aufnahmen enthalten Sprache und kommen
-  nicht ins Repo). Umgebung (Wind, Vögel, Wasser, Stadt) wird per Web Audio erzeugt. Lautstärken `S.sndBike`,
+  nicht ins Repo). Umgebung (Wind, Vögel, Wasser, Stadt), Abrollen, Pflaster-Rattern (Ulmer Altstadt),
+  Reifen-„Wusch“ bei kräftigen Tritten und beim Vorbeifahren (Leitpfosten, Laternen, Fahrer) per Web Audio erzeugt.
+- **Tempo-Gefühl im Bild:** Sichtfeld weitet sich (`updateCamera`), Kamera rubbelt leicht, Comic-Speed-Linien ab
+  ca. 32 km/h im Konturen-Shader (`speedLines`, nur mit Comic-Konturen). Lautstärken `S.sndBike`,
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
 - **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
