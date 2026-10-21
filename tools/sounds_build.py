@@ -8,7 +8,10 @@ Im Ordner erwartet (m4a/wav, Mono reicht):
   aufnahme2  „Aufs große Kettenblatt, aufs kleine Kettenblatt“ (Umwerfer vorne)
   aufnahme3  „Fahrgeräusche“ (gleichmäßiges Treten, Kette)
   aufnahme4  „Freilauf … jetzt“ (Rad läuft im Freilauf aus)
-Braucht ffmpeg, numpy und soundfile.
+Braucht ffmpeg, numpy, scipy und soundfile.
+
+Bearbeitung je Klang: Rauschunterdrückung (spektral, Rauschprofil aus einer ruhigen Stelle derselben
+Aufnahme), EQ (Rumpeln weg, weniger Mulm, mehr Präsenz), sanfte Kompression, Normalisierung.
 
 Ergebnis: const SOUNDS = {name: 'data:…;base64,…'}. Kurze Klänge als MP3, Schleifen als WAV
 (MP3 hat am Anfang eine Encoder-Pause und würde beim Wiederholen hörbar stocken).
@@ -16,15 +19,18 @@ Ergebnis: const SOUNDS = {name: 'data:…;base64,…'}. Kurze Klänge als MP3, S
 import base64, glob, os, subprocess, sys, tempfile
 import numpy as np
 import soundfile as sf
+from scipy import signal
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'src', 'data', 'sounds.js')
 
+# Ruhige Stellen je Aufnahme für das Rauschprofil (Raum; bei aufnahme2 läuft im Hintergrund die Kette)
+NOISE = {1: (0.3, 2.0), 2: (5.4, 7.0), 3: (0.15, 0.8), 4: None}
 # Schnittstellen in Sekunden (per Spektrogramm und Spracherkennung bestimmt)
 SHOTS = {  # name: (aufnahme, von, bis)
     'up1': (1, 4.79, 5.40), 'up2': (1, 7.19, 7.80),          # „Hochschalten“, „nochmal“
     'down1': (1, 10.75, 11.50), 'down2': (1, 13.76, 14.45),  # „Runterschalten“, „nochmal“
-    'ringbig': (2, 3.58, 4.50), 'ringsmall': (2, 9.66, 10.30),
+    'ringbig': (2, 4.25, 4.95), 'ringsmall': (2, 9.66, 10.30),  # großes Blatt: nur Kettensprung (davor ein harter Stoß)
 }
 LOOPS = {  # name: (aufnahme, von, bis, Ziel-RMS)
     'drive': (3, 3.0, 7.2, 0.18),
@@ -43,15 +49,74 @@ def load(folder, n):
     return x, sr
 
 
-def highpass(y, sr, fc=60):  # Rumpeln (Trittschall, Raum) entfernen
-    a = np.exp(-2 * np.pi * fc / sr)
-    o = np.zeros_like(y)
-    p = q = 0.0
-    for i, v in enumerate(y):
-        p = a * (p + v - q)
-        q = v
-        o[i] = p
-    return o
+def denoise(y, noise, sr, reduce_db=18, thresh_db=6):
+    """Spektrales Gate: Frequenzanteile nahe am Rauschprofil werden um bis zu reduce_db abgesenkt."""
+    n = 1024
+    _, _, N = signal.stft(noise, sr, nperseg=n)
+    _, _, Y = signal.stft(y, sr, nperseg=n)
+    ndb = 20 * np.log10(np.abs(N) + 1e-10)
+    lim = ndb.mean(axis=1, keepdims=True) + ndb.std(axis=1, keepdims=True) + thresh_db
+    ydb = 20 * np.log10(np.abs(Y) + 1e-10)
+    m = 1 / (1 + np.exp(-(ydb - lim) / 2.5))                       # weich: 0 = Rauschen, 1 = Signal
+    m = signal.convolve2d(m, np.ones((3, 5)) / 15, mode='same', boundary='symm')  # über Zeit/Frequenz glätten
+    floor = 10 ** (-reduce_db / 20)
+    _, out = signal.istft(Y * (floor + (1 - floor) * m), sr, nperseg=n)
+    return out[:len(y)]
+
+
+def biquad(kind, f, sr, gain_db=0.0, q=0.707):
+    """EQ-Filter nach dem RBJ-Kochbuch: 'hp', 'peak', 'lowshelf', 'highshelf'."""
+    A, w = 10 ** (gain_db / 40), 2 * np.pi * f / sr
+    c, a = np.cos(w), np.sin(w) / (2 * q)
+    if kind == 'hp':
+        b = [(1 + c) / 2, -(1 + c), (1 + c) / 2]; d = [1 + a, -2 * c, 1 - a]
+    elif kind == 'peak':
+        b = [1 + a * A, -2 * c, 1 - a * A]; d = [1 + a / A, -2 * c, 1 - a / A]
+    else:
+        s = 1 if kind == 'lowshelf' else -1
+        r = 2 * np.sqrt(A) * a
+        b = [A * ((A + 1) - s * (A - 1) * c + r), s * 2 * A * ((A - 1) - s * (A + 1) * c), A * ((A + 1) - s * (A - 1) * c - r)]
+        d = [(A + 1) + s * (A - 1) * c + r, -s * 2 * ((A - 1) + s * (A + 1) * c), (A + 1) + s * (A - 1) * c - r]
+    return np.array(b) / d[0], np.array(d) / d[0]
+
+
+def eq(y, sr, bands):
+    for band in bands:
+        b, a = biquad(*band[:1], band[1], sr, *band[2:])
+        y = signal.lfilter(b, a, y)
+    return y
+
+
+def compress(y, sr, thresh_db=-24, ratio=3.0, attack=0.005, release=0.12):
+    """Einfacher Kompressor (Spitzenwert-Hüllkurve), danach wird ohnehin normalisiert."""
+    env, out = 0.0, np.empty_like(y)
+    ka, kr = np.exp(-1 / (attack * sr)), np.exp(-1 / (release * sr))
+    for i, v in enumerate(np.abs(y)):
+        env = ka * env + (1 - ka) * v if v > env else kr * env + (1 - kr) * v
+        over = 20 * np.log10(env + 1e-9) - thresh_db
+        out[i] = y[i] * (10 ** (-over * (1 - 1 / ratio) / 20) if over > 0 else 1.0)
+    return out
+
+
+# EQ: Rumpeln weg, Mulm (250–400 Hz) etwas weniger, Präsenz/Klarheit etwas mehr
+EQ_SHOT = [('hp', 90), ('peak', 320, -3.5, 1.0), ('peak', 3200, 3.0, 0.9), ('highshelf', 8000, 2.0)]
+EQ_DRIVE = [('hp', 110), ('peak', 280, -3.0, 1.0), ('peak', 2500, 2.5, 0.9)]
+EQ_FREE = [('hp', 140), ('peak', 350, -2.0, 1.0), ('peak', 5000, -2.5, 1.2), ('peak', 1800, 2.0, 1.0)]
+
+
+def clean(rec, n, a, b, eqb, comp, reduce_db=18):
+    """Ausschnitt rauschbefreien, entzerren und komprimieren (mit etwas Vorlauf, damit Filter einschwingen)."""
+    x, sr = rec[n]
+    pad = int(0.15 * sr)
+    i0, i1 = max(0, int(a * sr) - pad), int(b * sr) + pad
+    y = x[i0:i1]
+    if NOISE[n]:
+        y = denoise(y, x[int(NOISE[n][0] * sr):int(NOISE[n][1] * sr)], sr, reduce_db)
+    y = eq(y, sr, eqb)
+    y = y[int(a * sr) - i0:int(a * sr) - i0 + int((b - a) * sr)]
+    if comp:
+        y = compress(y / np.abs(y).max(), sr, *comp)
+    return y
 
 
 def fade(y, sr, fi=0.004, fo=0.06):
@@ -92,12 +157,12 @@ def main():
     rec = {n: load(folder, n) for n in (1, 2, 3, 4)}
     out = {}
     for name, (n, a, b) in SHOTS.items():
-        x, sr = rec[n]
-        y = fade(highpass(x[int(a * sr):int(b * sr)], sr), sr)
+        sr = rec[n][1]
+        y = fade(clean(rec, n, a, b, EQ_SHOT, (-20, 2.5, 0.004, 0.08)), sr)  # schnelle Spitzen bleiben, Ausklang hörbarer
         out[name] = encode(y * 0.7 / np.abs(y).max(), sr, 'mp3')
     for name, (n, a, b, rms) in LOOPS.items():
-        x, sr = rec[n]
-        y = seamless(highpass(x[int(a * sr):int(b * sr)], sr), sr)
+        sr = rec[n][1]
+        y = seamless(clean(rec, n, a, b, EQ_DRIVE if name == 'drive' else EQ_FREE, (-18, 3.0, 0.01, 0.15), 9), sr)  # Kette: Nutzsignal nur knapp über dem Raumrauschen → behutsam
         out[name] = encode(np.clip(y * rms / np.sqrt(np.mean(y ** 2)), -0.98, 0.98), sr, 'wav')
     with open(OUT, 'w', encoding='utf-8') as f:
         f.write('// Fahrgeräusche aus eigenen Aufnahmen (tools/sounds_build.py) – Schaltwerk, Umwerfer, Kette, Freilauf\n')
