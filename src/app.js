@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,p30:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -42,8 +42,8 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -180,7 +180,7 @@ function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=n
   if(ns!==PERF.scale){PERF.scale=ns;renderer.setPixelRatio(basePR()*ns);renderer.setSize(innerWidth,innerHeight);}}
 // Weit entfernte Kacheln (Häuser, Bäume) ausblenden
 let CULL_R=1e9;const CULLS=[];
-function updateCull(){if(CULL_R>1e8)return;const cx=camera.position.x,cz=camera.position.z;for(const m of CULLS)m.visible=Math.hypot(m.position.x-cx,m.position.z-cz)<CULL_R;}
+function updateCull(){if(CULL_R>1e8)return;const cx=camera.position.x,cz=camera.position.z;for(const m of CULLS)m.visible=(!m.userData.life||S.life)&&Math.hypot(m.position.x-cx,m.position.z-cz)<CULL_R;}
 let GRASS_R=420;
 function updateGrass(){const cx=camera.position.x,cz=camera.position.z;
   for(const m of GRASS_CHUNKS)m.visible=Math.hypot(m.userData.cx-cx,m.userData.cz-cz)<GRASS_R;}
@@ -445,13 +445,13 @@ function fanGeos(){if(fanGeos.g)return fanGeos.g;
   const legL=new THREE.CylinderGeometry(0.075,0.085,0.66,5);legL.translate(-0.1,0.33,0);const legR=legL.clone();legR.translate(0.2,0,0);
   const head=new THREE.IcosahedronGeometry(0.19,1);head.translate(0,1.58,0);const hand1=new THREE.IcosahedronGeometry(0.075,0);hand1.translate(-0.52,1.78,0);const hand2=hand1.clone();hand2.translate(1.04,0,0);
   return fanGeos.g={shirt:mergeGeos([torso,armL,armR]),skin:mergeGeos([head,hand1,hand2]),legs:mergeGeos([legL,legR])};}
-function komDecor(KI){
+function komDecor(KI,ok){
   // jubelnde Zuschauer & Fahnen an der Bergwertung
   const G=fanGeos(),cnt=64,shirtM=new THREE.InstancedMesh(G.shirt,std(0xffffff,0.8),cnt),skinM=new THREE.InstancedMesh(G.skin,std(0xffffff,0.8),cnt),legM=new THREE.InstancedMesh(G.legs,std(0xffffff,0.8),cnt);
   const dm=new THREE.Object3D(),col=new THREE.Color(),shirts=[0xd62f2f,0xf2c230,0x2e7dd7,0xffffff,0x2bb673,0xff7a1a,0x7a4fd6,0xff8fb8,0x3ec1d3],skins=[0xf1c9a5,0xe2b48d,0xc68e62,0x8d5a3b,0xf6d7bd],pants=[0x2a3a5a,0x3a3a3a,0x6b4b2e,0x1f5f8b];
   const base=[];
-  for(let k=0;k<cnt;k++){const i=(KI-Math.round(75/ds)+Math.floor(k/2)*Math.round(2.3/ds)+N)%N,side=k%2?1:-1,[x,z]=lateralPoint(i,side*rnd(6.3,8.2));
-    const b={x,y:groundH(x,z)-0.05,z,ry:Math.atan2(RTX[i],RTZ[i])+(side>0?-Math.PI/2:Math.PI/2)+rnd(-0.3,0.3),s:rnd(0.88,1.1),ph:rnd(0,6.28),sp:rnd(5,8)};base.push(b);
+  for(let k=0;k<cnt;k++){const r=roadAt(KI*ds-75+Math.floor(k/2)*2.3),side=k%2?1:-1,off=side*rnd(6.3,8.2),x=r.x-r.tz*off,z=r.z+r.tx*off; // in Metern, nicht in Streckenpunkten
+    const b={x,y:groundH(x,z)-0.05,z,ry:Math.atan2(r.tx,r.tz)+(side>0?-Math.PI/2:Math.PI/2)+rnd(-0.3,0.3),s:ok&&!ok(x,z)?0:rnd(0.88,1.1),ph:rnd(0,6.28),sp:rnd(5,8)};base.push(b);
     dm.position.set(b.x,b.y,b.z);dm.rotation.set(0,b.ry,0);dm.scale.setScalar(b.s);dm.updateMatrix();
     for(const m of [shirtM,skinM,legM])m.setMatrixAt(k,dm.matrix);
     shirtM.setColorAt(k,col.set(shirts[k%shirts.length]));skinM.setColorAt(k,col.set(skins[(k*7)%skins.length]));legM.setColorAt(k,col.set(pants[(k*3)%pants.length]));}
@@ -641,13 +641,13 @@ function gableGeo(){const g=new THREE.BufferGeometry();
     -.5,0,-.5, 0,1,-.5, 0,1,.5, -.5,0,-.5, 0,1,.5, -.5,0,.5,   .5,0,-.5, .5,0,.5, 0,1,.5, .5,0,-.5, 0,1,.5, 0,1,-.5];
   g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.computeVertexNormals();return g;}
 // Instanzen in Kacheln (wie die Vegetation), damit nur Sichtbares gezeichnet wird
-function chunkedInstances(geo,mat,items,opts={}){const buckets=new Map();
+function chunkedInstances(geo,mat,items,opts={}){const buckets=new Map(),out=[];
   for(const it of items){const k=Math.floor(it.x/CHUNK)+'|'+Math.floor(it.z/CHUNK);if(!buckets.has(k))buckets.set(k,{cx:(Math.floor(it.x/CHUNK)+0.5)*CHUNK,cz:(Math.floor(it.z/CHUNK)+0.5)*CHUNK,a:[]});buckets.get(k).a.push(it);}
   const dm=new THREE.Object3D(),col=new THREE.Color();
   for(const b of buckets.values()){let y0=1e9,y1=-1e9;for(const it of b.a){y0=Math.min(y0,it.y);y1=Math.max(y1,it.y+it.sy);}
     const m=new THREE.InstancedMesh(shareGeo(geo,(y0+y1)/2,CHUNK*0.75+(y1-y0)/2+30),mat,b.a.length);m.position.set(b.cx,0,b.cz);
-    b.a.forEach((it,i)=>{dm.position.set(it.x-b.cx,it.y,it.z-b.cz);dm.rotation.set(0,it.ry||0,0);dm.scale.set(it.sx,it.sy,it.sz);dm.updateMatrix();m.setMatrixAt(i,dm.matrix);col.set(it.c);m.setColorAt(i,col);});
-    m.castShadow=opts.shadow!==false;m.receiveShadow=true;scene.add(m);CULLS.push(m);}}
+    b.a.forEach((it,i)=>{dm.position.set(it.x-b.cx,it.y,it.z-b.cz);dm.rotation.set(it.rx||0,it.ry||0,0,'YXZ');dm.scale.set(it.sx,it.sy,it.sz);dm.updateMatrix();m.setMatrixAt(i,dm.matrix);col.set(it.c);m.setColorAt(i,col);});
+    m.castShadow=opts.shadow!==false;m.receiveShadow=true;scene.add(m);CULLS.push(m);out.push(m);}return out;}
 /* ---- Stadt ---- */
 let LANDMARK_FOOT=[];
 function footFree(x,z,pad){for(const f of LANDMARK_FOOT){if(Math.abs(x-f.x)<f.hx+pad&&Math.abs(z-f.z)<f.hz+pad)return false;}return true;}
@@ -1096,6 +1096,10 @@ function makeRider(jersey,label,frameCol){
   // Beine (IK pro Frame)
   const legs=[1,-1].map(s=>{const th=limb(black,0.068),shin=limb(skin,0.048),foot=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.06,0.25),shoe),knee=new THREE.Mesh(new THREE.SphereGeometry(0.052,8,6),skin);
     foot.castShadow=true;g.add(th,shin,foot,knee);return {s,th,shin,foot,knee};});
+  // unbewegliche Körperteile (Oberkörper, Kopf, Helm, Arme) zu einem Mesh zusammenfassen – spart ~19 Zeichenaufrufe pro Fahrer
+  {const keep=new Set([wR,wF,frame,...legs.flatMap(L=>[L.th,L.shin,L.foot,L.knee])]),parts=[],drop=[];
+    for(const o of g.children){if(!o.isMesh||keep.has(o))continue;o.updateMatrix();const gg=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();gg.applyMatrix4(o.matrix);parts.push([gg,o.material.color.getHex()]);drop.push(o);}
+    for(const o of drop)g.remove(o);g.add(new THREE.Mesh(merge(parts),new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6})));}
   g.userData={legs,crank,wR,wF,hip};
   animRider(g,0,0);
   if(label){const sp=textSprite(label);sp.position.y=2.05;g.add(sp);g.userData.label=sp;}
@@ -1112,17 +1116,69 @@ function animRider(o,phase,wheelAng){const u=o.userData;u.crank.rotation.x=-phas
     L.foot.position.set(_p.x,_p.y+0.03,_p.z+0.05);L.foot.rotation.x=Math.sin(ph)*0.25-0.1;}}
 function placeRider(o,dist,lat){const r=roadAt(dist),a=roadAt(dist+2),rx=-r.tz,rz=r.tx;
   o.position.set(r.x+rx*lat,r.h+0.25,r.z+rz*lat);o.lookAt(a.x+rx*lat,a.h+0.25,a.z+rz*lat);}
+/* ================= Mitfahrer & Gegenverkehr ================= */
+// Rollen: „Gruppe“ fährt mit dir (richtet sich nach deiner Leistung der letzten ~30 s und bleibt in deiner Nähe),
+// „langsam“ überholst du, „schnell“ überholt dich ab und zu. Wer weit weg ist, wird außer Sicht neu eingesetzt,
+// damit die Strecke nie leer wirkt. S.botMode: 'me' (fahren mit mir) | 'fixed' (Gruppe mit S.botWkg) | 'off'.
+const BOT_DEFS=[['Lena K.',0x2e7dd7,0xf2f2f2,'group'],['Jonas',0x2bb673,0x222222,'group'],['Aylin',0xd63aa8,0x222222,'group'],['Sven',0x7a4fd6,0xe8e8e8,'group'],
+  ['Tobi',0xf2c230,0x2a4a8a,'slow'],['Marie',0x18b5c9,0x9a1e1e,'slow'],['Hanna',0xff8fb8,0x222222,'slow'],['Paul',0xe04848,0x222222,'fast'],['Emre',0x3e8fe0,0xe8e8e8,'fast']];
 function initRiders(){
   player=makeRider(0xeb567b,null,0x1b1d22);
-  const defs=[['Lena K.',3.4,0x2e7dd7,0xf2f2f2],['Jonas',2.6,0x2bb673,0x222222],['Aylin',3.0,0xd63aa8,0x222222],['Tobi',2.2,0xf2c230,0x2a4a8a],['Sven',3.9,0x7a4fd6,0xe8e8e8],['Marie',2.8,0x18b5c9,0x9a1e1e],['Paul',2.4,0xe04848,0x222222]];
-  BOTS=defs.map((d,k)=>({color:d[2],name:d[0],wkg:d[1],mass:62+Math.random()*20,dist:(k-3)*14,v:7,lat:-2.5+Math.random()*5,latT:0,seed:Math.random()*100,phase:Math.random()*6,wheel:0,obj:makeRider(d[2],d[0],d[3])}));
-}
+  BOTS=BOT_DEFS.map(([name,color,frame,role])=>({name,color,role,mass:60+Math.random()*22,str:role==='group'?rnd(0.93,1.07):role==='slow'?rnd(0.66,0.8):rnd(1.18,1.32),
+    climb:rnd(0.88,1.12),off:rnd(-20,16),cad:rnd(82,94),dist:0,v:0,P:0,wkg:0,lat:0,latT:0,fat:0,surge:0,surgeT:rnd(60,200),seed:Math.random()*100,phase:Math.random()*6,wheel:0,active:true,
+    obj:makeRider(color,name,frame)}));
+  placeBotsStart();applyBotVis();initOncoming();}
+// Startaufstellung relativ zu dir (auch beim Wiedereinschalten mitten in der Fahrt)
+function placeBotsStart(){const gd=[-14,-7,8,15];let gk=0,sk=0,fk=0;
+  for(const b of BOTS){b.P=0;b.fat=0;b.surge=0;b._sg=undefined;
+    if(b.role==='group'){b.dist=S.dist+gd[gk++%4];b.v=S.v;b.lat=rnd(-0.6,2.4);}
+    else if(b.role==='slow'){b.dist=S.dist+200+sk++*230+rnd(0,60);b.v=Math.max(6,S.v*0.8);b.lat=rnd(1.4,2.6);}
+    else{b.dist=S.dist-170-fk++*170;b.v=Math.max(9,S.v);b.lat=rnd(-0.8,0.4);}
+    b.latT=b.lat;}}
+function applyBotVis(){const on=S.botMode!=='off'&&(typeof NET==='undefined'||NET.state!=='on'||$('iNetBots').checked);for(const b of BOTS){b.active=on;b.obj.visible=on;}}
+function stepBots(dt){if(S.botMode==='off')return;
+  const t=performance.now()/1000,follow=S.botMode==='me',ref=follow?S.p30/S.mass:S.botWkg,me=S.dist,curves=(FEELS[S.feel]||FEELS.real).curves;
+  for(const b of BOTS){if(!b.active)continue;const g=gradeAt(b.dist),gap=b.dist-me;let w;
+    if(b.role==='group'){w=ref*b.str;
+      // fährt mit dir: wer vorne wegzieht, lässt nach, wer hängt, drückt – jeder hat seinen Lieblingsplatz in der Gruppe
+      if(follow)w*=clamp(1-(gap-b.off)/90,0.6,1.35);
+      if(g>0.03)w*=b.climb;}
+    else{w=Math.max(ref,1.8)*b.str;if(g>0.03)w*=1.08*b.climb;}
+    b.fat=clamp(b.fat+dt*(g>0.04?1:-0.6)/900,0,0.15);w*=1-b.fat*(b.climb<1?1.6:0.6); // lange Anstiege machen müde
+    b.surgeT-=dt;if(b.surgeT<0){b.surge=b.role==='group'&&Math.random()<0.5?rnd(12,30):0;b.surgeT=rnd(90,240);} // ab und zu eine Attacke
+    if(b.surge>0){b.surge-=dt;w*=1.25;}
+    w*=1+0.05*Math.sin(t*0.07+b.seed)+0.03*Math.sin(t*0.37+b.seed*2);
+    const hangs=follow&&b.role==='group'&&gap<b.off-5; // wer in der Gruppe hinten hängt, tritt bergab weiter
+    if(!hangs){if(g<-0.035&&b.v>11)w=0;else if(g<-0.02)w*=0.4;} // bergab rollen lassen
+    let P=clamp(w*b.mass,0,b.mass*8);if(b.role==='group'&&(S.elapsed<1||(follow&&ref<0.05)))P=0; // Gruppe wartet, bis du losfährst
+    b.P+=(P-b.P)*Math.min(1,dt*1.5);b.wkg=b.P/b.mass;
+    b.v=advance(b.v,b.P,g,b.mass+PHYS.bike,draftFactor(b.dist,b),dt);
+    if(curves)b.v=Math.min(b.v,Math.max(Math.min(curveLimit(b.dist),VCOMF),b.v-CURVE_DEC*1.4*dt));
+    b.dist+=b.v*dt;b.wheel+=b.v/0.335*dt;b.phase+=(b.P>30?b.cad/60:0)*Math.PI*2*dt;
+    if(Math.random()<dt*0.1)b.latT=rnd(-0.9,2.6);b.lat+=(b.latT-b.lat)*dt*0.3; // rechte Straßenhälfte
+    // weit weg? außer Sicht (hinter dir bzw. weit vorne) neu einsetzen
+    const gp=b.dist-me;
+    if(b.role==='group'){if(follow?Math.abs(gp)>400:Math.abs(gp)>900){b.dist=me-rnd(60,100);b.v=Math.max(S.v,3);b._sg=undefined;}}
+    else if(b.role==='slow'){if(gp<-250||gp>1200){b.dist=me+rnd(350,600);b.v=Math.max(S.v*0.75,4);b._sg=undefined;}}
+    else if(gp>350||gp<-800){b.dist=me-rnd(200,330);b.v=Math.max(S.v*1.1,7);b._sg=undefined;}}}
+// Gegenverkehr: Radfahrer auf der linken Straßenhälfte, die dir entgegenkommen
+const ONC={list:[]};
+function initOncoming(){ONC.list=[];const n=S.quality==='low'?3:5,cols=[0x2bb673,0xd63aa8,0xf2c230,0x18b5c9,0xe04848,0x7a4fd6];
+  for(let k=0;k<n;k++){const o={obj:makeRider(cols[k%cols.length],null,k%2?0x222222:0xe8e8e8),d:0,v:0,base:7,lat:-3,phase:Math.random()*6,wheel:0};ONC.list.push(o);respawnOnc(o,k);}}
+function respawnOnc(o,k){o.d=S.dist+rnd(250,750)+(k||0)*130;o.base=rnd(6.5,9.5);o.v=o.base;o.lat=rnd(-3.4,-2.6);o._sg=undefined;}
+function stepOncoming(dt){const on=S.life&&S.started;
+  for(const o of ONC.list){if(!on){o.obj.visible=false;continue;}
+    const gOpp=-gradeAt(o.d),vT=o.base*clamp(1-6*gOpp,0.45,1.6);o.v+=(vT-o.v)*Math.min(1,dt*0.5);o.d-=o.v*dt;
+    o.phase+=(gOpp<-0.03&&o.v>9?0:1.45)*Math.PI*2*dt;o.wheel+=o.v/0.335*dt;
+    if(o.d<S.dist-60||o.d>S.dist+1500)respawnOnc(o);
+    placeRider(o.obj,o.d,o.lat);o.obj.rotateY(Math.PI);const d2=o.obj.position.distanceToSquared(camera.position);
+    o.obj.visible=d2<320*320;if(d2<200*200)animRider(o.obj,o.phase,o.wheel);}}
 
 /* ================= Physik ================= */
 function draftFactor(d,self){
   const check=o=>{const g=o-d;return g>0.6&&g<7;};
   if(self!==player&&check(S.dist))return 0.72;
-  for(const b of BOTS)if(b!==self&&b.obj.visible&&check(b.dist))return 0.72;
+  for(const b of BOTS)if(b!==self&&b.active&&check(b.dist))return 0.72;
   if(self===player&&NET.state==='on'&&netDraftCheck(d))return 0.72;return 1;}
 function roadForce(v,grade,mass,draft){const th=Math.atan(grade);
   return mass*PHYS.g*(Math.sin(th)+PHYS.crr*Math.cos(th))+0.5*PHYS.rho*PHYS.cda*draft*v*v;}
@@ -1153,11 +1209,9 @@ function stepPhysics(dt){
   const h=roadAt(S.dist).h;if(S.lastH!==null&&h>S.lastH)S.climb+=h-S.lastH;S.lastH=h;
   S.legPhase+=S.cadence/60*Math.PI*2*dt;
   const t=performance.now()/1000;
-  for(const b of BOTS){const br={grade:gradeAt(b.dist)};let P=b.wkg*b.mass*(1+0.08*Math.sin(t*0.05+b.seed)+0.04*Math.sin(t*0.31+b.seed*2));
-    if(br.grade>0.03)P*=1.12;if(br.grade<-0.03)P*=0.35;
-    b.v=advance(b.v,P,br.grade,b.mass+PHYS.bike,draftFactor(b.dist,b),dt);if((FEELS[S.feel]||FEELS.real).curves)b.v=Math.min(b.v,Math.max(Math.min(curveLimit(b.dist),VCOMF),b.v-CURVE_DEC*1.4*dt));b.dist+=b.v*dt;b.wheel+=b.v/0.335*dt;
-    b.phase+=(P>40?1.47:0)*Math.PI*2*dt;
-    if(Math.random()<dt*0.1)b.latT=-2.8+Math.random()*5.6;b.lat+=(b.latT-b.lat)*dt*0.3;}
+  // ~30-s-Mittel deiner Leistung (steigt schneller als es fällt): danach richten sich die Mitfahrer
+  {const p=T.pedaling?S.power:0;S.p30+=(p-S.p30)*Math.min(1,dt/(p>S.p30?8:25));}
+  stepBots(dt);
 }
 function trainerGradeCmd(){
   const r={grade:gradeAt(S.dist)},mass=S.mass+PHYS.bike;
@@ -1561,11 +1615,11 @@ async function netJoin(code,create){
   NET.state='on';netStatus('Online · Raum '+NET.room+(create?' (du bist Gastgeber)':''),'ok');
   if(!create)setTimeout(()=>{if(!NET.info&&NET.state==='on')netStatus('Raum '+NET.room+' gefunden? Noch kein Gastgeber – warte …','busy');},4000);
   $('netCode').textContent=NET.room;updateNetUi();try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:NET.host,ts:Date.now()}));}catch(e){}
-  BOTS.forEach(b=>b.obj.visible=$('iNetBots').checked);}
+  applyBotVis();}
 function publishRoom(){if(NET.client&&NET.host&&NET.info)NET.client.publish(netPrefix()+'/room',JSON.stringify(NET.info),{qos:1,retain:true});}
 function netLeave(){if(!NET.client)return;try{NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify({id:NET.id,left:true}));if(NET.host)NET.client.publish(netPrefix()+'/room','',{retain:true});NET.client.end(false);}catch(e){}
   NET.client=null;NET.state='off';NET.hold=false;for(const p of NET.peers.values())if(p.obj)scene.remove(p.obj);NET.peers.clear();NET.info=null;
-  BOTS.forEach(b=>b.obj.visible=true);try{localStorage.removeItem('kalea_net_room');}catch(e){}netStatus('Offline','');$('netBanner').classList.add('hidden');updateNetUi();}
+  applyBotVis();try{localStorage.removeItem('kalea_net_room');}catch(e){}netStatus('Offline','');$('netBanner').classList.add('hidden');updateNetUi();}
 function sameTrack(m){return m.w===WORLD&&m.r===ROUTE.id;}
 function onRoomInfo(m){if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Gastgeber hat den Raum geschlossen.','bad');NET.info=null;NET.hold=false;updateNetUi();}return;}
   NET.info=m;if(m.host===NET.id)NET.host=true;
@@ -1638,7 +1692,7 @@ function wireNet(){
   $('netCols').innerHTML=NET_COLS.map(c=>`<button class="colchip" data-c="${c}" style="background:#${c.toString(16).padStart(6,'0')}" aria-label="Trikotfarbe"></button>`).join('');
   const mark=()=>document.querySelectorAll('.colchip').forEach(b=>b.classList.toggle('on',+b.dataset.c===S.netCol));mark();
   document.querySelectorAll('.colchip').forEach(b=>b.onclick=()=>{S.netCol=+b.dataset.c;mark();saveNetPrefs();if(player){scene.remove(player);player=makeRider(S.netCol,null,0x1b1d22);toonify(player);}});
-  $('iNetName').onchange=saveNetPrefs;$('iNetBots').onchange=()=>{saveNetPrefs();if(NET.state==='on')BOTS.forEach(b=>b.obj.visible=$('iNetBots').checked);};
+  $('iNetName').onchange=saveNetPrefs;$('iNetBots').onchange=()=>{saveNetPrefs();applyBotVis();};
   $('netCreate').onclick=()=>{const code=Array.from({length:5},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');netJoin(code,true);};
   $('netJoin').onclick=()=>netJoin($('iNetCode').value,false);
   $('netLeave').onclick=netLeave;$('netStart').onclick=netStartRace;
@@ -1942,7 +1996,7 @@ function updateHud(now){
   updateKomHud(now);if(now-ridersT>500){ridersT=now;updateRiders();drawProfile();updateErgUi();updateWorkoutHud();}
 }
 function updateRiders(){
-  const rows=BOTS.filter(b=>b.obj.visible).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
+  const rows=BOTS.filter(b=>b.active).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
   if(NET.state==='on')for(const q of NET.peers.values())if(q.obj)rows.push({n:'🌐 '+q.n,gap:q.disp-S.dist,w:q.wkg,net:true});
   rows.sort((a,b)=>b.gap-a.gap);
   $('riders').innerHTML=rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?r.w.toFixed(1)+' W/kg':(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
@@ -1956,7 +2010,7 @@ function drawProfile(){
   x.beginPath();x.moveTo(0,h);const step=Math.max(1,Math.floor(N/w));
   for(let i=0;i<N;i+=step)x.lineTo(i/N*w,Y(RH[i]));x.lineTo(w,Y(RH[0]));x.lineTo(w,h);x.closePath();x.fillStyle=grd;x.fill();x.lineWidth=2;x.strokeStyle='#1e0f3a';x.stroke();
   const pos=d=>((d%L)+L)%L/L*w;
-  x.fillStyle='#ffffff';x.strokeStyle='#1e0f3a';x.lineWidth=1.5;for(const b of BOTS){const px=pos(b.dist);x.beginPath();x.arc(px,Y(roadAt(b.dist).h),3,0,7);x.fill();x.stroke();}
+  x.fillStyle='#ffffff';x.strokeStyle='#1e0f3a';x.lineWidth=1.5;for(const b of BOTS){if(!b.active)continue;const px=pos(b.dist);x.beginPath();x.arc(px,Y(roadAt(b.dist).h),3,0,7);x.fill();x.stroke();}
   const px=pos(S.dist);x.strokeStyle='#1e0f3a';x.lineWidth=2;x.setLineDash([4,3]);x.beginPath();x.moveTo(px,0);x.lineTo(px,h);x.stroke();x.setLineDash([]);
   x.fillStyle='#eb567b';x.beginPath();x.arc(px,Y(roadAt(S.dist).h),6,0,7);x.fill();x.lineWidth=2.5;x.stroke();
   const lap=Math.floor(Math.max(0,S.dist)/L)+1,d=((S.dist%L)+L)%L,i=Math.floor(d/ds)%N;
@@ -2050,7 +2104,8 @@ function sndStep(now){if(now-SND.last<100)return;SND.last=now;
   SND.lastD=live?S.dist:null;
   if(live){const pass=(o,d,lat,ov)=>{const g=d-S.dist,pg=o._sg;o._sg=g;
       if(pg!==undefined&&(pg>0)!==(g>0)&&Math.abs(g)<5&&Math.abs(lat-0.8)<4)sndBurst(t+0.01,0.35,1700,500,0.11*(0.3+sat(Math.abs(ov-S.v)/3)),clamp((lat-0.8)/3,-0.9,0.9),SND.bus.amb);};
-    for(const b of BOTS)if(b.obj.visible)pass(b,b.dist,b.lat,b.v);
+    for(const b of BOTS)if(b.active)pass(b,b.dist,b.lat,b.v);
+    for(const o of ONC.list)if(o.obj.visible)pass(o,o.d,o.lat,-o.v);
     for(const q of NET.peers.values())if(q.obj)pass(q,q.disp,q.lat,q.v||0);}
   if(L.drive){set(L.drive.g.gain,ped?0.18*sat(v/2.5)*(0.7+0.3*sat(v/12)):0,0.2);set(L.drive.s.playbackRate,clamp((S.cadence>20?S.cadence:85)/88,0.65,1.35),0.3);}
   if(L.free){const on=live&&!ped&&v>1.2;set(L.free.g.gain,on?0.1*sat((v-1.2)/5):0,on?0.35:0.12);set(L.free.s.playbackRate,clamp(v/11,0.45,1.3),0.3);}
@@ -2058,7 +2113,7 @@ function sndStep(now){if(now-SND.last<100)return;SND.last=now;
   let water=0,city=0;
   if(live){const p=player.position;
     if(IS_ULM){water=sat(1-(riverDist(p.x,p.z).d-RIVER_HW)/150)*0.5;city=sat(ulmZone(p.x,p.z).d)*0.12;}
-    else{let w=0;for(let k=0;k<8;k++){const a=k*Math.PI/4;if(rawHeight(p.x+Math.cos(a)*120,p.z+Math.sin(a)*120)<0)w++;}water=sat(w/3)*0.6;}}
+    else{let w=0;for(let k=0;k<8;k++){const a=k*Math.PI/4;for(const r of [150,300])if(rawHeight(p.x+Math.cos(a)*r,p.z+Math.sin(a)*r)<0)w+=r<200?1:0.5;}water=sat(w/3)*0.6;}}
   set(L.water.g.gain,water*(IS_ULM?1:0.6+0.4*Math.sin(t*0.9)*Math.sin(t*0.37)),0.8);set(L.city.g.gain,city,1.0);
   if(live&&t>SND.nextBird){SND.nextBird=t+rnd(4,11);if(city<0.2&&Math.random()<0.8)sndBirds();}}
 
@@ -2175,11 +2230,13 @@ function balloons(n,cx,cz,R,y0){const stripes=[[0xe8463c,0xffd23f],[0x3ec1d3,0xf
     g.traverse(o=>{if(o.isMesh)o.castShadow=false;});scene.add(g);BALLOONS.push(g);}}
 // Vogelschwärme
 let BIRDS=[];
-function birds(n){const wing=new THREE.BufferGeometry();wing.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,-1.4,0.5,-0.35,-1.4,0,0.35, 0,0,0,1.4,0,0.35,1.4,0.5,-0.35],3));wing.computeVertexNormals();
-  const m=new THREE.MeshBasicMaterial({color:0x1e0f3a,side:THREE.DoubleSide});
-  for(let f=0;f<n;f++){const flock=new THREE.Group(),cnt=5+Math.floor(Math.random()*5);
+function birds(n,o={}){const wing=new THREE.BufferGeometry();wing.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,-1.4,0.5,-0.35,-1.4,0,0.35, 0,0,0,1.4,0,0.35,1.4,0.5,-0.35],3));wing.computeVertexNormals();
+  const m=new THREE.MeshBasicMaterial({color:o.col||0x1e0f3a,side:THREE.DoubleSide}),C=o.cnt||[5,9],Y=o.y||[140,260],R=o.r||[600,1400],SP=o.sp||[0.02,0.04],out=[];
+  for(let f=0;f<n;f++){const flock=new THREE.Group(),cnt=C[0]+Math.floor(Math.random()*(C[1]-C[0]+1));
     for(let k=0;k<cnt;k++){const b=new THREE.Mesh(wing,m);const row=Math.ceil(k/2),side=k%2?1:-1;b.position.set(side*row*3,rnd(-0.5,0.5),row*3.5);b.userData.ph=rnd(0,6);flock.add(b);}
-    flock.position.set(rnd(-1500,1500),rnd(140,260),rnd(-1500,1500));flock.userData={ang:rnd(0,6.28),r:rnd(600,1400),sp:rnd(0.02,0.04),cy:flock.position.y,cx:rnd(-600,600),cz:rnd(-600,600)};scene.add(flock);BIRDS.push(flock);}}
+    if(o.s)flock.scale.setScalar(o.s);const c=o.center?o.center():[rnd(-600,600),rnd(-600,600)];
+    flock.position.set(c[0],rnd(Y[0],Y[1]),c[1]);flock.userData={ang:rnd(0,6.28),r:rnd(R[0],R[1]),sp:rnd(SP[0],SP[1]),cy:flock.position.y,cx:c[0],cz:c[1]};scene.add(flock);BIRDS.push(flock);out.push(flock);}
+  return out;}
 // Schafe auf Wiesen
 function sheep(count,ok){const body=new THREE.IcosahedronGeometry(0.75,1);body.scale(1.25,0.9,0.95);body.translate(0,0.95,0);
   const head=new THREE.BoxGeometry(0.42,0.46,0.5);head.translate(1.0,1.15,0);const leg=new THREE.CylinderGeometry(0.07,0.07,0.6,4);
@@ -2265,7 +2322,7 @@ function drawMap(c,opts){
     x.lineWidth=3;x.strokeStyle='rgba(255,250,240,.95)';x.strokeText(lb.t,px,py-5);x.fillStyle='#1e0f3a';x.fillText(lb.t,px,py-5);}
   // andere Fahrer
   const dot=(o,col,r)=>{const [px,py]=T2(o.x,o.z);x.fillStyle=col;x.strokeStyle='#1e0f3a';x.lineWidth=1.5;x.beginPath();x.arc(px,py,r,0,7);x.fill();x.stroke();};
-  for(const b of BOTS)if(b.obj.visible)dot(b.obj.position,'#'+b.color.toString(16).padStart(6,'0'),3.5);
+  for(const b of BOTS)if(b.active)dot(b.obj.position,'#'+b.color.toString(16).padStart(6,'0'),3.5);
   if(typeof NET!=='undefined')for(const r of NET.peers.values())if(r.obj)dot(r.obj.position,'#'+(r.col||0x490cb8).toString(16).padStart(6,'0'),5);
   // ich: Pfeil in Fahrtrichtung
   {const r=roadAt(S.dist),[px,py]=T2(me.x,me.z),ang=Math.atan2(r.tz,r.tx)+rot;
@@ -2458,7 +2515,8 @@ function frame(now){
   if(now-PERF.lastF<1000/cap-1.5)return;PERF.lastF=now;perfTick(now);const dt=Math.min(0.1,(now-last)/1000);last=now;const t=now/1000;
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8);animRider(player,S.legPhase,S.wheel);
-  for(const b of BOTS){placeRider(b.obj,b.dist,b.lat);const d2=b.obj.position.distanceToSquared(camera.position);if(d2<200*200)animRider(b.obj,b.phase,b.wheel);if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
+  for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel);if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
+  stepLife(dt,t);
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
@@ -2522,6 +2580,10 @@ function wireUi(){
   $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
+  $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;
+  $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'&&S.botMode!=='off')placeBotsStart();};
+  $('iBotWkg').onchange=()=>{S.botWkg=clamp(+$('iBotWkg').value||2.5,1,6);$('iBotWkg').value=S.botWkg;saveSettings();};
+  $('iLife').onchange=()=>{S.life=$('iLife').checked;saveSettings();applyLifeVis();};
   $('iSndBike').value=Math.round(S.sndBike*100);$('iSndAmb').value=Math.round(S.sndAmb*100);sndVolume();
   $('iSndBike').oninput=()=>{S.sndBike=$('iSndBike').value/100;sndVolume();};$('iSndAmb').oninput=()=>{S.sndAmb=$('iSndAmb').value/100;sndVolume();};
   $('iSndBike').onchange=$('iSndAmb').onchange=()=>{saveSettings();if(S.sndBike>0)sndPlay('up1',0.6,1);};$('bFs').onclick=toggleFullscreen;
@@ -2568,6 +2630,173 @@ function wireUi(){
     else if(k==='Escape'){if(!$('devDlg').classList.contains('hidden')){closeDevices();return;}if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});
 }
 
+/* ================= Leben am Rand: Fußgänger, Hunde, Menschen, Tiere, Boote, Autos ================= */
+// Alles einfache Comic-Figuren als InstancedMesh; bewegt wird nur, was in deiner Nähe ist. S.life schaltet es ab.
+const LIFE={walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]};
+const SHIRTS=[0xd62f2f,0xf2c230,0x2e7dd7,0xffffff,0x2bb673,0xff7a1a,0x7a4fd6,0xff8fb8,0x3ec1d3,0x1e2a44,0x8a8f99],SKINS=[0xf1c9a5,0xe2b48d,0xc68e62,0x8d5a3b,0xf6d7bd],
+  PANTS=[0x2a3a5a,0x3a3a3a,0x6b4b2e,0x1f5f8b,0x55606e,0xc9b27a];
+const pick=a=>a[Math.random()*a.length|0];
+function lifeMat(vc){return new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:!!vc,roughness:0.8});}
+// Figur (Blick in +z): Oberkörper mit Armen, Kopf mit Händen, Beine einzeln (Drehpunkt an der Hüfte) oder zusammen
+function personGeos(){if(personGeos.g)return personGeos.g;
+  const arm=s=>tr(new THREE.CylinderGeometry(0.05,0.055,0.6,5),[s*0.25,1.06,0],[0,0,s*0.12]);
+  const shirt=mergeGeos([tr(new THREE.CylinderGeometry(0.17,0.2,0.68,8),[0,1.06,0]),arm(1),arm(-1)]);
+  const skin=mergeGeos([tr(new THREE.IcosahedronGeometry(0.17,1),[0,1.58,0]),tr(new THREE.IcosahedronGeometry(0.06,0),[0.29,0.76,0]),tr(new THREE.IcosahedronGeometry(0.06,0),[-0.29,0.76,0])]);
+  const leg=mergeGeos([tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[0,-0.36,0])]);
+  const legs=mergeGeos([tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[0.1,0.36,0]),tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[-0.1,0.36,0])]);
+  return personGeos.g={shirt,skin,leg,legs};}
+function dogGeo(){const C=(r,h)=>new THREE.CylinderGeometry(r,r,h,5);
+  return mergeGeos([tr(new THREE.BoxGeometry(0.28,0.28,0.62),[0,0.42,0]),tr(new THREE.BoxGeometry(0.22,0.22,0.26),[0,0.62,0.38]),tr(new THREE.BoxGeometry(0.12,0.1,0.14),[0,0.57,0.56]),
+    tr(new THREE.BoxGeometry(0.06,0.1,0.04),[0.08,0.76,0.36]),tr(new THREE.BoxGeometry(0.06,0.1,0.04),[-0.08,0.76,0.36]),
+    tr(C(0.04,0.3),[0.1,0.15,0.22]),tr(C(0.04,0.3),[-0.1,0.15,0.22]),tr(C(0.04,0.3),[0.1,0.15,-0.22]),tr(C(0.04,0.3),[-0.1,0.15,-0.22]),tr(C(0.025,0.3),[0,0.6,-0.4],[-0.8,0,0])]);}
+// Stimmt der Punkt mit einem echten OSM-Haus überein? (Grundrisse mit Begrenzungsrahmen)
+function inOsm(x,z){for(const P of MAPPOLY){let bb=P.bb;if(!bb){bb=P.bb=[1e9,1e9,-1e9,-1e9];for(const q of P){bb[0]=Math.min(bb[0],q[0]);bb[1]=Math.min(bb[1],q[1]);bb[2]=Math.max(bb[2],q[0]);bb[3]=Math.max(bb[3],q[1]);}}
+    if(x<bb[0]-1||x>bb[2]+1||z<bb[1]-1||z>bb[3]+1)continue;let c=false;
+    for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c;}if(c)return true;}return false;}
+function nearOsm(x,z,r){return inOsm(x,z)||inOsm(x+r,z)||inOsm(x-r,z)||inOsm(x,z+r)||inOsm(x,z-r);}
+function freeSpot(x,z,road){return !nearestRoad(x,z,road||5.5)&&occFree(x,z,0,1,1)&&(!IS_ULM||(riverDist(x,z).d>RIVER_HW+5&&!inOsm(x,z)))&&(IS_ULM||rawHeight(x,z)>0.15);}
+
+// ---- Fußgänger und Jogger am Straßenrand (manche mit Hund), immer in deiner Nähe ----
+const _wo=new THREE.Object3D(),_wl=new THREE.Object3D(),_wd=new THREE.Object3D(),_Z0=new THREE.Matrix4().makeScale(0,0,0);_wo.add(_wl,_wd);
+function buildWalkers(n){const G=personGeos(),mk=geo=>{const m=new THREE.InstancedMesh(geo,lifeMat(false),n);m.castShadow=true;m.frustumCulled=false;scene.add(m);LIFE.statics.push(m);return m;};
+  const W=LIFE.wm={shirt:mk(G.shirt),skin:mk(G.skin),legL:mk(G.leg),legR:mk(G.leg),dog:mk(dogGeo())},col=new THREE.Color();
+  for(let k=0;k<n;k++){const pants=pick(PANTS);W.shirt.setColorAt(k,col.set(pick(SHIRTS)));W.skin.setColorAt(k,col.set(pick(SKINS)));W.legL.setColorAt(k,col.set(pants));W.legR.setColorAt(k,col.set(pants));
+    W.dog.setColorAt(k,col.set(pick([0x8a5a36,0x2b2422,0xe8dcc8,0xc8913c,0x6b6b6b])));for(const m of Object.values(W))m.setMatrixAt(k,_Z0);
+    LIFE.walk.push({k,d:0,off:0,dir:1,sp:1,jog:false,dog:false,ph:rnd(0,6.28),s:1,y:0,yd:-1e9,hide:true,init:false});}}
+function respawnWalker(w,first){
+  for(let t=0;t<8;t++){const d=S.dist+(first?rnd(-60,650):rnd(150,650)),off=(Math.random()<0.5?-1:1)*rnd(7.0,8.6),r=roadAt(d),x=r.x-r.tz*off,z=r.z+r.tx*off;
+    if(IS_ULM&&Math.random()>0.2+0.8*ulmZone(x,z).d)continue; // in der Stadt mehr Leute
+    if(!freeSpot(x,z))continue;
+    Object.assign(w,{d,off,dir:Math.random()<0.5?1:-1,jog:Math.random()<0.3,hide:false,yd:-1e9,s:rnd(0.9,1.08)});w.sp=w.jog?rnd(2.3,3.1):rnd(1.0,1.5);w.dog=!w.jog&&Math.random()<0.35;return;}
+  w.hide=true;}
+function stepWalkers(dt){const W=LIFE.wm;if(!W)return;const on=S.life&&S.started;for(const m of Object.values(W))m.visible=on;if(!on)return;
+  for(const w of LIFE.walk){
+    if(!w.init){w.init=true;respawnWalker(w,true);}
+    else if(w.hide){if(Math.random()<dt*0.5)respawnWalker(w);}
+    else{w.d+=w.dir*w.sp*dt;if(w.d<S.dist-80||w.d>S.dist+900)respawnWalker(w);}
+    if(w.hide){for(const m of Object.values(W))m.setMatrixAt(w.k,_Z0);continue;}
+    let r=roadAt(w.d),x=r.x-r.tz*w.off,z=r.z+r.tx*w.off;
+    if(Math.abs(w.d-w.yd)>2){if(!freeSpot(x,z,4.5)){w.dir=-w.dir;w.d+=w.dir*2.5;r=roadAt(w.d);x=r.x-r.tz*w.off;z=r.z+r.tx*w.off;} // vor Wasser/Haus umdrehen
+      w.y=groundH(x,z)-0.03;w.yd=w.d;}
+    w.ph+=dt*w.sp*(w.jog?2.4:3.4);const sw=Math.sin(w.ph)*(w.jog?0.7:0.42),bob=Math.abs(Math.cos(w.ph))*(w.jog?0.07:0.03);
+    _wo.position.set(x,w.y+bob,z);_wo.rotation.set(w.jog?0.12:0,Math.atan2(r.tx,r.tz)+(w.dir<0?Math.PI:0),0,'YXZ');_wo.scale.setScalar(w.s);_wo.updateMatrixWorld(true);
+    W.shirt.setMatrixAt(w.k,_wo.matrixWorld);W.skin.setMatrixAt(w.k,_wo.matrixWorld);
+    _wl.position.set(0.1,0.72,0);_wl.rotation.set(sw,0,0);_wl.updateMatrixWorld(true);W.legL.setMatrixAt(w.k,_wl.matrixWorld);
+    _wl.position.set(-0.1,0.72,0);_wl.rotation.set(-sw,0,0);_wl.updateMatrixWorld(true);W.legR.setMatrixAt(w.k,_wl.matrixWorld);
+    if(w.dog){_wd.position.set(0.55,-bob+Math.abs(Math.sin(w.ph*1.3))*0.04,0.9);_wd.rotation.set(0,Math.sin(w.ph*0.4)*0.2,0);_wd.updateMatrixWorld(true);W.dog.setMatrixAt(w.k,_wd.matrixWorld);}
+    else W.dog.setMatrixAt(w.k,_Z0);}
+  for(const m of Object.values(W))m.instanceMatrix.needsUpdate=true;}
+
+// ---- Stehende Menschen (Plätze, Strand) ----
+function staticPeople(list){const G=personGeos(),a=[],b=[],c=[];
+  for(const p of list){const s=rnd(0.9,1.06),base={x:p.x,z:p.z,y:p.y!==undefined?p.y:groundH(p.x,p.z)-0.03,sx:s,sy:s,sz:s,ry:p.ry!==undefined?p.ry:rnd(0,6.28),rx:p.rx||0};
+    a.push({...base,c:pick(SHIRTS)});b.push({...base,c:pick(SKINS)});c.push({...base,c:pick(PANTS)});}
+  if(list.length)LIFE.statics.push(...chunkedInstances(G.shirt,lifeMat(),a),...chunkedInstances(G.skin,lifeMat(),b),...chunkedInstances(G.legs,lifeMat(),c));}
+function scatterPeople(L,cx,cz,w,h,n,ok){for(let t=0,c=0;t<n*15&&c<n;t++){const x=cx+rnd(-w,w),z=cz+rnd(-h,h);if(!freeSpot(x,z)||(ok&&!ok(x,z)))continue;L.push({x,z});c++;}}
+function peopleUlm(){const P=ULM.places,L=[],m=P.muenster;
+  scatterPeople(L,m[0]-135,m[1],60,55,28,(x,z)=>!(Math.abs(x-m[0]-2)<76&&Math.abs(z-m[1])<31)); // Münsterplatz (westlich vom Münster)
+  scatterPeople(L,P.rathaus[0],P.rathaus[1]-31,45,35,12,(x,z)=>footFree(x,z,0.5));            // Marktplatz am Rathaus
+  if(P.friedrichsau)scatterPeople(L,P.friedrichsau[0],P.friedrichsau[1],160,120,20,(x,z)=>footFree(x,z,1)); // Park
+  staticPeople(L);}
+function beachLife(){const L=[],towels=[],umbr=[],crabs=[],step=Math.round(40/ds);
+  for(let i=0;i<N;i+=step)for(const sd of [-1,1]){if(Math.random()>0.5)continue;let x=0,z=0,h=9;
+    for(let o=20;o<=450;o+=10){[x,z]=lateralPoint(i,sd*o);h=rawHeight(x,z);if(h<1.6)break;} // nach außen bis zum Sand
+    if(h<0.2||h>1.6||nearestRoad(x,z,12))continue;
+    const ry=rnd(0,6.28),n=2+(Math.random()*2|0);umbr.push({x,z,y:groundH(x,z)-0.1,ry,sx:1,sy:1,sz:1,c:pick([0xe8463c,0xf2c230,0x3ec1d3,0xff8fb8,0x7ad35a,0xffffff])});
+    for(let q=0;q<n;q++){const px=x+Math.cos(ry+q*2.1)*1.6,pz=z+Math.sin(ry+q*2.1)*1.6,gy=groundH(px,pz);
+      if(Math.random()<0.55){towels.push({x:px,z:pz,y:gy+0.01,ry:ry+q,sx:1,sy:1,sz:1,c:pick(SHIRTS)});L.push({x:px,z:pz,y:gy+0.2,ry:ry+q,rx:-Math.PI/2});}  // liegt auf dem Handtuch
+      else L.push({x:px,z:pz});}
+    for(let q=0;q<2;q++){const cx2=x+rnd(-8,8),cz2=z+rnd(-8,8),ch=rawHeight(cx2,cz2);if(ch>0.05&&ch<1.2)crabs.push({x:cx2,z:cz2,y:groundH(cx2,cz2),ry:rnd(0,6.28),sx:1,sy:1,sz:1,c:0xffffff});}}
+  staticPeople(L);
+  LIFE.statics.push(...chunkedInstances(new THREE.BoxGeometry(0.9,0.03,1.9),lifeMat(),towels,{shadow:false}));
+  LIFE.statics.push(...chunkedInstances(merge([[tr(new THREE.CylinderGeometry(0.03,0.03,2.2,5),[0,1.1,0]),0xffffff],[tr(new THREE.ConeGeometry(1.15,0.5,10),[0,2.3,0]),0xffffff]]),lifeMat(true),umbr));
+  const crab=merge([[tr(new THREE.IcosahedronGeometry(0.13,0),[0,0.06,0],[0,0,0],[1.3,0.45,1]),0xd8452e],[tr(new THREE.IcosahedronGeometry(0.05,0),[0.17,0.06,0.1]),0xe0553a],[tr(new THREE.IcosahedronGeometry(0.05,0),[-0.17,0.06,0.1]),0xe0553a]]);
+  LIFE.statics.push(...chunkedInstances(crab,lifeMat(true),crabs,{shadow:false}));
+  // Fischerdorf
+  const F=[],r=roadAt(500);for(let t=0;t<200&&F.length<14;t++){const i=(Math.round((500+rnd(-70,70))/ds)+N)%N,[x,z]=lateralPoint(i,(Math.random()<0.5?-1:1)*rnd(8,32));if(rawHeight(x,z)>0.8&&freeSpot(x,z))F.push({x,z});}
+  staticPeople(F);}
+
+// ---- Tiere ----
+function herd(geo,count,ok,cols,group,kind){const items=[];let tries=0;
+  while(items.length<count&&tries<count*60){tries++;const i=Math.random()*N|0,[x,z]=lateralPoint(i,(Math.random()<0.5?-1:1)*rnd(25,110));if(!ok(x,z))continue;
+    for(let q=0;q<group&&items.length<count;q++){const sx=x+rnd(-12,12),sz=z+rnd(-12,12);if(nearestRoad(sx,sz,12)||!ok(sx,sz)||(IS_ULM&&nearOsm(sx,sz,8)))continue;const s=rnd(0.9,1.1);
+      items.push({x:sx,z:sz,y:groundH(sx,sz)-0.05,ry:rnd(0,6.28),sx:s,sy:s,sz:s,c:pick(cols)});}}
+  const ms=chunkedInstances(geo,lifeMat(true),items);for(const m of ms)m.userData.kind=kind;LIFE.statics.push(...ms);}
+function cowGeo(){const L=(x,z)=>[tr(new THREE.CylinderGeometry(0.07,0.07,0.65,5),[x,0.33,z]),0xf0f0f0];
+  return merge([[tr(new THREE.BoxGeometry(0.65,0.75,1.5),[0,1.0,0]),0xf4f4f0],[tr(new THREE.BoxGeometry(0.67,0.5,0.6),[0,1.08,0.15]),0x2a2422],[tr(new THREE.BoxGeometry(0.67,0.35,0.35),[0,0.95,-0.5]),0x2a2422],
+    [tr(new THREE.BoxGeometry(0.36,0.4,0.45),[0,1.15,0.95]),0xf4f4f0],[tr(new THREE.BoxGeometry(0.3,0.22,0.2),[0,1.03,1.2]),0xe8b4a8],[tr(new THREE.BoxGeometry(0.5,0.06,0.06),[0,1.38,0.9]),0xe8e0c8],
+    L(0.22,0.55),L(-0.22,0.55),L(0.22,-0.55),L(-0.22,-0.55)]);}
+function horseGeo(){const L=(x,z)=>[tr(new THREE.CylinderGeometry(0.06,0.06,0.95,5),[x,0.48,z]),0x5a3a22];
+  return merge([[tr(new THREE.BoxGeometry(0.5,0.6,1.5),[0,1.22,0]),0x8a5a36],[tr(new THREE.BoxGeometry(0.3,0.75,0.3),[0,1.6,0.75],[0.6,0,0]),0x8a5a36],
+    [tr(new THREE.BoxGeometry(0.25,0.25,0.6),[0,1.9,1.05],[0.4,0,0]),0x8a5a36],[tr(new THREE.BoxGeometry(0.08,0.6,0.08),[0,1.0,-0.8],[-0.3,0,0]),0x2a1a12],[tr(new THREE.BoxGeometry(0.06,0.6,0.35),[0,1.85,0.68],[0.6,0,0]),0x2a1a12],
+    L(0.17,0.55),L(-0.17,0.55),L(0.17,-0.55),L(-0.17,-0.55)]);}
+function storkGeo(){return merge([[tr(new THREE.IcosahedronGeometry(0.3,1),[0,1.0,0],[0,0,0],[0.7,0.7,1.3]),0xf6f6f2],[tr(new THREE.BoxGeometry(0.44,0.18,0.5),[0,1.02,-0.18]),0x1e1e1e],
+    [tr(new THREE.CylinderGeometry(0.04,0.05,0.45,5),[0,1.3,0.28],[0.5,0,0]),0xf6f6f2],[tr(new THREE.IcosahedronGeometry(0.08,0),[0,1.5,0.38]),0xf6f6f2],[tr(new THREE.ConeGeometry(0.03,0.3,5),[0,1.47,0.55],[Math.PI/2,0,0]),0xe0452a],
+    [tr(new THREE.CylinderGeometry(0.02,0.02,0.75,4),[0.07,0.38,0]),0xe0452a],[tr(new THREE.CylinderGeometry(0.02,0.02,0.75,4),[-0.07,0.38,0]),0xe0452a]]);}
+function duckGeo(){return merge([[tr(new THREE.IcosahedronGeometry(0.18,1),[0,0.08,0],[0,0,0],[0.8,0.6,1.3]),0x8a6a4a],[tr(new THREE.IcosahedronGeometry(0.09,1),[0,0.25,0.2]),0x1f6b3a],[tr(new THREE.BoxGeometry(0.05,0.03,0.1),[0,0.23,0.31]),0xf0a020]]);}
+function swanGeo(){return merge([[tr(new THREE.IcosahedronGeometry(0.35,1),[0,0.15,0],[0,0,0],[0.8,0.6,1.4]),0xffffff],[tr(new THREE.CylinderGeometry(0.05,0.06,0.6,6),[0,0.52,0.32],[-0.25,0,0]),0xffffff],
+    [tr(new THREE.IcosahedronGeometry(0.08,1),[0,0.82,0.42]),0xffffff],[tr(new THREE.BoxGeometry(0.05,0.05,0.14),[0,0.8,0.53]),0xf08a20]]);}
+function waterBirds(){const segs=RIV.filter(sg=>nearestRoad((sg.a[0]+sg.b[0])/2,(sg.a[1]+sg.b[1])/2,700));if(!segs.length)return;
+  for(const [geo,n,fam] of [[duckGeo(),32,4],[swanGeo(),8,2]]){const m=new THREE.InstancedMesh(geo,lifeMat(true),n);m.frustumCulled=false;scene.add(m);LIFE.statics.push(m);LIFE.duckMs.push(m);
+    for(let k=0;k<n;){const sg=pick(segs),u=Math.random(),v=rnd(-0.55,0.55)*RIVER_HW,bx=sg.a[0]+sg.dx*u-sg.tz*v,bz=sg.a[1]+sg.dz*u+sg.tx*v,amp=rnd(8,22),sp=rnd(0.02,0.05),ph=rnd(0,6.28);
+      for(let q=0;q<fam&&k<n;q++,k++)LIFE.ducks.push({m,k,bx:bx+rnd(-2.5,2.5)*sg.tz,bz:bz-rnd(-2.5,2.5)*sg.tx,tx:sg.tx,tz:sg.tz,ph:ph+q*0.08,sp,amp,bob:rnd(0,6)});}}}
+// Ausflugsboote auf der Donau (fahren rund um die Altstadt hin und her)
+function riverBoats(){const r=ULM.river,cum=[0];for(let i=1;i<r.length;i++)cum.push(cum[i-1]+Math.hypot(r[i][0]-r[i-1][0],r[i][1]-r[i-1][1]));
+  let mi=0,md=1e9;r.forEach((q,i)=>{const d=Math.hypot(q[0]-ULM.places.muenster[0],q[1]-ULM.places.muenster[1]);if(d<md){md=d;mi=i;}});
+  const geo=merge([[tr(new THREE.BoxGeometry(2.8,1.0,10),[0,0.4,0]),0xf2f2f2],[tr(new THREE.BoxGeometry(2.82,0.18,10.02),[0,0.72,0]),0x2e5fa8],[tr(new THREE.BoxGeometry(2.4,1.3,6),[0,1.55,-0.5]),0xeaeaea],
+    [tr(new THREE.BoxGeometry(2.44,0.45,5.6),[0,1.65,-0.5]),0x2a3540],[tr(new THREE.BoxGeometry(2.6,0.12,6.4),[0,2.25,-0.5]),0x2e5fa8],[tr(new THREE.ConeGeometry(1.4,2.2,4),[0,0.4,6.0],[Math.PI/2,Math.PI/4,0],[1,1,0.45]),0xf2f2f2]]);
+  const s0=Math.max(0,cum[mi]-1500),s1=Math.min(cum[cum.length-1],cum[mi]+1500),mat=lifeMat(true);
+  for(let k=0;k<2;k++){const m=new THREE.Mesh(geo,mat);m.castShadow=true;scene.add(m);LIFE.statics.push(m);LIFE.rboats.push({m,s:s0+(s1-s0)*(0.3+0.4*k),dir:k?1:-1,s0,s1,cum,r});}}
+function stepRiverBoat(b,dt){b.s+=b.dir*2.2*dt;if(b.s>b.s1){b.s=b.s1;b.dir=-1;}if(b.s<b.s0){b.s=b.s0;b.dir=1;}
+  let i=1;while(i<b.cum.length-1&&b.cum[i]<b.s)i++;const a=b.r[i-1],c=b.r[i],u=(b.s-b.cum[i-1])/Math.max(0.01,b.cum[i]-b.cum[i-1]),tx=(c[0]-a[0]),tz=(c[1]-a[1]),l=Math.hypot(tx,tz)||1;
+  const off=b.dir*RIVER_HW*0.35;b.m.position.set(a[0]+tx*u-tz/l*off,WATER_Y+0.05,a[1]+tz*u+tx/l*off);b.m.rotation.set(0,Math.atan2(tx*b.dir,tz*b.dir),Math.sin(performance.now()/900+b.s)*0.02);}
+// Delfine (Kalea): springen ab und zu in deiner Nähe aus dem Meer
+function dolphins(){const geo=merge([[tr(new THREE.IcosahedronGeometry(0.5,1),[0,0,0],[0,0,0],[0.42,0.42,1.6]),0x6f8fa8],[tr(new THREE.IcosahedronGeometry(0.3,1),[0,-0.08,0.1],[0,0,0],[0.5,0.3,1.4]),0xdfe8ee],
+    [tr(new THREE.ConeGeometry(0.12,0.35,4),[0,0.3,-0.05],[-0.4,0,0],[0.4,1,1]),0x5f7f98],[tr(new THREE.BoxGeometry(0.7,0.04,0.22),[0,0,-0.85]),0x5f7f98],[tr(new THREE.ConeGeometry(0.08,0.3,6),[0,-0.02,0.9],[Math.PI/2,0,0]),0x6f8fa8]]);
+  const mat=lifeMat(true);for(let k=0;k<3;k++){const m=new THREE.Mesh(geo,mat);m.visible=false;scene.add(m);LIFE.dolph.push({m,wait:rnd(4,15),jumps:0,t:0,x:0,z:0,dx:0,dz:1});}}
+function stepDolphin(d,dt){const m=d.m;
+  if(!d.jumps){m.visible=false;d.wait-=dt;if(d.wait>0||!player)return;
+    for(let t=0;t<16;t++){const a=rnd(0,6.28),r=rnd(150,480),x=player.position.x+Math.cos(a)*r,z=player.position.z+Math.sin(a)*r,h=rnd(0,6.28),dx=Math.cos(h),dz=Math.sin(h);
+      if(rawHeight(x,z)<-6&&rawHeight(x+dx*20,z+dz*20)<-6){Object.assign(d,{x,z,dx,dz,jumps:2+(Math.random()*2|0),t:0});return;}}
+    d.wait=rnd(3,8);return;}
+  d.t+=dt/1.3;if(d.t>=1){d.jumps--;d.t=-0.35;d.x+=d.dx*7;d.z+=d.dz*7;if(!d.jumps)d.wait=rnd(8,22);}
+  if(d.t<0){m.visible=false;return;}
+  const u=d.t,y=0.3-0.7+Math.sin(Math.PI*u)*2.0,slope=Math.cos(Math.PI*u)*Math.PI*2.0/6;
+  m.visible=true;m.position.set(d.x+d.dx*(u-0.5)*6,y,d.z+d.dz*(u-0.5)*6);m.rotation.set(-Math.atan(slope),Math.atan2(d.dx,d.dz),0,'YXZ');}
+// Parkende Autos in Ulmer Seitenstraßen
+function parkedCars(n){const items=[],cols=[0xd8d8d8,0x2b2b2b,0xf4f4f4,0x3a5a8a,0x9a2a2a,0x6a6a6a,0x2f4f3a,0xc9b27a];
+  const W=(x,z)=>[tr(new THREE.CylinderGeometry(0.33,0.33,0.25,10),[x,0.33,z],[0,0,Math.PI/2]),0x1a1a1a];
+  const geo=merge([[tr(new THREE.BoxGeometry(1.8,0.62,4.3),[0,0.62,0]),0xffffff],[tr(new THREE.BoxGeometry(1.64,0.34,2.24),[0,1.1,-0.2]),0x2a3540],[tr(new THREE.BoxGeometry(1.6,0.12,2.1),[0,1.33,-0.2]),0xffffff],
+    [tr(new THREE.BoxGeometry(1.5,0.12,0.05),[0,0.75,2.16]),0xfff3c4],[tr(new THREE.BoxGeometry(1.5,0.12,0.05),[0,0.75,-2.16]),0xc0392b],W(0.82,1.35),W(-0.82,1.35),W(0.82,-1.35),W(-0.82,-1.35)]);
+  for(const rd of ULM.vroads||[]){const p=rd.p;
+    for(let i=0;i<p.length-1;i++){const a=p[i],b=p[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);if(l<1)continue;const tx=dx/l,tz=dz/l;
+      for(let u=0;u<l;u+=6.5){if(Math.random()>0.22)continue;const sd=Math.random()<0.5?-1:1,off=(rd.w||5.5)-1.3,x=a[0]+tx*u-tz*off*sd,z=a[1]+tz*u+tx*off*sd,ry=Math.atan2(tx,tz);
+        if(ulmZone(x,z).d<0.45||nearestRoad(x,z,9)||riverDist(x,z).d<RIVER_HW+10||inOsm(x,z))continue;
+        items.push({x,z,y:finalHeight(x,z)+0.14,ry:ry+(Math.random()<0.5?Math.PI:0),sx:1,sy:1,sz:1,c:pick(cols)});}}}
+  for(let i=items.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[items[i],items[j]]=[items[j],items[i]];}
+  LIFE.statics.push(...chunkedInstances(geo,lifeMat(true),items.slice(0,n)));}
+function buildLife(){const q=S.quality==='low'?0.6:1;
+  buildWalkers(Math.round((IS_ULM?40:16)*q));
+  // Zuschauer an Start/Ziel (nicht in Häusern)
+  komDecor(Math.round(74/ds)%N,(x,z)=>freeSpot(x,z,5));
+  if(IS_ULM){const meadow=(x,z)=>ulmZone(x,z).d<0.05&&slopeY(x,z)>0.9&&riverDist(x,z).d>RIVER_HW+40&&!nearVRoad(x,z,10)&&footFree(x,z,10);
+    peopleUlm();herd(cowGeo(),Math.round(36*q),meadow,[0xffffff,0xffffff,0xd8c0a8],5,'kuh');herd(horseGeo(),Math.round(12*q),meadow,[0xffffff,0xc8b8a8,0x7a6a5a,0xf0e0c8],3,'pferd');
+    herd(storkGeo(),8,(x,z)=>{const rd=riverDist(x,z).d;return rd>RIVER_HW+30&&rd<RIVER_HW+260&&ulmZone(x,z).d<0.1&&!nearVRoad(x,z,8)&&footFree(x,z,5);},[0xffffff],2,'storch');
+    waterBirds();riverBoats();parkedCars(Math.round(320*q));}
+  else{beachLife();dolphins();
+    // Möwen über der Küste
+    const coast=[];for(let i=0;i<N;i+=Math.round(60/ds))for(const sd of [-1,1])for(let o=60;o<=500;o+=40){const [x,z]=lateralPoint(i,sd*o);if(rawHeight(x,z)<0){coast.push([x,z]);break;}}
+    if(coast.length)LIFE.statics.push(...birds(8,{col:0xf4f4f4,cnt:[1,3],y:[12,32],r:[25,70],sp:[0.08,0.14],s:0.45,center:()=>pick(coast)}));}
+  for(const m of LIFE.statics)m.userData.life=true;applyLifeVis();}
+function applyLifeVis(){for(const m of LIFE.statics)m.visible=S.life;for(const o of ONC.list)if(!S.life)o.obj.visible=false;}
+function stepLife(dt,t){const run=S.started&&!S.paused?dt:0;stepOncoming(run);stepWalkers(run);if(!S.life)return;
+  if(LIFE.ducks.length){const dm=_wo;dm.scale.setScalar(1);
+    for(const d of LIFE.ducks){const u=Math.sin(t*d.sp+d.ph)*d.amp,du=Math.cos(t*d.sp+d.ph)||1e-3;
+      dm.position.set(d.bx+d.tx*u,WATER_Y+0.02+0.03*Math.sin(t*1.7+d.bob),d.bz+d.tz*u);dm.rotation.set(0,Math.atan2(d.tx*du,d.tz*du),0,'YXZ');dm.updateMatrix();d.m.setMatrixAt(d.k,dm.matrix);}
+    for(const m of LIFE.duckMs)m.instanceMatrix.needsUpdate=true;}
+  for(const b of LIFE.rboats)stepRiverBoat(b,dt);
+  for(const d of LIFE.dolph)stepDolphin(d,run);}
+
 /* ================= Welt/Route wechseln ohne Neuladen (Bluetooth-Geräte bleiben verbunden) ================= */
 let REBUILD=false,SCENE_BASE=null;
 function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.isInstancedMesh&&c.dispose)c.dispose();
@@ -2583,6 +2812,7 @@ function clearWorld(){
   RIV=null;VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
   LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;
   OSM.data=null;OSM.built=0;OSM.embedded=false;
+  ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
   for(const p of NET.peers.values())p.obj=null;}
 async function buildWorld(){
   buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();
@@ -2593,7 +2823,7 @@ function resetRide(){
   Object.assign(S,{dist:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
   Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
-  BOTS.forEach((b,k)=>{b.dist=(k-3)*14;b.v=7;});
+  placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
   $('bStart').textContent='Losfahren';$('bStart').onclick=()=>startRide(false);$('bSim').classList.remove('hidden');$('bStats').classList.add('hidden');$('bEnd').classList.add('hidden');}
 function newRide(){resetRide();openMenu();}
@@ -2608,7 +2838,7 @@ async function rebuildWorld(world,route,msg){
   WORLD=world;IS_ULM=world==='ulm';ROUTE_ID=route||(()=>{try{return localStorage.getItem('kalea_route_'+world)||'';}catch(e){return '';}})();
   try{clearWorld();await buildWorld();}
   catch(e){console.error(e);$('loading').textContent='Fehler beim Bauen der Welt – Seite wird neu geladen …';setTimeout(()=>location.reload(),1500);return;}
-  if(NET.state==='on')BOTS.forEach(b=>b.obj.visible=$('iNetBots').checked);
+  applyBotVis();
   buildRouteMenu();wireOsm();$('komTable').innerHTML=komTable();updateNetUi();
   if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));
   REBUILD=false;PERF.t0=0;PERF.frames=0;
@@ -2627,10 +2857,11 @@ function decorate(){
   birds(5);
   if(IS_ULM){balloons(5,0,-600,2600,520);
     flowers(S.quality==='high'?2600:S.quality==='medium'?1200:500,(x,z)=>ulmZone(x,z).d<0.3&&riverDist(x,z).d>RIVER_HW+12&&!nearVRoad(x,z,6)&&footFree(x,z,2));
-    sheep(90,(x,z)=>ulmZone(x,z).d<0.05&&slopeY(x,z)>0.9&&riverDist(x,z).d>RIVER_HW+40&&!nearVRoad(x,z,10)&&footFree(x,z,10));}
+    sheep(90,(x,z)=>ulmZone(x,z).d<0.05&&slopeY(x,z)>0.9&&riverDist(x,z).d>RIVER_HW+40&&!nearVRoad(x,z,10)&&footFree(x,z,10)&&!nearOsm(x,z,8));}
   else{balloons(3,0,0,2000,420);
     flowers(S.quality==='high'?2200:S.quality==='medium'?1000:400,(x,z)=>{const h=rawHeight(x,z);return h>6&&Math.hypot(x-VOLC.x,z-VOLC.z)>380;});
     sheep(50,(x,z)=>{const h=rawHeight(x,z);return h>12&&h<60&&slopeY(x,z)>0.92&&Math.hypot(x-VOLC.x,z-VOLC.z)>700;});}
+  buildLife();
 }
 async function boot(){
   loadSettings();CHUNK=S.quality==='low'?900:500;initScene();SCENE_BASE=new Set(scene.children);await buildWorld();wireUi();

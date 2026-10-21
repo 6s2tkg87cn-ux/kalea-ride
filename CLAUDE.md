@@ -61,6 +61,15 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Tempo-Gefühl im Bild:** Sichtfeld weitet sich (`updateCamera`), Kamera rubbelt leicht, Comic-Speed-Linien ab
   ca. 32 km/h im Konturen-Shader (`speedLines`, nur mit Comic-Konturen). Lautstärken `S.sndBike`,
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
+- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (richtet sich nach `S.p30` = ~30-s-Mittel deiner
+  Leistung, bleibt per Gummiband in deiner Nähe, wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
+  dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
+  `ONC` auf der linken Straßenhälfte. Statische Körperteile jedes Fahrers sind in `makeRider` zu einem Mesh
+  zusammengefasst (Zeichenaufrufe sparen).
+- **Leben am Rand** (`LIFE`, `buildLife`, `stepLife`, Schalter `S.life`): Fußgänger/Jogger mit Hunden als Pool rund um
+  dich (`stepWalkers`, drehen vor Wasser/Häusern um), Menschen auf Plätzen/Strand, Kühe, Pferde, Störche, Enten und
+  Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Alles InstancedMesh;
+  `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser.
 - **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).

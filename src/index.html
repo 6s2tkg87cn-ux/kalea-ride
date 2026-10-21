@@ -455,6 +455,13 @@ body.realshift .vonly{display:none!important}
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
       </details>
+      <details><summary>👥 Mitfahrer &amp; Leben</summary>
+        <div class="grid">
+          <label>Mitfahrer<select id="iBotMode"><option value="me">Fahren mit mir (passen sich an)</option><option value="fixed">Feste Stärke</option><option value="off">aus</option></select><small>Eine Gruppe fährt mit dir, einige sind langsamer, ab und zu überholt dich jemand</small></label>
+          <label>Stärke der Gruppe (W/kg)<input id="iBotWkg" type="number" min="1" max="6" step="0.1" value="2.5"><small>nur bei „Feste Stärke“ – zum Dranbleiben üben</small></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="iLife" checked> Belebte Umgebung: Gegenverkehr, Fußgänger mit Hunden, Menschen auf Plätzen, Tiere, Boote, parkende Autos</label>
+      </details>
       <details><summary>🔊 Töne</summary>
         <div class="grid">
           <label>Rad (Kette, Freilauf, Schalten)<input id="iSndBike" type="range" min="0" max="100" value="60"><small>eigene Aufnahmen vom echten Rad</small></label>
