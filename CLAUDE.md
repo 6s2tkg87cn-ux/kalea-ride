@@ -63,7 +63,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
 - **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (richtet sich nach `S.p30` = ~30-s-Mittel deiner
   Leistung, bleibt per Gummiband in deiner Nähe, wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
-  dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
+  dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `solo` (ohne Gruppe, nur langsame und schnelle Fahrer) / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
   `ONC` auf der linken Straßenhälfte. Statische Körperteile jedes Fahrers sind in `makeRider` zu einem Mesh
   zusammengefasst (Zeichenaufrufe sparen).
 - **Leben am Rand** (`LIFE`, `buildLife`, `stepLife`, Schalter `S.life`): Fußgänger/Jogger mit Hunden als Pool rund um

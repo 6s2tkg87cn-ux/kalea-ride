@@ -42,7 +42,7 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
 function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
@@ -1119,7 +1119,8 @@ function placeRider(o,dist,lat){const r=roadAt(dist),a=roadAt(dist+2),rx=-r.tz,r
 /* ================= Mitfahrer & Gegenverkehr ================= */
 // Rollen: „Gruppe“ fährt mit dir (richtet sich nach deiner Leistung der letzten ~30 s und bleibt in deiner Nähe),
 // „langsam“ überholst du, „schnell“ überholt dich ab und zu. Wer weit weg ist, wird außer Sicht neu eingesetzt,
-// damit die Strecke nie leer wirkt. S.botMode: 'me' (fahren mit mir) | 'fixed' (Gruppe mit S.botWkg) | 'off'.
+// damit die Strecke nie leer wirkt. S.botMode: 'me' (fahren mit mir) | 'solo' (ohne Gruppe, nur andere Fahrer auf der
+// Strecke) | 'fixed' (Gruppe mit S.botWkg) | 'off'.
 const BOT_DEFS=[['Lena K.',0x2e7dd7,0xf2f2f2,'group'],['Jonas',0x2bb673,0x222222,'group'],['Aylin',0xd63aa8,0x222222,'group'],['Sven',0x7a4fd6,0xe8e8e8,'group'],
   ['Tobi',0xf2c230,0x2a4a8a,'slow'],['Marie',0x18b5c9,0x9a1e1e,'slow'],['Hanna',0xff8fb8,0x222222,'slow'],['Paul',0xe04848,0x222222,'fast'],['Emre',0x3e8fe0,0xe8e8e8,'fast']];
 function initRiders(){
@@ -1135,9 +1136,10 @@ function placeBotsStart(){const gd=[-14,-7,8,15];let gk=0,sk=0,fk=0;
     else if(b.role==='slow'){b.dist=S.dist+200+sk++*230+rnd(0,60);b.v=Math.max(6,S.v*0.8);b.lat=rnd(1.4,2.6);}
     else{b.dist=S.dist-170-fk++*170;b.v=Math.max(9,S.v);b.lat=rnd(-0.8,0.4);}
     b.latT=b.lat;}}
-function applyBotVis(){const on=S.botMode!=='off'&&(typeof NET==='undefined'||NET.state!=='on'||$('iNetBots').checked);for(const b of BOTS){b.active=on;b.obj.visible=on;}}
+function applyBotVis(){const on=S.botMode!=='off'&&(typeof NET==='undefined'||NET.state!=='on'||$('iNetBots').checked);
+  for(const b of BOTS){b.active=on&&!(S.botMode==='solo'&&b.role==='group');b.obj.visible=b.active;}}
 function stepBots(dt){if(S.botMode==='off')return;
-  const t=performance.now()/1000,follow=S.botMode==='me',ref=follow?S.p30/S.mass:S.botWkg,me=S.dist,curves=(FEELS[S.feel]||FEELS.real).curves;
+  const t=performance.now()/1000,follow=S.botMode==='me',ref=S.botMode==='fixed'?S.botWkg:S.p30/S.mass,me=S.dist,curves=(FEELS[S.feel]||FEELS.real).curves;
   for(const b of BOTS){if(!b.active)continue;const g=gradeAt(b.dist),gap=b.dist-me;let w;
     if(b.role==='group'){w=ref*b.str;
       // fährt mit dir: wer vorne wegzieht, lässt nach, wer hängt, drückt – jeder hat seinen Lieblingsplatz in der Gruppe
@@ -2581,7 +2583,7 @@ function wireUi(){
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
   $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;
-  $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'&&S.botMode!=='off')placeBotsStart();};
+  $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'||was==='solo')placeBotsStart();};
   $('iBotWkg').onchange=()=>{S.botWkg=clamp(+$('iBotWkg').value||2.5,1,6);$('iBotWkg').value=S.botWkg;saveSettings();};
   $('iLife').onchange=()=>{S.life=$('iLife').checked;saveSettings();applyLifeVis();};
   $('iSndBike').value=Math.round(S.sndBike*100);$('iSndAmb').value=Math.round(S.sndAmb*100);sndVolume();
