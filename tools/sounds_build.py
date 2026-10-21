@@ -24,7 +24,7 @@ OUT = os.path.join(ROOT, 'src', 'data', 'sounds.js')
 SHOTS = {  # name: (aufnahme, von, bis)
     'up1': (1, 4.79, 5.40), 'up2': (1, 7.19, 7.80),          # „Hochschalten“, „nochmal“
     'down1': (1, 10.75, 11.50), 'down2': (1, 13.76, 14.45),  # „Runterschalten“, „nochmal“
-    'ringbig': (2, 3.58, 4.50), 'ringsmall': (2, 9.66, 10.30),
+    'ringbig': (2, 4.25, 4.95), 'ringsmall': (2, 9.66, 10.30),  # großes Blatt: nur Kettensprung (davor ein harter Stoß)
 }
 LOOPS = {  # name: (aufnahme, von, bis, Ziel-RMS)
     'drive': (3, 3.0, 7.2, 0.18),
