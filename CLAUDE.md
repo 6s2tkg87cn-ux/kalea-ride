@@ -14,12 +14,15 @@ Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (V
 ```
 src/index.html            Markup + CSS (Comic-Look, Schrift Fredoka) + <script>-Einbindungen
 src/app.js                das ganze Programm (~2400 Zeilen, in Abschnitte gegliedert, s. u.)
-src/data/ulm-data.js      const ULM_DATA = {origin, grid (EU-DEM-Höhen), roads, river, places, routes[5]}
+src/data/ulm-data.js      const ULM_DATA = {origin, grid (Höhen), roads, rivers, zones, places, routes[8]} – erzeugt/ergänzt mit tools/ulm_routen.py
 src/data/osm-buildings.js const OSM_RAW  = 9336 echte Ulmer Gebäude (OSM, ODbL), kompakt kodiert
 src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tools/sounds_build.py)
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
-tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
+tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; aktualisiert auch
+                          die Kartenstücke/Routenlinien in ulm-haeuser-holen.html (Häuser entlang aller Routen)
+tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (95 Kartenstücke à 1,2 km nacheinander,
+                          mit Wiederholung; behält nur Häuser ≤ 220 m an den Routen) und speichert ulm-haeuser.json
 tools/ulm-routen-holen.html   Hilfsseite: Straßen/Radwege/Radrouten/Flüsse/Wasserflächen (Overpass) rund um Ulm → ulm-routen.json (Höhen holt Claude selbst: AWS-Terrarium-Kacheln)
 tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
 ```
@@ -92,9 +95,15 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   seitliche Blenden. Exakte Netzhöhe: `terrH(x,z)` (`groundH` nutzt sie abseits der Strecke).
 - **Bauwerke einpassen:** `addAt(group,p,ry,yOff,{rect,fixed})` schiebt Wahrzeichen anhand ihrer Bounding-Box auf den
   nächsten Platz ohne Strecke/Nebenstraße/Fluss (`landFit`, p wird angepasst; Münster fest).
-- **Donau:** Mittellinie ist grob. `riverFit` macht den Fluss je Seite schmaler (`RIVW`, mind. 14 m halbe Breite), wo er
-  echte Häuser oder Uferwege überdecken würde; `riverDist().d` ist auf `RIVER_HW` normiert, `RIVG` = Raster für schnelle
-  Abfragen. Exakte Lösung, sobald `ulm-routen.json` mit Wasserflächen (`areas`) vorliegt.
+- **Flüsse** (`ULM_DATA.rivers`: Donau = Index 0, Iller, Blau; Punkte `[x,z,halbeBreite+,halbeBreite−,Wasserspiegel]` aus
+  OSM-Wasserflächen): `RIV`-Segmente mit `ri`, `RIVW[ri]` = Breiten/Wasserspiegel je Punkt. `riverDist()` liefert `d`
+  (auf `RIVER_HW` normiert), `hw`, `wy` (Wasserspiegel). `riverFit` macht einen Fluss nur dort schmaler, wo echte Häuser
+  oder Uferwege ihn sonst schneiden würden. `ULM.river` = Donau (Stadtmauer, Ausflugsboote).
+- **Weltbereich Ulm** (`ULM.area`): Innenstadt-Kern (`ULM_CORE`) plus 2,5 km um die gefahrene Route – Gelände, Bäume,
+  Bebauung und Karte richten sich danach. Ortschaften an den Umland-Routen kommen als Zonen aus `ULM_DATA.zones`
+  (`ulmZone` mit 500-m-Raster `ZONEG`). Klöster Wiblingen/Oberelchingen (`buildKloster`) nur, wenn im Bereich.
+- **Routen Ulm:** Große Runde, Donau, Michelsberg, Eselsberg, Kuhberg (Innenstadt) sowie Donau & Kloster Elchingen
+  (27 km), Iller & Kloster Wiblingen (25 km), Blautal & Hochsträß (33 km) – Start/Ziel jeweils Neue Straße am Münster.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
@@ -113,7 +122,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
-- Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus).
+- Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus; über
+  OpenTopoData bzw. AWS Terrain Tiles).
 - **Persönliche Fahrdateien (.fit/.tcx) nie einchecken** – sie enthalten GPS-Spuren (s. `.gitignore`).
 
 ## Testen
