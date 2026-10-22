@@ -31,7 +31,7 @@ jobs:
           mkdir -p site
           cp dist/kalea-ride-offline.html site/index.html
           cp dist/kalea-ride.html dist/kalea-ride-offline.html site/
-          cp tools/ulm-haeuser-holen.html site/
+          cp tools/ulm-haeuser-holen.html tools/ulm-routen-holen.html site/
           touch site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

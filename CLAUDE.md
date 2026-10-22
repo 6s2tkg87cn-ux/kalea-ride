@@ -20,6 +20,7 @@ src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tool
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
 tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
+tools/ulm-routen-holen.html   Hilfsseite: Straßen/Radwege/Radrouten/Flüsse (Overpass) + Höhenraster (Open-Meteo) rund um Ulm → ulm-routen.json
 tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
 ```
 - **Quelle der Wahrheit ist `src/`.** `dist/` wird nur gebaut (gitignored). Die Datendateien sind riesige
@@ -61,6 +62,19 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Tempo-Gefühl im Bild:** Sichtfeld weitet sich (`updateCamera`), Kamera rubbelt leicht, Comic-Speed-Linien ab
   ca. 32 km/h im Konturen-Shader (`speedLines`, nur mit Comic-Konturen). Lautstärken `S.sndBike`,
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
+- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (richtet sich nach `S.p30` = ~30-s-Mittel deiner
+  Leistung, bleibt per Gummiband in deiner Nähe, wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
+  dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `solo` (ohne Gruppe, nur langsame und schnelle Fahrer) / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
+  `ONC` auf der linken Straßenhälfte. Statische Körperteile jedes Fahrers sind in `makeRider` zu einem Mesh
+  zusammengefasst (Zeichenaufrufe sparen).
+- **Leben am Rand** (`LIFE`, `buildLife`, `stepLife`, Schalter `S.life`): Fußgänger/Jogger mit Hunden als Pool rund um
+  dich (`stepWalkers`, drehen vor Wasser/Häusern um), Menschen auf Plätzen/Strand, Kühe, Pferde, Störche, Enten und
+  Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Alles InstancedMesh;
+  `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser.
+- **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
+  Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
+  Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
+  Bergwertung/Runde mit Gummiband (`a.rb`) zählt nicht als Bestzeit.
 - **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
@@ -68,7 +82,24 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
   `kalea_rides`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
-- **Leistung:** iPad/Handy laufen auf Qualität `low`. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
+- **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
+  Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
+  (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
+  Wiegetritt (steil + kräftig oder Sprint), Unterlenker (schnelle Abfahrt ohne Treten); `placeRider(o,d,lat,v,dir)`
+  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`.
+- **Gelände Ulm** (`buildTerrainUlm`): grobes Netz (24–48 m), entlang der Strecke feine Zellen (6–8 m, `TERR.FINE`),
+  Ränder zu groben Zellen linear (keine Risse). Unter der Fahrbahn eine Mulde, daneben max. 35 % Anstieg; die Straße hat
+  seitliche Blenden. Exakte Netzhöhe: `terrH(x,z)` (`groundH` nutzt sie abseits der Strecke).
+- **Bauwerke einpassen:** `addAt(group,p,ry,yOff,{rect,fixed})` schiebt Wahrzeichen anhand ihrer Bounding-Box auf den
+  nächsten Platz ohne Strecke/Nebenstraße/Fluss (`landFit`, p wird angepasst; Münster fest).
+- **Donau:** Mittellinie ist grob. `riverFit` macht den Fluss je Seite schmaler (`RIVW`, mind. 14 m halbe Breite), wo er
+  echte Häuser oder Uferwege überdecken würde; `riverDist().d` ist auf `RIVER_HW` normiert, `RIVG` = Raster für schnelle
+  Abfragen. Exakte Lösung, sobald `ulm-routen.json` mit Wasserflächen (`areas`) vorliegt.
+- **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
+- **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
+  Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
+- **Leistung:** iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`, Umschalten in
+  `updateCull` ab `LOD_R`), Vegetationskacheln sind 1,5 × `CHUNK` groß. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
   in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
   sonst heiß.
 
@@ -87,6 +118,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 
 ## Testen
 - Ohne Trainer: im Menü „Ohne Trainer testen“ (`S.sim`), Leistung mit W/S.
+- Grafik-Prüfung: Hilfsskripte im Verlauf prüften jede Strecke auf Häuser/Objekte/Hänge auf der Fahrbahn und Häuser im
+  Fluss (Grundrisse `MAPPOLY`/`MAPBLD`, Instanzen, Strahltest gegen Bauwerke, `terrH` am Fahrbahnrand).
 - Automatisiert: Playwright + Chromium (`--use-angle=swiftshader --enable-unsafe-swiftshader`). In der
   Cloud-Umgebung ist das CDN oft gesperrt → entweder `dist/kalea-ride-offline.html` testen oder
   `page.route('https://cdnjs.cloudflare.com/**', …)` auf `node_modules/three/build/three.min.js` umleiten.
