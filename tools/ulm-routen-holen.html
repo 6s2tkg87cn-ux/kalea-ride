@@ -4,13 +4,11 @@ h1{color:#490cb8}button{font:inherit;font-weight:700;font-size:18px;padding:10px
 button:disabled{opacity:.5;cursor:default}.bar{height:18px;border:2.5px solid #1e0f3a;border-radius:99px;background:#fff;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;width:0;background:#9d20a3;transition:width .3s}
 .st{font-size:15px;line-height:1.45;margin:4px 0 14px}small{color:#6b5f7d}</style></head><body><main>
 <h1>Radwege rund um Ulm für Kalea Ride</h1>
-<p>Lädt die Straßen und Radwege rund um Ulm (Donau, Iller, Blautal, Elchingen) von OpenStreetMap und die Geländehöhen
-von Open-Meteo. Ergebnis ist die Datei <b>ulm-routen.json</b> (einige MB) – die schickst du danach Claude im Chat.</p>
+<p>Lädt die Straßen und Radwege rund um Ulm (Donau, Iller, Blautal, Elchingen) von OpenStreetMap. Ergebnis ist die Datei <b>ulm-routen.json</b> (einige MB) – die schickst du danach Claude im Chat.</p>
 <p><button id="b">Daten herunterladen</button></p>
-<b>1. Straßen &amp; Radwege</b><div class="bar"><i id="bar1"></i></div><p id="t1" class="st">Bereit.</p>
-<b>2. Geländehöhen</b><div class="bar"><i id="bar2"></i></div><p id="t2" class="st">Wartet.</p>
+<b>Straßen, Radwege &amp; Flüsse</b><div class="bar"><i id="bar1"></i></div><p id="t1" class="st">Bereit.</p>
 <p id="t3" class="st"></p>
-<p><small>Dauert meist 2–4 Minuten. Fenster dabei offen lassen.<br>Karten © OpenStreetMap-Mitwirkende (ODbL) · Höhen: Copernicus DEM über Open-Meteo.</small></p></main>
+<p><small>Dauert meist 1–2 Minuten. Fenster dabei offen lassen.<br>Karten © OpenStreetMap-Mitwirkende (ODbL).</small></p></main>
 <script>
 // Gebiet: Blaustein/Ermingen im Westen bis Elchingen im Osten, Oberelchingen im Norden bis Illerkirchberg im Süden
 const BB={s:48.31,w:9.86,n:48.47,e:10.12};
@@ -56,24 +54,9 @@ function compact(js){const idx=new Map(),nl=[],ways=[],rels=[],water=[],areas=[]
     else if(t.name&&(e.center||e.lat!==undefined)){const c=e.center||e;pois.push([t.historic||t.amenity||t.tourism,t.name,I5(c.lat),I5(c.lon),t.building||'',t.religion||'']);}}
   return {nl,ways,rels,water,areas,places,pois,ts:(js.osm3s&&js.osm3s.timestamp_osm_base)||''};}
 
-// Höhenraster über Open-Meteo (max. 100 Punkte pro Anfrage), ca. 110 m Abstand
-async function elevation(){const dlat=0.001,dlon=0.0015,nlat=Math.round((BB.n-BB.s)/dlat)+1,nlon=Math.round((BB.e-BB.w)/dlon)+1,tot=nlat*nlon,h=new Array(tot).fill(null);
-  const jobs=[];for(let i=0;i<tot;i+=100)jobs.push(i);let done=0,fails=0;
-  async function one(i0){const la=[],lo=[];for(let k=i0;k<Math.min(tot,i0+100);k++){const r=Math.floor(k/nlon),c=k%nlon;la.push((BB.s+r*dlat).toFixed(5));lo.push((BB.w+c*dlon).toFixed(5));}
-    for(let a=0;a<6;a++){try{const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${la.join(',')}&longitude=${lo.join(',')}`);
-        if(r.status===429){await sleep(4000*(a+1));continue;}if(!r.ok)throw new Error('Status '+r.status);
-        const js=await r.json();js.elevation.forEach((v,k)=>h[i0+k]=Math.round(v*10));return;}
-      catch(e){await sleep(1500*(a+1));}}
-    fails++;}
-  async function worker(){while(jobs.length){const i0=jobs.shift();await one(i0);done++;$('bar2').style.width=(done/Math.ceil(tot/100)*100)+'%';$('t2').textContent=`Höhen: ${done} von ${Math.ceil(tot/100)} Paketen${fails?' · '+fails+' fehlgeschlagen':''}`;await sleep(120);}}
-  await Promise.all([worker(),worker(),worker()]);
-  return {s:BB.s,w:BB.w,dlat,dlon,nlat,nlon,h,fails};}
-
 $('b').onclick=async()=>{$('b').disabled=true;$('t3').textContent='';
   try{const js=await overpass();$('t1').textContent='Verarbeite …';await sleep(30);
     const d=compact(js);$('t1').innerHTML=`<b>✔</b> ${d.ways.length.toLocaleString('de-DE')} Wege, ${d.rels.length} Radrouten, ${d.water.length} Flussabschnitte, ${d.areas.length} Wasserflächen`;
-    $('t2').textContent='Frage Höhen ab …';d.elev=await elevation();
-    $('t2').innerHTML=d.elev.fails?`<b>⚠</b> ${d.elev.fails} Pakete fehlen – die Datei ist trotzdem brauchbar.`:'<b>✔</b> Höhenraster komplett';
     d.v=1;d.bbox=BB;const blob=new Blob([JSON.stringify(d)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ulm-routen.json';document.body.appendChild(a);a.click();
     $('t3').innerHTML=`<b>✔ Fertig:</b> <b>ulm-routen.json</b> (${(blob.size/1e6).toFixed(1)} MB) ist gespeichert (Ordner „Downloads“). Jetzt diese Datei im Chat an Claude schicken.`;}
