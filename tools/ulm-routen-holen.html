@@ -1,0 +1,78 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ulmer Radwege holen</title>
+<style>body{font-family:system-ui,sans-serif;background:#fffaf0;color:#1e0f3a;display:flex;justify-content:center;padding:24px}main{max-width:540px}
+h1{color:#490cb8}button{font:inherit;font-weight:700;font-size:18px;padding:10px 20px;border:3px solid #1e0f3a;border-radius:12px;background:#eb567b;color:#fff;box-shadow:3px 4px 0 #1e0f3a;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}.bar{height:18px;border:2.5px solid #1e0f3a;border-radius:99px;background:#fff;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;width:0;background:#9d20a3;transition:width .3s}
+.st{font-size:15px;line-height:1.45;margin:4px 0 14px}small{color:#6b5f7d}</style></head><body><main>
+<h1>Radwege rund um Ulm für Kalea Ride</h1>
+<p>Lädt die Straßen und Radwege rund um Ulm (Donau, Iller, Blautal, Elchingen) von OpenStreetMap und die Geländehöhen
+von Open-Meteo. Ergebnis ist die Datei <b>ulm-routen.json</b> (einige MB) – die schickst du danach Claude im Chat.</p>
+<p><button id="b">Daten herunterladen</button></p>
+<b>1. Straßen &amp; Radwege</b><div class="bar"><i id="bar1"></i></div><p id="t1" class="st">Bereit.</p>
+<b>2. Geländehöhen</b><div class="bar"><i id="bar2"></i></div><p id="t2" class="st">Wartet.</p>
+<p id="t3" class="st"></p>
+<p><small>Dauert meist 2–4 Minuten. Fenster dabei offen lassen.<br>Karten © OpenStreetMap-Mitwirkende (ODbL) · Höhen: Copernicus DEM über Open-Meteo.</small></p></main>
+<script>
+// Gebiet: Blaustein/Ermingen im Westen bis Elchingen im Osten, Oberelchingen im Norden bis Illerkirchberg im Süden
+const BB={s:48.31,w:9.86,n:48.47,e:10.12};
+const Q=`[out:json][timeout:300][maxsize:536870912][bbox:${BB.s},${BB.w},${BB.n},${BB.e}];
+(way[highway~"^(primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential|living_street|cycleway|track|road)$"][access!~"^(private|no)$"][bicycle!="no"];
+ way[highway~"^(path|footway|pedestrian|service|bridleway)$"][bicycle~"^(yes|designated|permissive)$"];
+ way[highway=path][!bicycle][access!~"^(private|no)$"];)->.w;
+.w out body qt;.w >;out skel qt;
+relation[route=bicycle];out body qt;
+way[waterway~"^(river|canal)$"];out geom qt;
+node[place~"^(city|town|village|suburb|hamlet|quarter)$"];out qt;
+nwr[historic~"^(monastery|castle|ruins|tower|city_gate)$"][name];out center qt;
+nwr[amenity=place_of_worship][name];out center qt;
+nwr[tourism~"^(viewpoint|attraction)$"][name];out center qt;`;
+const SERVERS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const I5=v=>Math.round(v*1e5);
+
+async function overpass(){const t0=Date.now();
+  for(const u of SERVERS){const host=u.split('/')[2],iv=setInterval(()=>{$('t1').textContent=`Server ${host} sucht die Wege heraus … ${Math.round((Date.now()-t0)/1000)} s (dauert meist 30–120 s)`;},500);
+    try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(Q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});clearInterval(iv);
+      if(!r.ok){$('t1').textContent=`Server ${host} antwortet ${r.status} – versuche den nächsten …`;await sleep(1500);continue;}
+      const rd=r.body.getReader(),ch=[];let n=0;for(;;){const {done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;$('bar1').style.width=Math.min(95,n/400000)+'%';$('t1').textContent='Lade herunter: '+(n/1e6).toFixed(1)+' MB';}
+      const js=JSON.parse(await new Blob(ch).text());if(!js.elements||!js.elements.length)throw new Error('leere Antwort');
+      if(js.remark&&/error|timed out/i.test(js.remark))throw new Error(js.remark);
+      $('bar1').style.width='100%';return js;}
+    catch(e){clearInterval(iv);$('t1').textContent='Fehler bei '+host+': '+e.message+' – versuche den nächsten Server …';await sleep(1500);}}
+  throw new Error('Kein OpenStreetMap-Server hat geantwortet. Bitte später nochmal probieren.');}
+
+// kompakt: Knoten als Ganzzahlen (Grad × 100 000), Wege mit Knotennummern statt OSM-IDs
+function compact(js){const idx=new Map(),nl=[],ways=[],rels=[],water=[],places=[],pois=[];
+  for(const e of js.elements)if(e.type==='node'&&!e.tags&&e.lat!==undefined&&!idx.has(e.id)){idx.set(e.id,nl.length/2);nl.push(I5(e.lat),I5(e.lon));}
+  for(const e of js.elements){const t=e.tags||{};
+    if(e.type==='way'&&t.highway&&e.nodes){const f=(t.bridge&&t.bridge!=='no'?1:0)|(t.tunnel&&t.tunnel!=='no'?2:0)|(t.oneway==='yes'||t.oneway==='1'?4:0)|(t.oneway==='-1'?8:0)|(t['oneway:bicycle']==='no'||/opposite/.test(t.cycleway||'')?16:0)|(t.segregated==='yes'?32:0)|(t.cycleway||t['cycleway:left']||t['cycleway:right']||t['cycleway:both']?64:0);
+      const nd=e.nodes.map(id=>idx.has(id)?idx.get(id):-1);if(nd.includes(-1))continue;
+      ways.push([e.id,t.highway,t.name||'',t.surface||'',t.bicycle||'',f,t.tracktype||'',t.layer||'',t.maxspeed||'',nd]);}
+    else if(e.type==='way'&&t.waterway&&e.geometry){const g=[];for(const p of e.geometry)g.push(I5(p.lat),I5(p.lon));water.push([t.waterway,t.name||'',t.width||'',g]);}
+    else if(e.type==='relation'&&t.route==='bicycle')rels.push([e.id,t.name||'',t.ref||'',t.network||'',e.members.filter(m=>m.type==='way').map(m=>[m.ref,m.role||''])]);
+    else if(e.type==='node'&&t.place)places.push([t.place,t.name||'',I5(e.lat),I5(e.lon)]);
+    else if(t.name&&(e.center||e.lat!==undefined)){const c=e.center||e;pois.push([t.historic||t.amenity||t.tourism,t.name,I5(c.lat),I5(c.lon),t.building||'',t.religion||'']);}}
+  return {nl,ways,rels,water,places,pois,ts:(js.osm3s&&js.osm3s.timestamp_osm_base)||''};}
+
+// Höhenraster über Open-Meteo (max. 100 Punkte pro Anfrage), ca. 110 m Abstand
+async function elevation(){const dlat=0.001,dlon=0.0015,nlat=Math.round((BB.n-BB.s)/dlat)+1,nlon=Math.round((BB.e-BB.w)/dlon)+1,tot=nlat*nlon,h=new Array(tot).fill(null);
+  const jobs=[];for(let i=0;i<tot;i+=100)jobs.push(i);let done=0,fails=0;
+  async function one(i0){const la=[],lo=[];for(let k=i0;k<Math.min(tot,i0+100);k++){const r=Math.floor(k/nlon),c=k%nlon;la.push((BB.s+r*dlat).toFixed(5));lo.push((BB.w+c*dlon).toFixed(5));}
+    for(let a=0;a<6;a++){try{const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${la.join(',')}&longitude=${lo.join(',')}`);
+        if(r.status===429){await sleep(4000*(a+1));continue;}if(!r.ok)throw new Error('Status '+r.status);
+        const js=await r.json();js.elevation.forEach((v,k)=>h[i0+k]=Math.round(v*10));return;}
+      catch(e){await sleep(1500*(a+1));}}
+    fails++;}
+  async function worker(){while(jobs.length){const i0=jobs.shift();await one(i0);done++;$('bar2').style.width=(done/Math.ceil(tot/100)*100)+'%';$('t2').textContent=`Höhen: ${done} von ${Math.ceil(tot/100)} Paketen${fails?' · '+fails+' fehlgeschlagen':''}`;await sleep(120);}}
+  await Promise.all([worker(),worker(),worker()]);
+  return {s:BB.s,w:BB.w,dlat,dlon,nlat,nlon,h,fails};}
+
+$('b').onclick=async()=>{$('b').disabled=true;$('t3').textContent='';
+  try{const js=await overpass();$('t1').textContent='Verarbeite …';await sleep(30);
+    const d=compact(js);$('t1').innerHTML=`<b>✔</b> ${d.ways.length.toLocaleString('de-DE')} Wege, ${d.rels.length} Radrouten, ${d.water.length} Flussabschnitte`;
+    $('t2').textContent='Frage Höhen ab …';d.elev=await elevation();
+    $('t2').innerHTML=d.elev.fails?`<b>⚠</b> ${d.elev.fails} Pakete fehlen – die Datei ist trotzdem brauchbar.`:'<b>✔</b> Höhenraster komplett';
+    d.v=1;d.bbox=BB;const blob=new Blob([JSON.stringify(d)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ulm-routen.json';document.body.appendChild(a);a.click();
+    $('t3').innerHTML=`<b>✔ Fertig:</b> <b>ulm-routen.json</b> (${(blob.size/1e6).toFixed(1)} MB) ist gespeichert (Ordner „Downloads“). Jetzt diese Datei im Chat an Claude schicken.`;}
+  catch(e){$('t3').innerHTML='<b>Hat nicht geklappt:</b> '+e.message;$('b').disabled=false;}};
+</script></body></html>

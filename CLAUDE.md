@@ -20,6 +20,7 @@ src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tool
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
 tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
+tools/ulm-routen-holen.html   Hilfsseite: Straßen/Radwege/Radrouten/Flüsse (Overpass) + Höhenraster (Open-Meteo) rund um Ulm → ulm-routen.json
 tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
 ```
 - **Quelle der Wahrheit ist `src/`.** `dist/` wird nur gebaut (gitignored). Die Datendateien sind riesige
