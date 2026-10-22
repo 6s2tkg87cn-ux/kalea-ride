@@ -158,6 +158,7 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 #netPeers{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:4px}#netPeers li{font-size:14px}#netPeers i{display:inline-block;width:12px;height:12px;border-radius:50%;border:1.5px solid var(--ink);margin-right:6px;vertical-align:-1px}
 .netstate{font-weight:600;font-size:13.5px;margin:8px 0 0}.netstate.ok{color:#1e8e4a}.netstate.busy{color:#b06d00}.netstate.bad{color:#c0392b}
 #riders .r.net span:first-child{color:#1d6fa5;font-weight:600}
+#riders .r.rb{color:var(--violet);font-weight:700;font-size:13px}
 .osmbox{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border:2.5px dashed var(--ink);border-radius:14px;background:#f2fbf4}
 .osmbox>div{flex:1 1 220px;min-width:0}.osmbox small{display:block;color:var(--mut);font-size:12.5px}
 .obadge{display:inline-block;font-size:11.5px;font-weight:700;padding:0 8px;border:2px solid var(--ink);border-radius:999px;background:#eee;vertical-align:1px}
@@ -333,7 +334,7 @@ body.realshift .vonly{display:none!important}
   <div class="top">
     <div class="m big"><span id="hPow">0</span><small>W</small><label>Leistung</label></div>
     <div class="m"><span id="hCad">0</span><small>rpm</small><label>Kadenz</label></div>
-    <div class="m"><span id="hSpd">0.0</span><small>km/h</small><label>Tempo</label></div>
+    <div class="m"><span id="hSpd">0.0</span><small>km/h</small><label id="hSpdL">Tempo</label></div>
     <div class="m"><span id="hHr">–</span><small>bpm</small><label>Puls</label></div>
     <div class="m"><span id="hDist">0.00</span><small>km</small><label>Distanz</label></div>
     <div class="m"><span id="hTime">0:00</span><label>Zeit</label></div>
@@ -422,13 +423,14 @@ body.realshift .vonly{display:none!important}
         <div class="grid"><label>Dein Name<input id="iNetName" type="text" maxlength="16" placeholder="z. B. Felix"></label><label>Trikotfarbe<span id="netCols" class="cols"></span></label>
           <label>Art<select id="iNetMode"><option value="race">Rennen</option><option value="group">Gruppenfahrt</option></select></label>
           <label>Runden (Rennen)<select id="iNetLaps"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label></div>
+        <label class="chk"><input type="checkbox" id="iNetRubber" checked> 🪢 Gummiband bei Gruppenfahrt – alle bleiben zusammen, auch bei unterschiedlicher Leistung</label>
         <div id="netOff"><div class="actions"><button id="netCreate">Raum erstellen</button><span class="or">oder Code</span><input id="iNetCode" type="text" maxlength="6" placeholder="ABC12" style="width:110px;text-transform:uppercase"><button id="netJoin">Beitreten</button></div>
           <label class="chk" style="margin-top:8px"><input type="checkbox" id="iNetBots"> Computerfahrer trotzdem anzeigen</label></div>
         <div id="netOn" class="hidden"><div class="netcode">Raumcode <b id="netCode">–</b><button id="netCopy">Kopieren</button></div>
           <ul id="netPeers"></ul>
           <div class="actions"><button id="netSwitch" class="hidden"></button><button id="netStart" class="hidden"></button><button id="netLeave">Raum verlassen</button></div></div>
         <p id="netState" class="netstate">Offline</p>
-        <p class="hint">So geht's: Einer erstellt einen Raum und schickt den Code an die anderen. Alle treten mit dem Code bei – wer auf einer anderen Route ist, wird zum Wechseln aufgefordert. Der Gastgeber startet mit 10-Sekunden-Countdown. Name, Position und Watt laufen über einen öffentlichen Online-Server; trag nichts Privates ein.</p>
+        <p class="hint">So geht's: Einer erstellt einen Raum und schickt den Code an die anderen. Alle treten mit dem Code bei – wer auf einer anderen Route ist, wird zum Wechseln aufgefordert. Der Gastgeber startet mit 10-Sekunden-Countdown. Gummiband (nur Gruppenfahrt): Wer zurückfällt, kommt etwas schneller voran, wer vorne wegfährt, etwas langsamer – Watt und Widerstand bleiben echt, Bestzeiten zählen dann aber nicht. Name, Position und Watt laufen über einen öffentlichen Online-Server; trag nichts Privates ein.</p>
       </details>
       <details id="mapDet"><summary>🗺️ Karte der Strecke</summary><canvas id="bigMap"></canvas><p class="hint">Pink: deine Route · Rot: Bergwertungen · Gelbe Punkte: wichtige Wahrzeichen. Im Fahrbetrieb zeigt die Minikarte unten links die Umgebung; tippen oder Taste M schaltet zwischen Umgebung, ganzer Strecke und aus.</p></details>
       <details id="komDet"><summary>⛰️ Bergwertungen &amp; Bestzeiten</summary>

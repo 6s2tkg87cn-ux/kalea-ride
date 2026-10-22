@@ -1207,7 +1207,7 @@ function stepPhysics(dt){
     // Realistisch: vor engen Kurven bremst man – vor allem bergab (draußen fährt man Abfahrten nie voll laufen)
     if(f.curves){const vc=curveLimit(S.dist),vl=Math.min(vc,VCOMF);if(S.v>vl+0.3){S.v=Math.max(vl,S.v-CURVE_DEC*1.4*dt);S.brakeT=now;
       if(vc<VCOMF&&now-(S.brakeMsg||0)>20000&&S.v>9){S.brakeMsg=now;toast('🛑 Kurve – du bremst auf '+Math.round(vl*3.6)+' km/h');}}}}
-  recStep(dt);const prevD=S.dist;S.dist+=S.v*dt;if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
+  recStep(dt);const prevD=S.dist;S.dist+=S.v*NET.rf*dt;if(Math.abs(NET.rf-1)>0.03){if(KOM.act)KOM.act.rb=true;if(LAP.act)LAP.act.rb=true;}if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
   const h=roadAt(S.dist).h;if(S.lastH!==null&&h>S.lastH)S.climb+=h-S.lastH;S.lastH=h;
   S.legPhase+=S.cadence/60*Math.PI*2*dt;
   const t=performance.now()/1000;
@@ -1402,13 +1402,13 @@ function stepKom(prev,cur,dt){
 function finishKom(a,t){
   const c=a.c,st=komStore(),e=st[c.key]||(st[c.key]={name:c.name,world:WORLD,len:c.len,gain:c.gain,hist:[]});
   const res={t:Math.round(t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,kg:S.mass,date:Date.now(),sim:S.sim,route:ROUTE.name};
-  const pb=e.pb,isPb=!pb||res.t<pb.t;e.name=c.name;e.len=c.len;e.gain=c.gain;e.hist.unshift(res);e.hist=e.hist.slice(0,20);
+  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.name=c.name;e.len=c.len;e.gain=c.gain;e.hist.unshift(res);e.hist=e.hist.slice(0,20);
   if(isPb)e.pb={...res,splits:a.splits};komSave();REC.koms.push({name:c.name,t:res.t,p:res.p,len:c.len,pb:isPb});showKomBanner(c,res,pb,isPb);}
 function fmtDelta(x){const s=Math.round(Math.abs(x));return (x<0?'−':'+')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function showKomBanner(c,res,pb,isPb){
   const v=c.len/res.t*3.6,vam=c.gain/res.t*3600,b=$('komBanner');b.classList.remove('lap');
   b.innerHTML=`<div class="kb-t">BERGWERTUNG · ${c.name.toUpperCase()}</div><div class="kb-time">${fmtTime(res.t)}<small>${(res.t%1).toFixed(1).slice(1)}</small></div>
-    <div class="kb-pb ${isPb?'new':''}">${isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE ZEIT – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
+    <div class="kb-pb ${isPb?'new':''}">${res.rb?'🪢 mit Gummiband – zählt nicht als Bestzeit':isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE ZEIT – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
     <div class="kb-row"><span><b>${res.p}</b> W</span><span><b>${(res.p/S.mass).toFixed(1)}</b> W/kg</span><span><b>${v.toFixed(1)}</b> km/h</span><span><b>${Math.round(vam)}</b> VAM</span>${res.hr?`<span><b>${res.hr}</b> bpm</span>`:''}</div>
     <div class="kb-s">${(c.len/1000).toFixed(2)} km · ${Math.round(c.gain)} hm · Ø ${(+c.avg).toFixed(1)} %</div>`;
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now();
@@ -1448,7 +1448,7 @@ function finishLap(a){if(a.t<30)return;
   const key=WORLD+'_'+ROUTE.id,st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name,world:WORLD,len:L,hist:[]});
   const res={t:Math.round(a.t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,cad:a.cadT>10?Math.round(a.cad/a.cadT):0,
     gain:Math.round(S.climb-a.c0),vmax:a.vmax,kj:Math.round(a.e/1000),kg:S.mass,date:Date.now(),sim:S.sim};
-  const pb=e.pb,isPb=!pb||res.t<pb.t;e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb=res;try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
+  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb=res;try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
   const nr=Math.round(a.d0/L)+1;REC.laps.push({n:nr,...res,pb:isPb});
   if(NET.state==='on'&&NET.info&&NET.info.mode==='race')return; // im Rennen zeigt das Ergebnis-Fenster alles
   const show=()=>showLapBanner(res,pb,isPb,nr),wait=KOM.shownT?6000-(performance.now()-KOM.shownT):0;
@@ -1456,7 +1456,7 @@ function finishLap(a){if(a.t<30)return;
 function showLapBanner(res,pb,isPb,nr){
   const v=L/res.t*3.6,b=$('komBanner');b.classList.add('lap');
   b.innerHTML=`<div class="kb-t">🏁 RUNDE ${nr>1?nr+' ':''}GESCHAFFT · ${ROUTE.name.toUpperCase()}</div><div class="kb-time">${fmtTime(res.t)}<small>${(res.t%1).toFixed(1).slice(1)}</small></div>
-    <div class="kb-pb ${isPb?'new':''}">${isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE RUNDE – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
+    <div class="kb-pb ${isPb?'new':''}">${res.rb?'🪢 mit Gummiband – zählt nicht als Bestzeit':isPb?(pb?'NEUE BESTZEIT! '+fmtDelta(res.t-pb.t):'ERSTE RUNDE – deine Bestzeit!'):'Bestzeit '+fmtTime(pb.t)+' · '+fmtDelta(res.t-pb.t)}</div>
     <div class="kb-row"><span><b>${res.p}</b> W</span><span><b>${(res.p/S.mass).toFixed(1)}</b> W/kg</span><span><b>${v.toFixed(1)}</b> km/h</span>${res.hr?`<span><b>${res.hr}</b> bpm</span>`:''}${res.cad?`<span><b>${res.cad}</b> rpm</span>`:''}</div>
     <div class="kb-s">${(L/1000).toFixed(2)} km · ${res.gain} hm · max. ${(res.vmax*3.6).toFixed(1)} km/h · ${res.kj} kJ</div>`;
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now();confetti();}
@@ -1584,7 +1584,7 @@ function exportTcx(){const A=REC.s;if(!A.length)return;const t0=REC.start,iso=t=
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([xml],{type:'application/vnd.garmin.tcx+xml'}));a.download=`KaleaRide_${new Date(t0).toISOString().slice(0,10)}_${ROUTE.id}.tcx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 
 /* ================= Online fahren (MQTT über öffentliche WebSocket-Broker) ================= */
-const NET={client:null,room:null,id:null,host:false,info:null,peers:new Map(),state:'off',hold:false,raceT0:0,fin:null,cd:0,lastPub:0,broker:''};
+const NET={client:null,room:null,id:null,host:false,info:null,peers:new Map(),state:'off',hold:false,raceT0:0,fin:null,cd:0,lastPub:0,broker:'',rf:1,rg:0};
 const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const NET_COLS=[0xeb567b,0x490cb8,0xe8463c,0x7ad35a,0xb06fe0,0xffd23f,0xff8fb8,0x2e7dd7];
 function netPrefix(){return 'kaleaRide/v1/'+NET.room;}
@@ -1613,21 +1613,21 @@ async function netJoin(code,create){
     if(topic===P+'/room')onRoomInfo(m);else if(topic===P+'/ctl')onCtl(m);else if(topic.startsWith(P+'/s/'))onPeerState(m);});
   c.on('reconnect',()=>netStatus('Verbindung unterbrochen – verbinde neu …','busy'));c.on('connect',()=>{if(NET.state!=='off')netStatus('Online · Raum '+NET.room,'ok');});
   c.subscribe([P+'/room',P+'/ctl',P+'/s/+'],{qos:0});
-  if(create){NET.info={host:NET.id,world:WORLD,route:ROUTE.id,routeName:ROUTE.name,mode:$('iNetMode').value,laps:+$('iNetLaps').value,state:'lobby',v:1};publishRoom();}
+  if(create){NET.info={host:NET.id,world:WORLD,route:ROUTE.id,routeName:ROUTE.name,mode:$('iNetMode').value,laps:+$('iNetLaps').value,rubber:$('iNetRubber').checked,state:'lobby',v:1};publishRoom();}
   NET.state='on';netStatus('Online · Raum '+NET.room+(create?' (du bist Gastgeber)':''),'ok');
   if(!create)setTimeout(()=>{if(!NET.info&&NET.state==='on')netStatus('Raum '+NET.room+' gefunden? Noch kein Gastgeber – warte …','busy');},4000);
   $('netCode').textContent=NET.room;updateNetUi();try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:NET.host,ts:Date.now()}));}catch(e){}
   applyBotVis();}
 function publishRoom(){if(NET.client&&NET.host&&NET.info)NET.client.publish(netPrefix()+'/room',JSON.stringify(NET.info),{qos:1,retain:true});}
 function netLeave(){if(!NET.client)return;try{NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify({id:NET.id,left:true}));if(NET.host)NET.client.publish(netPrefix()+'/room','',{retain:true});NET.client.end(false);}catch(e){}
-  NET.client=null;NET.state='off';NET.hold=false;for(const p of NET.peers.values())if(p.obj)scene.remove(p.obj);NET.peers.clear();NET.info=null;
+  NET.client=null;NET.state='off';NET.hold=false;NET.rf=1;NET.rg=0;for(const p of NET.peers.values())if(p.obj)scene.remove(p.obj);NET.peers.clear();NET.info=null;
   applyBotVis();try{localStorage.removeItem('kalea_net_room');}catch(e){}netStatus('Offline','');$('netBanner').classList.add('hidden');updateNetUi();}
 function sameTrack(m){return m.w===WORLD&&m.r===ROUTE.id;}
 function onRoomInfo(m){if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Gastgeber hat den Raum geschlossen.','bad');NET.info=null;NET.hold=false;updateNetUi();}return;}
   NET.info=m;if(m.host===NET.id)NET.host=true;
   const same=m.world===WORLD&&m.route===ROUTE.id;
   if(!same){netStatus(`Raum ${NET.room} fährt „${m.routeName}“ (${m.world==='ulm'?'Ulm':'Kalea'}) – bitte wechseln.`,'busy');}
-  else netStatus('Online · Raum '+NET.room+(NET.host?' (du bist Gastgeber)':'')+' · '+(m.mode==='race'?'Rennen über '+m.laps+(m.laps>1?' Runden':' Runde'):'Gruppenfahrt'),'ok');
+  else netStatus('Online · Raum '+NET.room+(NET.host?' (du bist Gastgeber)':'')+' · '+(m.mode==='race'?'Rennen über '+m.laps+(m.laps>1?' Runden':' Runde'):'Gruppenfahrt'+(m.rubber?' mit Gummiband 🪢':'')),'ok');
   if(m.mode==='race'&&m.state==='lobby'&&same&&S.started&&!NET.fin){NET.hold=true;holdAtStart();}
   if(m.mode!=='race'||m.state==='done')NET.hold=false;
   updateNetUi();}
@@ -1658,12 +1658,24 @@ function netStep(dt,now){
   for(const p of NET.peers.values()){if(now-p.recv>12000){if(p.obj)scene.remove(p.obj);NET.peers.delete(p.id);updateNetUi();continue;}
     const tgt=p.d+p.v*(now-p.recv)/1000;p.disp+=p.v*dt;p.disp+=(tgt-p.disp)*Math.min(1,dt*2.5);if(Math.abs(tgt-p.disp)>80)p.disp=tgt;
     if(p.obj){placeRider(p.obj,p.disp,p.lat);p.phase+=(p.cad||0)/60*Math.PI*2*dt;p.wheel+=p.v/0.335*dt;if(p.obj.position.distanceToSquared(camera.position)<200*200)animRider(p.obj,p.phase,p.wheel);}}
+  netRubber(dt);
   // eigenen Zustand senden (2× pro Sekunde)
   if(NET.client&&now-NET.lastPub>480){NET.lastPub=now;
-    const m={id:NET.id,n:netName(),col:netCol(),w:WORLD,r:ROUTE.id,d:Math.round(S.dist*10)/10,v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),wkg:+(S.power/S.mass).toFixed(1),c:Math.round(S.cadence),lap:Math.floor(S.dist/L)+1,fin:NET.fin};
+    const m={id:NET.id,n:netName(),col:netCol(),w:WORLD,r:ROUTE.id,d:Math.round(S.dist*10)/10,v:+(S.v*NET.rf).toFixed(2),p:Math.round(T.pedaling?S.power:0),wkg:+(S.power/S.mass).toFixed(1),c:Math.round(S.cadence),lap:Math.floor(S.dist/L)+1,fin:NET.fin};
     NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify(m),{qos:0});}
   if(now-(NET.uiT||0)>1000){NET.uiT=now;updateNetUi();}}
-function netStartRace(){if(!NET.host||!NET.info)return;NET.info.state='countdown';NET.info.mode=$('iNetMode').value;NET.info.laps=+$('iNetLaps').value;publishRoom();
+// Gummiband (nur Gruppenfahrt, vom Gastgeber eingeschaltet): Wer hinter der Gruppe ist, kommt pro Meter Tempo etwas
+// weiter voran, wer vorne wegfährt, etwas weniger – so bleiben alle zusammen, auch mit ganz verschiedener Leistung.
+// Jeder rechnet das selbst aus (Abstand zur Gruppenmitte), Trainer-Widerstand und Watt bleiben echt.
+function rubberOn(){const I=NET.info;return NET.state==='on'&&I&&I.mode==='group'&&!!I.rubber&&I.world===WORLD&&I.route===ROUTE.id&&!NET.hold&&!NET.cd;}
+function netRubber(dt){let tgt=1,g=0;
+  if(rubberOn()&&S.v>0.8){let sum=0,n=0;const now=performance.now();
+    for(const p of NET.peers.values()){if(!sameTrack(p)||now-p.recv>6000||p.v<0.8)continue;const gp=p.disp-S.dist;if(Math.abs(gp)>1500)continue;sum+=gp;n++;} // Pause oder weit weg: zählt nicht
+    if(n){g=sum/(n+1); // Abstand zur Gruppenmitte (du zählst mit)
+      const e=Math.sign(g)*Math.max(0,Math.abs(g)-4); // nebeneinander/Windschatten: kein Eingriff
+      tgt=clamp(1+e/20,0.6,1.6);}}
+  NET.rf+=(tgt-NET.rf)*Math.min(1,dt*0.8);if(Math.abs(NET.rf-1)<0.002)NET.rf=1;NET.rg=g;}
+function netStartRace(){if(!NET.host||!NET.info)return;NET.info.state='countdown';NET.info.mode=$('iNetMode').value;NET.info.laps=+$('iNetLaps').value;NET.info.rubber=$('iNetRubber').checked;publishRoom();
   NET.client.publish(netPrefix()+'/ctl',JSON.stringify({type:'countdown',secs:10}),{qos:1});onCtl({type:'countdown',secs:10});closeMenu();}
 function netEndRide(){if(NET.client&&NET.host&&NET.info&&NET.info.mode==='race'){NET.info.state='done';publishRoom();}}
 function showNetBanner(t){const b=$('netBanner');b.innerHTML=t===undefined?'':`<b>${t}</b><span>${t==='LOS!'?'Viel Erfolg!':'Rennen startet gleich'}</span>`;b.classList.remove('hidden');}
@@ -1680,13 +1692,15 @@ function updateNetUi(){
   $('netOff').classList.toggle('hidden',on);$('netOn').classList.toggle('hidden',!on);
   if(!on)return;
   $('netSwitch').classList.toggle('hidden',!info||same);
+  if(info&&!NET.host){$('iNetRubber').checked=!!info.rubber;$('iNetMode').value=info.mode;}
+  $('iNetRubber').disabled=!!(info&&!NET.host);$('iNetMode').disabled=!!(info&&!NET.host);
   if(info&&!same)$('netSwitch').textContent=`Zur Route „${info.routeName}“ wechseln`;
   $('netStart').classList.toggle('hidden',!(NET.host&&same));
   $('netStart').textContent=info&&info.mode==='race'?(info.state==='running'?'Rennen neu starten':'Rennen starten (10 s Countdown)'):'Gemeinsam starten (10 s Countdown)';
   const list=[...NET.peers.values()];
   $('netPeers').innerHTML=`<li><i style="background:#${netCol().toString(16).padStart(6,'0')}"></i><b>${netName()}</b> (du)${NET.host?' · Gastgeber':''}</li>`+
     list.map(p=>`<li><i style="background:#${(p.col||0).toString(16).padStart(6,'0')}"></i><b>${p.n||'?'}</b>${info&&p.id===info.host?' · Gastgeber':''} · ${sameTrack(p)?((p.d/1000).toFixed(2)+' km · '+p.p+' W'):'<em>andere Strecke</em>'}</li>`).join('');}
-function saveNetPrefs(){try{localStorage.setItem('kalea_net',JSON.stringify({name:$('iNetName').value,col:netCol(),bots:$('iNetBots').checked}));}catch(e){}}
+function saveNetPrefs(){try{localStorage.setItem('kalea_net',JSON.stringify({name:$('iNetName').value,col:netCol(),bots:$('iNetBots').checked,rubber:$('iNetRubber').checked}));}catch(e){}}
 let AC=null;function beep(f,dur){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=f;o.type='square';g.gain.value=0.06;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur);o.stop(AC.currentTime+dur+0.02);}catch(e){}}
 function wireNet(){
   let pr={};try{pr=JSON.parse(localStorage.getItem('kalea_net')||'{}');}catch(e){}
@@ -1698,6 +1712,8 @@ function wireNet(){
   $('netCreate').onclick=()=>{const code=Array.from({length:5},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');netJoin(code,true);};
   $('netJoin').onclick=()=>netJoin($('iNetCode').value,false);
   $('netLeave').onclick=netLeave;$('netStart').onclick=netStartRace;
+  $('iNetRubber').checked=pr.rubber!==false;
+  $('iNetRubber').onchange=()=>{saveNetPrefs();if(NET.host&&NET.info){NET.info.rubber=$('iNetRubber').checked;publishRoom();onRoomInfo(NET.info);}};
   $('netSwitch').onclick=()=>{try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:false,ts:Date.now()}));}catch(e){}switchTo(NET.info.world,NET.info.route);};
   $('netCopy').onclick=()=>{const t=NET.room;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('netCopy').textContent='Kopiert ✓';},()=>{});};
   updateNetUi();
@@ -1988,7 +2004,7 @@ let hudT=0,ridersT=0;
 function updateHud(now){
   if(now-hudT<120)return;hudT=now;
   const r=roadAt(S.dist);
-  $('hPow').textContent=Math.round(T.pedaling?S.power:0);$('hCad').textContent=Math.round(S.cadence);$('hSpd').textContent=(S.v*3.6).toFixed(1);
+  $('hPow').textContent=Math.round(T.pedaling?S.power:0);$('hCad').textContent=Math.round(S.cadence);$('hSpd').textContent=(S.v*3.6).toFixed(1);$('hSpdL').textContent=NET.rf!==1?(NET.rf>1?'🪢 Tempo +':'🪢 Tempo −')+Math.round(Math.abs(NET.rf-1)*100)+' %':'Tempo';
   $('hHr').textContent=S.hr?S.hr:'–';$('hDist').textContent=(S.dist/1000).toFixed(2);$('hTime').textContent=fmtTime(S.elapsed);$('hElev').textContent=Math.round(S.climb);
   const gp=r.grade*100,ge=$('grade'),ef=gradeAt(S.dist)*100,fmt=x=>(x>=0?'':'−')+Math.abs(x).toFixed(1)+'%';
   ge.innerHTML=fmt(gp)+(S.smooth&&Math.abs(ef-gp)>0.4?`<small>gefühlt ${fmt(ef)}</small>`:'');
@@ -2001,7 +2017,7 @@ function updateRiders(){
   const rows=BOTS.filter(b=>b.active).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
   if(NET.state==='on')for(const q of NET.peers.values())if(q.obj)rows.push({n:'🌐 '+q.n,gap:q.disp-S.dist,w:q.wkg,net:true});
   rows.sort((a,b)=>b.gap-a.gap);
-  $('riders').innerHTML=rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?r.w.toFixed(1)+' W/kg':(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
+  $('riders').innerHTML=(rubberOn()?`<div class="r rb"><span>🪢 Gummiband</span><span class="g">${NET.rf>1.005?'holt auf':NET.rf<0.995?'wartet':'zusammen'}</span></div>`:'')+rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?r.w.toFixed(1)+' W/kg':(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
 }
 function drawProfile(){
   const c=$('profile'),dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=c.clientHeight;
