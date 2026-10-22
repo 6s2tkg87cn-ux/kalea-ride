@@ -82,7 +82,24 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
   `kalea_rides`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
-- **Leistung:** iPad/Handy laufen auf Qualität `low`. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
+- **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
+  Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
+  (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
+  Wiegetritt (steil + kräftig oder Sprint), Unterlenker (schnelle Abfahrt ohne Treten); `placeRider(o,d,lat,v,dir)`
+  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`.
+- **Gelände Ulm** (`buildTerrainUlm`): grobes Netz (24–48 m), entlang der Strecke feine Zellen (6–8 m, `TERR.FINE`),
+  Ränder zu groben Zellen linear (keine Risse). Unter der Fahrbahn eine Mulde, daneben max. 35 % Anstieg; die Straße hat
+  seitliche Blenden. Exakte Netzhöhe: `terrH(x,z)` (`groundH` nutzt sie abseits der Strecke).
+- **Bauwerke einpassen:** `addAt(group,p,ry,yOff,{rect,fixed})` schiebt Wahrzeichen anhand ihrer Bounding-Box auf den
+  nächsten Platz ohne Strecke/Nebenstraße/Fluss (`landFit`, p wird angepasst; Münster fest).
+- **Donau:** Mittellinie ist grob. `riverFit` macht den Fluss je Seite schmaler (`RIVW`, mind. 14 m halbe Breite), wo er
+  echte Häuser oder Uferwege überdecken würde; `riverDist().d` ist auf `RIVER_HW` normiert, `RIVG` = Raster für schnelle
+  Abfragen. Exakte Lösung, sobald `ulm-routen.json` mit Wasserflächen (`areas`) vorliegt.
+- **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
+- **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
+  Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
+- **Leistung:** iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`, Umschalten in
+  `updateCull` ab `LOD_R`), Vegetationskacheln sind 1,5 × `CHUNK` groß. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
   in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
   sonst heiß.
 
@@ -101,6 +118,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 
 ## Testen
 - Ohne Trainer: im Menü „Ohne Trainer testen“ (`S.sim`), Leistung mit W/S.
+- Grafik-Prüfung: Hilfsskripte im Verlauf prüften jede Strecke auf Häuser/Objekte/Hänge auf der Fahrbahn und Häuser im
+  Fluss (Grundrisse `MAPPOLY`/`MAPBLD`, Instanzen, Strahltest gegen Bauwerke, `terrH` am Fahrbahnrand).
 - Automatisiert: Playwright + Chromium (`--use-angle=swiftshader --enable-unsafe-swiftshader`). In der
   Cloud-Umgebung ist das CDN oft gesperrt → entweder `dist/kalea-ride-offline.html` testen oder
   `page.route('https://cdnjs.cloudflare.com/**', …)` auf `node_modules/three/build/three.min.js` umleiten.

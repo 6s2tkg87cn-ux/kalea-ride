@@ -458,12 +458,12 @@ function makeArch(d,text,color){
 function buildLandmarks(){
   if(IS_ULM){buildLandmarksUlm();return;}
   // Dorf am Start
-  const walls=[0xf3efe6,0xf2d7b6,0xd8e6ea,0xf5d2c6,0xfff6d8],roofM=new THREE.MeshStandardMaterial({color:0xb24a2f,roughness:0.8,flatShading:true});
-  const winTex=canvasTex(128,128,(x,w,h)=>{x.fillStyle='#fff';x.fillRect(0,0,w,h);x.fillStyle='#4b6a82';[[18,30],[74,30],[18,78],[74,78]].forEach(([a,b])=>x.fillRect(a,b,36,30));x.fillStyle='#7a5638';x.fillRect(46,92,0,0);});
+  const walls=[0xf3efe6,0xf2d7b6,0xd8e6ea,0xf5d2c6,0xfff6d8],rt=roofTileTex();rt.repeat.set(3,3);const roofM=new THREE.MeshStandardMaterial({color:0xc4573a,map:rt,roughness:0.8,flatShading:true});
+  const winTex=winTile();winTex.repeat.set(2,2);
   for(let k=0;k<22;k++){const r=roadAt(130+k*45),side=k%2?1:-1,off=side*rnd(17,34);
     const x=r.x-r.tz*off,z=r.z+r.tx*off,h=finalHeight(x,z),w=rnd(5,8.5),hh=rnd(4,7);
     const house=new THREE.Group();
-    const wm=new THREE.MeshStandardMaterial({color:walls[k%5],map:winTex,roughness:0.9});winTex.wrapS=winTex.wrapT=THREE.RepeatWrapping;
+    const wm=new THREE.MeshStandardMaterial({color:walls[k%5],map:winTex,roughness:0.9});
     const body=new THREE.Mesh(new THREE.BoxGeometry(w,hh,w*0.8),wm);body.position.y=hh/2;
     const roof=new THREE.Mesh(new THREE.ConeGeometry(w*0.76,2.8,4),roofM);roof.position.y=hh+1.4;roof.rotation.y=Math.PI/4;roof.scale.z=0.82;
     house.add(body,roof);house.position.set(x,h-0.3,z);house.rotation.y=Math.atan2(r.tx,r.tz);house.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});scene.add(house);}
@@ -498,16 +498,10 @@ function buildLandmarks(){
 function climbArches(){
   for(const c of CLIMBS){makeArch(c.start+4,'⛰ '+c.name.toUpperCase()+' · START','#e8a317');makeArch(Math.max(0,c.end-6),'BERGWERTUNG '+c.name.toUpperCase(),'#c62828');komDecor(Math.round(c.end/ds)%N);}}
 let FANS=[];
-function fanGeos(){if(fanGeos.g)return fanGeos.g;
-  const torso=new THREE.CylinderGeometry(0.19,0.23,0.72,8);torso.translate(0,1.0,0);
-  const armL=new THREE.CylinderGeometry(0.055,0.06,0.62,5);armL.translate(0,0.31,0);armL.rotateZ(0.55);armL.translate(-0.2,1.28,0);
-  const armR=new THREE.CylinderGeometry(0.055,0.06,0.62,5);armR.translate(0,0.31,0);armR.rotateZ(-0.55);armR.translate(0.2,1.28,0);
-  const legL=new THREE.CylinderGeometry(0.075,0.085,0.66,5);legL.translate(-0.1,0.33,0);const legR=legL.clone();legR.translate(0.2,0,0);
-  const head=new THREE.IcosahedronGeometry(0.19,1);head.translate(0,1.58,0);const hand1=new THREE.IcosahedronGeometry(0.075,0);hand1.translate(-0.52,1.78,0);const hand2=hand1.clone();hand2.translate(1.04,0,0);
-  return fanGeos.g={shirt:mergeGeos([torso,armL,armR]),skin:mergeGeos([head,hand1,hand2]),legs:mergeGeos([legL,legR])};}
+function fanGeos(){return fanGeos.g||(fanGeos.g=personParts(true));}
 function komDecor(KI,ok){
   // jubelnde Zuschauer & Fahnen an der Bergwertung
-  const G=fanGeos(),cnt=64,shirtM=new THREE.InstancedMesh(G.shirt,std(0xffffff,0.8),cnt),skinM=new THREE.InstancedMesh(G.skin,std(0xffffff,0.8),cnt),legM=new THREE.InstancedMesh(G.legs,std(0xffffff,0.8),cnt);
+  const G=fanGeos(),cnt=64,vm=()=>new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.8,vertexColors:true}),shirtM=new THREE.InstancedMesh(G.shirt,vm(),cnt),skinM=new THREE.InstancedMesh(G.skin,vm(),cnt),legM=new THREE.InstancedMesh(G.legs,vm(),cnt);
   const dm=new THREE.Object3D(),col=new THREE.Color(),shirts=[0xd62f2f,0xf2c230,0x2e7dd7,0xffffff,0x2bb673,0xff7a1a,0x7a4fd6,0xff8fb8,0x3ec1d3],skins=[0xf1c9a5,0xe2b48d,0xc68e62,0x8d5a3b,0xf6d7bd],pants=[0x2a3a5a,0x3a3a3a,0x6b4b2e,0x1f5f8b];
   const base=[];
   for(let k=0;k<cnt;k++){const r=roadAt(KI*ds-75+Math.floor(k/2)*2.3),side=k%2?1:-1,off=side*rnd(6.3,8.2),x=r.x-r.tz*off,z=r.z+r.tx*off; // in Metern, nicht in Streckenpunkten
@@ -2888,13 +2882,24 @@ const SHIRTS=[0xd62f2f,0xf2c230,0x2e7dd7,0xffffff,0x2bb673,0xff7a1a,0x7a4fd6,0xf
 const pick=a=>a[Math.random()*a.length|0];
 function lifeMat(vc){return new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:!!vc,roughness:0.8});}
 // Figur (Blick in +z): Oberkörper mit Armen, Kopf mit Händen, Beine einzeln (Drehpunkt an der Hüfte) oder zusammen
-function personGeos(){if(personGeos.g)return personGeos.g;
-  const arm=s=>tr(new THREE.CylinderGeometry(0.05,0.055,0.6,5),[s*0.25,1.06,0],[0,0,s*0.12]);
-  const shirt=mergeGeos([tr(new THREE.CylinderGeometry(0.17,0.2,0.68,8),[0,1.06,0]),arm(1),arm(-1)]);
-  const skin=mergeGeos([tr(new THREE.IcosahedronGeometry(0.17,1),[0,1.58,0]),tr(new THREE.IcosahedronGeometry(0.06,0),[0.29,0.76,0]),tr(new THREE.IcosahedronGeometry(0.06,0),[-0.29,0.76,0])]);
-  const leg=mergeGeos([tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[0,-0.36,0])]);
-  const legs=mergeGeos([tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[0.1,0.36,0]),tr(new THREE.CylinderGeometry(0.07,0.08,0.72,5),[-0.1,0.36,0])]);
-  return personGeos.g={shirt,skin,leg,legs};}
+// Menschen (Fußgänger, Zuschauer, Leute auf Plätzen): drei Farbgruppen je Figur (Oberteil, Haut + Haare, Hose + Schuhe),
+// damit jede Figur mit drei Instanz-Farben auskommt. Haare/Schuhe sind dunkel in die Eckpunktfarben eingefärbt.
+function personParts(armsUp){const lath=(prof,seg)=>{const g=new THREE.LatheGeometry(prof.map(([r,y])=>new THREE.Vector2(r,y)),seg);return g;};
+  const shirtP=[],skinP=[],legP=[];
+  {const t=lath([[0.001,0.86],[0.16,0.87],[0.165,0.98],[0.15,1.12],[0.175,1.3],[0.17,1.4],[0.1,1.47],[0.001,1.48]],10);t.scale(1.15,1,0.72);shirtP.push([tr(t),0xffffff]);}
+  for(const s of [1,-1]){
+    if(armsUp){shirtP.push([tube([s*0.19,1.4,0],[s*0.3,1.62,0.02],0.055,6),0xffffff]);skinP.push([tube([s*0.3,1.62,0.02],[s*0.38,1.9,0.05],0.045,6),0xffffff]);
+      skinP.push([tr(new THREE.IcosahedronGeometry(0.05,0),[s*0.39,1.95,0.05]),0xffffff]);}
+    else{shirtP.push([tube([s*0.2,1.4,0],[s*0.23,1.13,0.0],0.055,6),0xffffff]);skinP.push([tube([s*0.23,1.13,0],[s*0.235,0.84,0.04],0.043,6),0xffffff]);
+      skinP.push([tr(new THREE.IcosahedronGeometry(0.048,0),[s*0.235,0.8,0.05]),0xffffff]);}}
+  skinP.push([tube([0,1.46,0],[0,1.56,0.01],0.05,6),0xffffff]);
+  {const h=new THREE.SphereGeometry(0.11,10,8);h.scale(0.9,1.06,1);skinP.push([tr(h,[0,1.65,0.01]),0xffffff]);
+    const nose=new THREE.ConeGeometry(0.018,0.045,4);nose.rotateX(Math.PI/2);skinP.push([tr(nose,[0,1.64,0.12]),0xffffff]);
+    const hair=new THREE.SphereGeometry(0.117,10,6,0,Math.PI*2,0,Math.PI*0.5);hair.scale(0.92,1.0,1.05);skinP.push([tr(hair,[0,1.665,-0.004],[-0.25,0,0]),0x4a3424]);}
+  const leg=x=>{const g=[];g.push([tube([x,0.86,0],[x*1.1,0.06,0],0.072,7),0xffffff]);g.push([tr(new THREE.BoxGeometry(0.1,0.08,0.24),[x*1.1,0.04,0.05]),0x2a2a2e]);return g;};
+  const legOne=[[tube([0,0,0],[0,-0.8,0],0.072,7),0xffffff],[tr(new THREE.BoxGeometry(0.1,0.08,0.24),[0,-0.82,0.05]),0x2a2a2e]];
+  return {shirt:merge(shirtP),skin:merge(skinP),legs:merge([...leg(0.095),...leg(-0.095),[tr(new THREE.SphereGeometry(0.16,8,6),[0,0.86,0],[0,0,0],[1.1,0.6,0.8]),0xffffff]]),leg:merge(legOne)};}
+function personGeos(){return personGeos.g||(personGeos.g=personParts(false));}
 function dogGeo(){const C=(r,h)=>new THREE.CylinderGeometry(r,r,h,5);
   return mergeGeos([tr(new THREE.BoxGeometry(0.28,0.28,0.62),[0,0.42,0]),tr(new THREE.BoxGeometry(0.22,0.22,0.26),[0,0.62,0.38]),tr(new THREE.BoxGeometry(0.12,0.1,0.14),[0,0.57,0.56]),
     tr(new THREE.BoxGeometry(0.06,0.1,0.04),[0.08,0.76,0.36]),tr(new THREE.BoxGeometry(0.06,0.1,0.04),[-0.08,0.76,0.36]),
@@ -2908,8 +2913,8 @@ function freeSpot(x,z,road){return !nearestRoad(x,z,road||5.5)&&occFree(x,z,0,1,
 
 // ---- Fußgänger und Jogger am Straßenrand (manche mit Hund), immer in deiner Nähe ----
 const _wo=new THREE.Object3D(),_wl=new THREE.Object3D(),_wd=new THREE.Object3D(),_Z0=new THREE.Matrix4().makeScale(0,0,0);_wo.add(_wl,_wd);
-function buildWalkers(n){const G=personGeos(),mk=geo=>{const m=new THREE.InstancedMesh(geo,lifeMat(false),n);m.castShadow=true;m.frustumCulled=false;scene.add(m);LIFE.statics.push(m);return m;};
-  const W=LIFE.wm={shirt:mk(G.shirt),skin:mk(G.skin),legL:mk(G.leg),legR:mk(G.leg),dog:mk(dogGeo())},col=new THREE.Color();
+function buildWalkers(n){const G=personGeos(),mk=(geo,vc=true)=>{const m=new THREE.InstancedMesh(geo,lifeMat(vc),n);m.castShadow=true;m.frustumCulled=false;scene.add(m);LIFE.statics.push(m);return m;};
+  const W=LIFE.wm={shirt:mk(G.shirt),skin:mk(G.skin),legL:mk(G.leg),legR:mk(G.leg),dog:mk(dogGeo(),false)},col=new THREE.Color();
   for(let k=0;k<n;k++){const pants=pick(PANTS);W.shirt.setColorAt(k,col.set(pick(SHIRTS)));W.skin.setColorAt(k,col.set(pick(SKINS)));W.legL.setColorAt(k,col.set(pants));W.legR.setColorAt(k,col.set(pants));
     W.dog.setColorAt(k,col.set(pick([0x8a5a36,0x2b2422,0xe8dcc8,0xc8913c,0x6b6b6b])));for(const m of Object.values(W))m.setMatrixAt(k,_Z0);
     LIFE.walk.push({k,d:0,off:0,dir:1,sp:1,jog:false,dog:false,ph:rnd(0,6.28),s:1,y:0,yd:-1e9,hide:true,init:false});}}
@@ -2931,8 +2936,8 @@ function stepWalkers(dt){const W=LIFE.wm;if(!W)return;const on=S.life&&S.started
     w.ph+=dt*w.sp*(w.jog?2.4:3.4);const sw=Math.sin(w.ph)*(w.jog?0.7:0.42),bob=Math.abs(Math.cos(w.ph))*(w.jog?0.07:0.03);
     _wo.position.set(x,w.y+bob,z);_wo.rotation.set(w.jog?0.12:0,Math.atan2(r.tx,r.tz)+(w.dir<0?Math.PI:0),0,'YXZ');_wo.scale.setScalar(w.s);_wo.updateMatrixWorld(true);
     W.shirt.setMatrixAt(w.k,_wo.matrixWorld);W.skin.setMatrixAt(w.k,_wo.matrixWorld);
-    _wl.position.set(0.1,0.72,0);_wl.rotation.set(sw,0,0);_wl.updateMatrixWorld(true);W.legL.setMatrixAt(w.k,_wl.matrixWorld);
-    _wl.position.set(-0.1,0.72,0);_wl.rotation.set(-sw,0,0);_wl.updateMatrixWorld(true);W.legR.setMatrixAt(w.k,_wl.matrixWorld);
+    _wl.position.set(0.095,0.86,0);_wl.rotation.set(sw,0,0);_wl.updateMatrixWorld(true);W.legL.setMatrixAt(w.k,_wl.matrixWorld);
+    _wl.position.set(-0.095,0.86,0);_wl.rotation.set(-sw,0,0);_wl.updateMatrixWorld(true);W.legR.setMatrixAt(w.k,_wl.matrixWorld);
     if(w.dog){_wd.position.set(0.55,-bob+Math.abs(Math.sin(w.ph*1.3))*0.04,0.9);_wd.rotation.set(0,Math.sin(w.ph*0.4)*0.2,0);_wd.updateMatrixWorld(true);W.dog.setMatrixAt(w.k,_wd.matrixWorld);}
     else W.dog.setMatrixAt(w.k,_Z0);}
   for(const m of Object.values(W))m.instanceMatrix.needsUpdate=true;}
@@ -2941,7 +2946,7 @@ function stepWalkers(dt){const W=LIFE.wm;if(!W)return;const on=S.life&&S.started
 function staticPeople(list){const G=personGeos(),a=[],b=[],c=[];
   for(const p of list){const s=rnd(0.9,1.06),base={x:p.x,z:p.z,y:p.y!==undefined?p.y:groundH(p.x,p.z)-0.03,sx:s,sy:s,sz:s,ry:p.ry!==undefined?p.ry:rnd(0,6.28),rx:p.rx||0};
     a.push({...base,c:pick(SHIRTS)});b.push({...base,c:pick(SKINS)});c.push({...base,c:pick(PANTS)});}
-  if(list.length)LIFE.statics.push(...chunkedInstances(G.shirt,lifeMat(),a),...chunkedInstances(G.skin,lifeMat(),b),...chunkedInstances(G.legs,lifeMat(),c));}
+  if(list.length)LIFE.statics.push(...chunkedInstances(G.shirt,lifeMat(true),a),...chunkedInstances(G.skin,lifeMat(true),b),...chunkedInstances(G.legs,lifeMat(true),c));}
 function scatterPeople(L,cx,cz,w,h,n,ok){for(let t=0,c=0;t<n*15&&c<n;t++){const x=cx+rnd(-w,w),z=cz+rnd(-h,h);if(!freeSpot(x,z)||(ok&&!ok(x,z)))continue;L.push({x,z});c++;}}
 function peopleUlm(){const P=ULM.places,L=[],m=P.muenster;
   scatterPeople(L,m[0]-135,m[1],60,55,28,(x,z)=>!(Math.abs(x-m[0]-2)<76&&Math.abs(z-m[1])<31)); // Münsterplatz (westlich vom Münster)
