@@ -222,8 +222,8 @@ function detailBlend(mat){mat.userData.det=true;mat.customProgramCacheKey=()=>'d
   mat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>',
     '#ifdef USE_MAP\n vec4 texelColor=texture2D(map,vUv);vec4 tc2=texture2D(map,vUv*0.143+vec2(0.37,0.11));\n texelColor=mapTexelToLinear(texelColor*mix(vec4(1.0),tc2*1.18,0.55));diffuseColor*=texelColor;\n#endif');};return mat;}
 // Asphalt mit Splitt, Flickstellen, Rissen, Fahrspuren, Rinne und abgefahrener Markierung
-function asphaltTex(w,h,o){return canvasTex(w,h,(x)=>{x.fillStyle='#57595d';x.fillRect(0,0,w,h);
-  for(let k=0;k<w*h/9;k++){const v=60+Math.random()*70|0;x.fillStyle=`rgb(${v},${v},${v+3})`;x.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*1.2,1+Math.random()*1.2);}
+function asphaltTex(w,h,o){return canvasTex(w,h,(x)=>{const im=x.createImageData(w,h),D=im.data;
+  for(let i=0;i<w*h;i++){const r=Math.random(),v=r<0.12?62+r*300:r>0.93?120+(r-0.93)*600:80+(r-0.12)*18;D[i*4]=v;D[i*4+1]=v;D[i*4+2]=v+3;D[i*4+3]=255;}x.putImageData(im,0,0);
   for(let k=0;k<w*h/600;k++){const v=150+Math.random()*60|0;x.fillStyle=`rgba(${v},${v-4},${v-10},.8)`;x.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}
   for(let k=0;k<h/70;k++){const pw=w*(0.12+Math.random()*0.3),ph=h*(0.006+Math.random()*0.025),px=w*0.08+Math.random()*(w*0.84-pw),py=Math.random()*h;
     x.fillStyle=Math.random()<0.5?'rgba(28,28,32,.08)':'rgba(140,140,146,.06)';wrapDraw(w,h,px,py,ph,(X,Y)=>x.fillRect(X,Y,pw,ph));}
@@ -529,7 +529,7 @@ function komDecor(KI,ok){
 const UY0=460;                  // Höhe über NN, die y=0 entspricht
 const WATER_Y=465.6-UY0;        // Donau-Wasserspiegel in Ulm (~465–466 m ü. NN)
 const RIVER_HW=36;              // halbe Flussbreite
-let ULM=null,RIV=null,RIVW=null,VR=[],VRHASH=new Map();
+let ULM=null,RIV=null,RIVW=null,RIVG=null,VR=[],VRHASH=new Map();
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function ulmLL(lon,lat){const o=ULM_DATA.origin,kx=111320*Math.cos(o[0]*Math.PI/180);return [(lon-o[1])*kx,-(lat-o[0])*110540];}
 function ulmInit(){
@@ -539,6 +539,8 @@ function ulmInit(){
   if(!ULM.riverSmoothed){let r=ULM.river;for(let it=0;it<2;it++){const o=[r[0]];for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1];o.push([a[0]*0.75+b[0]*0.25,a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75,a[1]*0.25+b[1]*0.75]);}o.push(r[r.length-1]);r=o;}ULM.river=r;ULM.riverSmoothed=true;}
   const r=ULM.river;RIV=[];for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);RIV.push({a,b,dx,dz,l2:dx*dx+dz*dz,tx:dx/l,tz:dz/l,i});}
   RIVW={p:r.map(()=>RIVER_HW),m:r.map(()=>RIVER_HW)};
+  RIVG=new Map();for(const sg of RIV){const x0=Math.min(sg.a[0],sg.b[0])-400,x1=Math.max(sg.a[0],sg.b[0])+400,z0=Math.min(sg.a[1],sg.b[1])-400,z1=Math.max(sg.a[1],sg.b[1])+400;
+    for(let i=Math.floor(x0/100);i<=Math.floor(x1/100);i++)for(let j=Math.floor(z0/100);j<=Math.floor(z1/100);j++){const k=i*100000+j;if(!RIVG.has(k))RIVG.set(k,[]);RIVG.get(k).push(sg);}}
   // Sichtstraßen: feste Nebenstraßen + die Straßen der anderen Routen (ohne Stücke, die auf der gefahrenen Strecke liegen)
   const VL=[],seen=new Set(),ck=(x,z)=>Math.floor(x/9)+'|'+Math.floor(z/9);
   const mark=(x,z)=>{const ix=Math.floor(x/9),iz=Math.floor(z/9);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)seen.add((ix+a)+'|'+(iz+b));};
@@ -559,7 +561,7 @@ function ulmInit(){
 function segDist(s,x,z){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1);return Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);}
 // Abstand zum Fluss. d ist auf die Standardbreite umgerechnet (d − echte halbe Breite + RIVER_HW), so dass alle
 // Vergleiche mit RIVER_HW auch dort stimmen, wo der Fluss schmaler gemacht wurde (riverFit)
-function riverDist(x,z){let best=1e9,bs=null,bt=0;for(const s of RIV){if(Math.abs(x-s.a[0])>2500&&Math.abs(x-s.b[0])>2500)continue;const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;bs=s;bt=t;}}
+function riverDist(x,z){let best=1e9,bs=null,bt=0;const L=RIVG&&RIVG.get(Math.floor(x/100)*100000+Math.floor(z/100));if(RIVG&&!L)return {d:1e4,s:null};for(const s of L||RIV){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;bs=s;bt=t;}}
   if(!bs)return {d:best,s:null};const side=(bs.tx*(z-bs.a[1])-bs.tz*(x-bs.a[0]))>=0?1:-1,W=side>0?RIVW.p:RIVW.m,hw=W[bs.i]+(W[bs.i+1]-W[bs.i])*bt;
   return {d:best+RIVER_HW-hw,raw:best,s:bs,side,hw};}
 // Fluss an die echten Häuser und Wege anpassen: wo die (grob vermessene) Flusslinie Häuser oder Uferwege überdecken
@@ -3057,7 +3059,7 @@ function clearWorld(){
   HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
-  RIV=null;RIVW=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
+  RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
   LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;
   OSM.data=null;OSM.built=0;OSM.embedded=false;
   ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
