@@ -309,6 +309,11 @@ function buildRoad(){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();
   const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:0.88,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
   mesh.receiveShadow=true;scene.add(mesh);
+  // seitliche Blenden: das Gelände liegt unter der Fahrbahn etwas tiefer (keine Hänge über dem Rand), die Blenden verdecken die Kante
+  {const SP=[],SI=[];for(const sd of [-1,1]){const o=SP.length/3;for(let k=0;k<=N;k++){const i=k%N,[ax,az]=lateralPoint(i,sd*W),[bx,bz]=lateralPoint(i,sd*(W+0.35));
+      SP.push(ax,RH[i]+0.24,az,bx,RH[i]-1.8,bz);if(k<N){const q=o+k*2;if(sd>0)SI.push(q,q+2,q+1,q+1,q+2,q+3);else SI.push(q,q+1,q+2,q+1,q+3,q+2);}}}
+    const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(SP,3));sg.setIndex(SI);sg.computeVertexNormals();
+    const sk=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:IS_ULM?0x8c877e:0x9a8466,roughness:1,side:THREE.DoubleSide}));sk.receiveShadow=true;scene.add(sk);}
   // Leitpfosten
   const post=merge([[tr(new THREE.BoxGeometry(0.12,1.0,0.12),[0,0.5,0]),0xf4f4f0],[tr(new THREE.BoxGeometry(0.13,0.2,0.13),[0,0.85,0]),0x222222],[tr(new THREE.BoxGeometry(0.135,0.07,0.135),[0,0.85,0]),0xff6a1a]]);
   const step=Math.round(50/ds),cnt=Math.floor(N/step)*2,pm=new THREE.InstancedMesh(post,new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6}),cnt);
@@ -345,9 +350,13 @@ function shareGeo(geo,ymid,radius){const g=new THREE.BufferGeometry();for(const 
 // Bodenhöhe genau so, wie das Geländenetz sie darstellt (damit nichts schwebt oder versinkt)
 let TERR=null;
 function setTerr(x0,z0,dx,dz,nx,nz,pos){const Y=new Float32Array(nx*nz);for(let i=0;i<Y.length;i++)Y[i]=pos.getY(i);TERR={x0,z0,dx,dz,nx,nz,Y};}
-function groundH(x,z){const T=TERR;if(!T||nearestRoad(x,z,9.5))return finalHeight(x,z);const fx=(x-T.x0)/T.dx,fz=(z-T.z0)/T.dz;if(fx<0||fz<0||fx>=T.nx-1||fz>=T.nz-1)return finalHeight(x,z);
-  const ix=Math.floor(fx),iz=Math.floor(fz),u=fx-ix,v=fz-iz,a=T.Y[iz*T.nx+ix],b=T.Y[(iz+1)*T.nx+ix],c=T.Y[(iz+1)*T.nx+ix+1],d=T.Y[iz*T.nx+ix+1];
+// Höhe genau so, wie das Geländenetz sie zeigt (grobe Zellen bzw. feine Zellen entlang der Strecke)
+function terrH(x,z){const T=TERR;if(!T)return finalHeight(x,z);const fx=(x-T.x0)/T.dx,fz=(z-T.z0)/T.dz;if(fx<0||fz<0||fx>=T.nx-1||fz>=T.nz-1)return finalHeight(x,z);
+  let ix=Math.floor(fx),iz=Math.floor(fz),u=fx-ix,v=fz-iz,Y=T.Y,nx=T.nx;
+  const F=T.FINE&&T.FINE.get(iz*T.SX+ix);if(F){const n=T.sub,gu=u*n,gv=v*n,ju=Math.min(n-1,Math.floor(gu)),jv=Math.min(n-1,Math.floor(gv));u=gu-ju;v=gv-jv;Y=F;nx=n+1;ix=ju;iz=jv;}
+  const a=Y[iz*nx+ix],b=Y[(iz+1)*nx+ix],c=Y[(iz+1)*nx+ix+1],d=Y[iz*nx+ix+1];
   return u+v<=1?a+(d-a)*u+(b-a)*v:c+(b-c)*(1-u)+(d-c)*(1-v);}
+function groundH(x,z){if(!TERR||nearestRoad(x,z,9.5))return finalHeight(x,z);return terrH(x,z);}
 function scatter(geo,mat,count,pick,opts={}){
   const buckets=new Map(),dm=new THREE.Object3D(),col=new THREE.Color();let n=0,tries=0;
   if(S.quality==='low')count=Math.round(count*0.5);
@@ -451,14 +460,14 @@ function komDecor(KI,ok){
   const dm=new THREE.Object3D(),col=new THREE.Color(),shirts=[0xd62f2f,0xf2c230,0x2e7dd7,0xffffff,0x2bb673,0xff7a1a,0x7a4fd6,0xff8fb8,0x3ec1d3],skins=[0xf1c9a5,0xe2b48d,0xc68e62,0x8d5a3b,0xf6d7bd],pants=[0x2a3a5a,0x3a3a3a,0x6b4b2e,0x1f5f8b];
   const base=[];
   for(let k=0;k<cnt;k++){const r=roadAt(KI*ds-75+Math.floor(k/2)*2.3),side=k%2?1:-1,off=side*rnd(6.3,8.2),x=r.x-r.tz*off,z=r.z+r.tx*off; // in Metern, nicht in Streckenpunkten
-    const b={x,y:groundH(x,z)-0.05,z,ry:Math.atan2(r.tx,r.tz)+(side>0?-Math.PI/2:Math.PI/2)+rnd(-0.3,0.3),s:ok&&!ok(x,z)?0:rnd(0.88,1.1),ph:rnd(0,6.28),sp:rnd(5,8)};base.push(b);
+    const b={x,y:groundH(x,z)-0.05,z,ry:Math.atan2(r.tx,r.tz)+(side>0?-Math.PI/2:Math.PI/2)+rnd(-0.3,0.3),s:(ok&&!ok(x,z))||nearestRoad(x,z,5.6)?0:rnd(0.88,1.1),ph:rnd(0,6.28),sp:rnd(5,8)};base.push(b);
     dm.position.set(b.x,b.y,b.z);dm.rotation.set(0,b.ry,0);dm.scale.setScalar(b.s);dm.updateMatrix();
     for(const m of [shirtM,skinM,legM])m.setMatrixAt(k,dm.matrix);
     shirtM.setColorAt(k,col.set(shirts[k%shirts.length]));skinM.setColorAt(k,col.set(skins[(k*7)%skins.length]));legM.setColorAt(k,col.set(pants[(k*3)%pants.length]));}
   for(const m of [shirtM,skinM,legM]){m.castShadow=true;m.frustumCulled=false;scene.add(m);}
   FANS.push({ms:[shirtM,skinM,legM],base,cx:RX[KI],cz:RZ[KI]});
   const flagTex=canvasTex(64,64,(x)=>{for(let a=0;a<8;a++)for(let b=0;b<8;b++){x.fillStyle=(a+b)%2?'#c62828':'#ffffff';x.fillRect(a*8,b*8,8,8);}});
-  for(let k=0;k<12;k++){const i=(KI-Math.round(110/ds)+k*Math.round(10/ds)+N)%N,side=k%2?1:-1,[x,z]=lateralPoint(i,side*5.6),h=groundH(x,z);
+  for(let k=0;k<12;k++){const i=(KI-Math.round(110/ds)+k*Math.round(10/ds)+N)%N,side=k%2?1:-1,[x,z]=lateralPoint(i,side*5.6),h=groundH(x,z);if(nearestRoad(x,z,5.2))continue;
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,4,5),new THREE.MeshStandardMaterial({color:0xcccccc}));pole.position.set(x,h+2,z);
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.8),new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide}));fl.position.set(x+0.6,h+3.5,z);fl.rotation.y=Math.atan2(RTX[i],RTZ[i])+Math.PI/2;
     scene.add(pole,fl);}
@@ -469,7 +478,7 @@ function komDecor(KI,ok){
 const UY0=460;                  // Höhe über NN, die y=0 entspricht
 const WATER_Y=465.6-UY0;        // Donau-Wasserspiegel in Ulm (~465–466 m ü. NN)
 const RIVER_HW=36;              // halbe Flussbreite
-let ULM=null,RIV=null,VR=[],VRHASH=new Map();
+let ULM=null,RIV=null,RIVW=null,VR=[],VRHASH=new Map();
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function ulmLL(lon,lat){const o=ULM_DATA.origin,kx=111320*Math.cos(o[0]*Math.PI/180);return [(lon-o[1])*kx,-(lat-o[0])*110540];}
 function ulmInit(){
@@ -477,7 +486,8 @@ function ulmInit(){
   // Flussmitte als Segmente
   // Donau-Mittellinie zweimal glätten (Chaikin), damit Ufer und Wasser weich geschwungen sind
   if(!ULM.riverSmoothed){let r=ULM.river;for(let it=0;it<2;it++){const o=[r[0]];for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1];o.push([a[0]*0.75+b[0]*0.25,a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75,a[1]*0.25+b[1]*0.75]);}o.push(r[r.length-1]);r=o;}ULM.river=r;ULM.riverSmoothed=true;}
-  const r=ULM.river;RIV=[];for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);RIV.push({a,b,dx,dz,l2:dx*dx+dz*dz,tx:dx/l,tz:dz/l});}
+  const r=ULM.river;RIV=[];for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);RIV.push({a,b,dx,dz,l2:dx*dx+dz*dz,tx:dx/l,tz:dz/l,i});}
+  RIVW={p:r.map(()=>RIVER_HW),m:r.map(()=>RIVER_HW)};
   // Sichtstraßen: feste Nebenstraßen + die Straßen der anderen Routen (ohne Stücke, die auf der gefahrenen Strecke liegen)
   const VL=[],seen=new Set(),ck=(x,z)=>Math.floor(x/9)+'|'+Math.floor(z/9);
   const mark=(x,z)=>{const ix=Math.floor(x/9),iz=Math.floor(z/9);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)seen.add((ix+a)+'|'+(iz+b));};
@@ -485,18 +495,38 @@ function ulmInit(){
     for(const q of pts){if(nearestRoad(q[0],q[1],12)||seen.has(ck(q[0],q[1]))){if(cur.length)cur.push(q);flush();continue;}cur.push(q);}flush();
     for(const v of VL)if(v.n===name)for(const q of v.p)mark(q[0],q[1]);};
   for(const rd of ULM.roads){const dense=[];for(let i=0;i<rd.p.length-1;i++){const a=rd.p[i],b=rd.p[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/8));for(let k=0;k<n;k++)dense.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);}
-    dense.push(rd.p[rd.p.length-1]);addLine(dense,rd.n,rd.n.startsWith('B 10')?7.5:5.5);}
+    dense.push(rd.p[rd.p.length-1]);addLine(dense,rd.n,rd.n.startsWith('B 10')?7:3.8);}
   for(const rt of ULM.routes){if(rt===ROUTE)continue;let si=0,cur=[],nm=null;
     for(let i=0;i<rt.x.length;i+=2){while(si<rt.segs.length-1&&rt.segs[si+1][0]<=i)si++;const n=rt.segs[si][1];
-      if(n!==nm&&cur.length){cur.push([rt.x[i],rt.z[i]]);addLine(cur,nm,5);cur=[];}nm=n;cur.push([rt.x[i],rt.z[i]]);}
-    if(cur.length)addLine(cur,nm,5);}
+      if(n!==nm&&cur.length){cur.push([rt.x[i],rt.z[i]]);addLine(cur,nm,4);cur=[];}nm=n;cur.push([rt.x[i],rt.z[i]]);}
+    if(cur.length)addLine(cur,nm,4);}
   ULM.vroads=VL;
   for(const rd of VL){const p=rd.p;for(let i=0;i<p.length-1;i++){const a=p[i],b=p[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;
-    const sg={a,b,dx,dz,l2:dx*dx+dz*dz,tx:dx/l,tz:dz/l,name:rd.n};VR.push(sg);
+    const sg={a,b,dx,dz,l2:dx*dx+dz*dz,tx:dx/l,tz:dz/l,name:rd.n,w:rd.w};VR.push(sg);
     const n=Math.ceil(l/20);for(let k=0;k<=n;k++){const x=a[0]+dx*k/n,z=a[1]+dz*k/n,key=hkey(Math.floor(x/CELL),Math.floor(z/CELL));if(!VRHASH.has(key))VRHASH.set(key,new Set());VRHASH.get(key).add(sg);}}}
 }
 function segDist(s,x,z){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1);return Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);}
-function riverDist(x,z){let best=1e9,bs=null;for(const s of RIV){if(Math.abs(x-s.a[0])>2500&&Math.abs(x-s.b[0])>2500)continue;const d=segDist(s,x,z);if(d<best){best=d;bs=s;}}return {d:best,s:bs};}
+// Abstand zum Fluss. d ist auf die Standardbreite umgerechnet (d − echte halbe Breite + RIVER_HW), so dass alle
+// Vergleiche mit RIVER_HW auch dort stimmen, wo der Fluss schmaler gemacht wurde (riverFit)
+function riverDist(x,z){let best=1e9,bs=null,bt=0;for(const s of RIV){if(Math.abs(x-s.a[0])>2500&&Math.abs(x-s.b[0])>2500)continue;const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;bs=s;bt=t;}}
+  if(!bs)return {d:best,s:null};const side=(bs.tx*(z-bs.a[1])-bs.tz*(x-bs.a[0]))>=0?1:-1,W=side>0?RIVW.p:RIVW.m,hw=W[bs.i]+(W[bs.i+1]-W[bs.i])*bt;
+  return {d:best+RIVER_HW-hw,raw:best,s:bs,side,hw};}
+// Fluss an die echten Häuser und Wege anpassen: wo die (grob vermessene) Flusslinie Häuser oder Uferwege überdecken
+// würde, wird er auf dieser Seite schmaler (mind. 14 m halbe Breite). Brücken (Straße quert die Mitte) zählen nicht.
+function riverFit(){const r=ULM.river,n=r.length,HP=new Array(n).fill(RIVER_HW),HM=new Array(n).fill(RIVER_HW);
+  const G=new Map(),cell=12,key=(x,z)=>Math.floor(x/cell)+'|'+Math.floor(z/cell);
+  if(OSM.data)for(const b of OSM.data.b){const P=b.p;let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(let i=0;i<P.length;i+=2){x0=Math.min(x0,P[i]);x1=Math.max(x1,P[i]);z0=Math.min(z0,P[i+1]);z1=Math.max(z1,P[i+1]);}
+    if(x1-x0>400||z1-z0>400)continue;for(let i=Math.floor((x0-3)/cell);i<=Math.floor((x1+3)/cell);i++)for(let j=Math.floor((z0-3)/cell);j<=Math.floor((z1+3)/cell);j++){const k=i+'|'+j;if(!G.has(k))G.set(k,[]);G.get(k).push(P);}}
+  const inB=(x,z)=>{for(const P of G.get(key(x,z))||[]){let c=false;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){const ax=P[i],az=P[i+1],bx=P[j],bz=P[j+1];if((az>z)!==(bz>z)&&x<(bx-ax)*(z-az)/(bz-az)+ax)c=!c;}if(c)return true;}return false;};
+  for(let i=0;i<n;i++){const a=r[Math.max(0,i-1)],b=r[Math.min(n-1,i+1)];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz)||1;tx/=l;tz/=l;
+    let cross=false;for(let u=-60;u<=60&&!cross;u+=6){const qx=r[i][0]+tx*u,qz=r[i][1]+tz*u;if(nearestRoad(qx,qz,16)||nearVRoad(qx,qz,12))cross=true;}
+    for(const sd of [1,-1]){for(let t=4;t<=RIVER_HW+6;t+=2){const x=r[i][0]-tz*sd*t,z=r[i][1]+tx*sd*t;
+      let hit=inB(x,z)||inB(x+2.5,z)||inB(x-2.5,z)||inB(x,z+2.5)||inB(x,z-2.5);
+      if(!hit&&!cross){const vr=nearVRoad(x,z,9);hit=!!nearestRoad(x,z,6.5)||!!(vr&&vr.d<(vr.s.w||4)+1.5);}
+      if(hit){(sd>0?HP:HM)[i]=Math.max(14,Math.min(RIVER_HW,t-5));break;}}}}
+  // glätten: erst Minimum der Nachbarn, dann Mittel – keine Zacken im Ufer
+  const sm=A=>{const m=A.map((v,i)=>Math.min(v,A[Math.max(0,i-1)],A[Math.min(n-1,i+1)]));return m.map((v,i)=>Math.min(v,(m[Math.max(0,i-1)]+2*v+m[Math.min(n-1,i+1)])/4+2));};
+  RIVW={p:sm(HP),m:sm(HM)};}
 function nearVRoad(x,z,maxR){const ix=Math.floor(x/CELL),iz=Math.floor(z/CELL),rr=Math.ceil(maxR/CELL);let best=maxR,bs=null;
   for(let dx=-rr;dx<=rr;dx++)for(let dz=-rr;dz<=rr;dz++){const set=VRHASH.get(hkey(ix+dx,iz+dz));if(!set)continue;for(const s of set){const d=segDist(s,x,z);if(d<best){best=d;bs=s;}}}
   return bs?{d:best,s:bs}:null;}
@@ -551,15 +581,41 @@ let RNAME=null;
 /* ---- Gelände ---- */
 function buildTerrainUlm(){
   const g=ULM.grid,x0=g.x0-2600,x1=g.x0+g.dx*(g.nx-1)+2600,z0=g.z0-2600,z1=g.z0+g.dz*(g.nz-1)+2600;
-  const W=x1-x0,H=z1-z0,res=S.quality==='high'?24:S.quality==='medium'?34:48,SX=Math.round(W/res),SZ=Math.round(H/res);
-  const geo=new THREE.PlaneGeometry(W,H,SX,SZ);geo.rotateX(-Math.PI/2);geo.translate((x0+x1)/2,0,(z0+z1)/2);
-  const pos=geo.attributes.position,near=new Float32Array(pos.count),vnear=new Float32Array(pos.count),rdist=new Float32Array(pos.count);
-  for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),nr=nearestRoad(x,z,70);rdist[i]=riverDist(x,z).d;
+  const W=x1-x0,H=z1-z0,res=S.quality==='high'?24:S.quality==='medium'?34:48,SX=Math.round(W/res),SZ=Math.round(H/res),dx=W/SX,dz=H/SZ;
+  // Entlang der Strecke feineres Netz (6–8 m statt 24–48 m), sonst schneiden grobe Dreiecke in Kehren und Hanglagen
+  // über die Fahrbahn. Kanten zu groben Nachbarzellen werden linear gehalten, damit keine Risse entstehen.
+  const fr=S.quality==='low'?8:6,sub=Math.max(2,Math.round(Math.max(dx,dz)/fr)),fine=new Uint8Array(SX*SZ),FINE=new Map();
+  for(let j=0;j<SZ;j++)for(let i=0;i<SX;i++){if(nearestRoad(x0+(i+0.5)*dx,z0+(j+0.5)*dz,Math.hypot(dx,dz)*0.5+16))fine[j*SX+i]=1;}
+  const isFine=(i,j)=>i>=0&&j>=0&&i<SX&&j<SZ&&fine[j*SX+i]===1;
+  const hAt=(x,z)=>{const nr=nearestRoad(x,z,70),rd=riverDist(x,z).d;
     // unter den Brücken kein Damm: dort bleibt das Flussbett frei
-    const uh=ulmHeight(x,z),bh=blendRoad(uh,nr),rw=sstep((rdist[i]-RIVER_HW-2)/22);let h=uh+(bh-uh)*rw;near[i]=nr?nr.d:99;
-    const vr=nearVRoad(x,z,30);vnear[i]=vr?vr.d:99;pos.setY(i,h);}
-  setTerr(x0,z0,W/SX,H/SZ,SX+1,SZ+1,pos);
+    const uh=ulmHeight(x,z),bh=blendRoad(uh,nr),rw=sstep((rd-RIVER_HW-2)/22);let h=uh+(bh-uh)*rw;
+    // unter der Fahrbahn eine flache Mulde, daneben höchstens 35 % Anstieg – gemessen an allen nahen Streckenpunkten
+    // (in Kehren liegt der untere Ast sonst unter dem Hang des oberen); die Straße hat seitliche Blenden (buildRoad)
+    if(nr&&nr.d<30){const ix=Math.floor(x/CELL),iz=Math.floor(z/CELL);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const arr=HASH.get(hkey(ix+a,iz+b));if(!arr)continue;
+      for(const k of arr){const d=Math.hypot(RX[k]-x,RZ[k]-z);if(d<30)h=Math.min(h,RH[k]-1.25+0.35*Math.max(0,d-4)+sstep((d-22)/8)*50);}}}
+    return h;};
+  const P=[],UV=[],IDX=[];let nv=0;
+  const vtx=(x,z,h)=>{P.push(x,h,z);UV.push((x-x0)/W,(z-z0)/H);return nv++;};
+  const CY=new Float32Array((SX+1)*(SZ+1));for(let j=0;j<=SZ;j++)for(let i=0;i<=SX;i++){const x=x0+i*dx,z=z0+j*dz;CY[j*(SX+1)+i]=hAt(x,z);vtx(x,z,CY[j*(SX+1)+i]);}
+  const C=(i,j)=>j*(SX+1)+i;
+  for(let j=0;j<SZ;j++)for(let i=0;i<SX;i++){
+    if(!fine[j*SX+i]){const a=C(i,j),b=C(i,j+1),c=C(i+1,j+1),d=C(i+1,j);IDX.push(a,b,d,b,c,d);continue;}
+    const n=sub,Y=new Float32Array((n+1)*(n+1)),base=nv,ca=CY[C(i,j)],cb=CY[C(i,j+1)],cc=CY[C(i+1,j+1)],cd=CY[C(i+1,j)];
+    for(let v=0;v<=n;v++)for(let u=0;u<=n;u++){const x=x0+(i+u/n)*dx,z=z0+(j+v/n)*dz,fu=u/n,fv=v/n;let h;
+      // Rand zu einer groben Zelle: genau wie deren Kante (linear zwischen den Ecken)
+      if(u===0&&!isFine(i-1,j))h=ca+(cb-ca)*fv;else if(u===n&&!isFine(i+1,j))h=cd+(cc-cd)*fv;
+      else if(v===0&&!isFine(i,j-1))h=ca+(cd-ca)*fu;else if(v===n&&!isFine(i,j+1))h=cb+(cc-cb)*fu;
+      else if((u===0||u===n)&&(v===0||v===n))h=CY[C(i+u/n,j+v/n)];else h=hAt(x,z);
+      Y[v*(n+1)+u]=h;vtx(x,z,h);}
+    for(let v=0;v<n;v++)for(let u=0;u<n;u++){const a=base+v*(n+1)+u,b=a+(n+1),c=b+1,d=a+1;IDX.push(a,b,d,b,c,d);}
+    FINE.set(j*SX+i,Y);}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));
+  geo.setIndex(nv>65535?new THREE.Uint32BufferAttribute(IDX,1):new THREE.Uint16BufferAttribute(IDX,1));
+  TERR={x0,z0,dx,dz,nx:SX+1,nz:SZ+1,Y:CY,sub,FINE,SX};
   geo.computeVertexNormals();
+  const pos=geo.attributes.position,near=new Float32Array(pos.count),vnear=new Float32Array(pos.count),rdist=new Float32Array(pos.count);
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),nr=nearestRoad(x,z,70);near[i]=nr?nr.d:99;rdist[i]=riverDist(x,z).d;const vr=nearVRoad(x,z,30);vnear[i]=vr?vr.d:99;}
   const nor=geo.attributes.normal,cols=new Float32Array(pos.count*3),c=new THREE.Color(),t=new THREE.Color();
   for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),h=pos.getY(i),ny=nor.getY(i),p=patch(x,z),zn=ulmZone(x,z);
     // Feldermuster außerhalb der Stadt
@@ -589,7 +645,7 @@ function buildTerrainUlm(){
 function buildRiverUlm(){
   const r=ULM.river,P=[],E=[],I=[];
   for(let i=0;i<r.length;i++){const a=r[Math.max(0,i-1)],b=r[Math.min(r.length-1,i+1)];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz);tx/=l;tz/=l;
-    for(const s of [-1,-0.5,0,0.5,1]){P.push(r[i][0]-tz*s*(RIVER_HW+2),WATER_Y,r[i][1]+tx*s*(RIVER_HW+2));E.push(Math.abs(s));}
+    for(const s of [-1,-0.5,0,0.5,1]){const w=(s>0?RIVW.p[i]:RIVW.m[i])+2;P.push(r[i][0]-tz*s*w,WATER_Y,r[i][1]+tx*s*w);E.push(Math.abs(s));}
     if(i<r.length-1)for(let k=0;k<4;k++){const q=i*5+k;I.push(q,q+5,q+1,q+1,q+5,q+6);}}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('edge',new THREE.Float32BufferAttribute(E,1));g.setIndex(I);
   const m=new THREE.ShaderMaterial({fog:false,side:THREE.DoubleSide,
@@ -654,6 +710,13 @@ function footFree(x,z,pad){for(const f of LANDMARK_FOOT){if(Math.abs(x-f.x)<f.hx
 function roadDir(x,z){const nr=nearestRoad(x,z,70),vr=nearVRoad(x,z,70);
   if(nr&&(!vr||nr.d<vr.d))return Math.atan2(RTX[nr.i],RTZ[nr.i]);if(vr)return Math.atan2(vr.s.tx,vr.s.tz);return null;}
 const MAPBLD=[];
+// Grundrisse mit Dachhöhe für die Kamera: steht ein Haus zwischen Kamera und Fahrer, rückt die Kamera näher heran
+const CAMOCC=new Map(),CAMC=10;
+function camOccAdd(P,top){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const p of P){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1]);}
+  if(x1-x0>300||z1-z0>300)return;const o={P,top};for(let i=Math.floor(x0/CAMC);i<=Math.floor(x1/CAMC);i++)for(let j=Math.floor(z0/CAMC);j<=Math.floor(z1/CAMC);j++){const k=i*100000+j;if(!CAMOCC.has(k))CAMOCC.set(k,[]);CAMOCC.get(k).push(o);}}
+function camBlocked(x,z,y){const L=CAMOCC.get(Math.floor(x/CAMC)*100000+Math.floor(z/CAMC));if(!L)return false;
+  for(const o of L){if(o.top<y)continue;const P=o.P;let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c;}if(c)return true;}return false;}
+function rectPoly(cx,cz,ry,sx,sz){const c=Math.cos(ry),s=Math.sin(ry);return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>[cx+c*u*sx/2+s*v*sz/2,cz-s*u*sx/2+c*v*sz/2]);}
 // Belegungsraster (2 m), damit Häuser sich nicht überlappen
 const OCC=new Set(),OCCS=2;
 function rectPts(cx,cz,ry,sx,sz,shrink,cb){const ax=Math.cos(ry),az=-Math.sin(ry),bx=Math.sin(ry),bz=Math.cos(ry),hx=sx/2-shrink,hz=sz/2-shrink;
@@ -674,7 +737,7 @@ function buildCityUlm(){
   const add=(k,cx,cz,ry,sx,sz,h,roofType)=>{ // sx: quer zur Straße, sz: entlang der Straße
     if(OSM.data&&osmCovered(cx,cz))return;
     const y=Math.min(finalHeight(cx,cz),groundAt4(cx,cz,ry,sx,sz))-0.6;
-    items[k].push({x:cx,z:cz,y,sx,sy:h+0.6,sz,ry,c:pick(wallCols[k])});MAPBLD.push([cx,cz,sx,sz,ry,k==='alt'||k==='fach'||k==='shop'?1:0]);occMark(cx,cz,ry,sx,sz);
+    items[k].push({x:cx,z:cz,y,sx,sy:h+0.6,sz,ry,c:pick(wallCols[k])});camOccAdd(rectPoly(cx,cz,ry,sx,sz),y+h+0.6);MAPBLD.push([cx,cz,sx,sz,ry,k==='alt'||k==='fach'||k==='shop'?1:0]);occMark(cx,cz,ry,sx,sz);
     if(roofType==='giebel'){const rh=sz*R(0.6,0.85);roofs.push({x:cx,z:cz,y:y+h+0.6,sx:sz+0.7,sy:rh,sz:sx+0.6,ry:ry+Math.PI/2,c:pick(roofCols)});}
     else if(roofType==='trauf'){const rh=sx*R(0.4,0.6);roofs.push({x:cx,z:cz,y:y+h+0.6,sx:sx+0.7,sy:rh,sz:sz+0.6,ry,c:pick(roofCols)});}};
   const groundAt4=(cx,cz,ry,sx,sz)=>{let m=1e9;const ax=Math.cos(ry),az=-Math.sin(ry),bx=Math.sin(ry),bz=Math.cos(ry);for(const [u,v] of [[-1,-1],[1,-1],[-1,1],[1,1]])m=Math.min(m,finalHeight(cx+ax*u*sx*0.4+bx*v*sz*0.4,cz+az*u*sx*0.4+bz*v*sz*0.4));return m;};
@@ -747,7 +810,20 @@ function mergeGroup(G){G.updateMatrixWorld(true);const inv=new THREE.Matrix4().c
     for(const g of list){const c=g.attributes.position.count;P.set(g.attributes.position.array,o*3);Nn.set(g.attributes.normal.array,o*3);U.set(g.attributes.uv.array,o*2);if(C)C.set(g.attributes.color.array,o*3);o+=c;}
     const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.BufferAttribute(P,3));bg.setAttribute('normal',new THREE.BufferAttribute(Nn,3));bg.setAttribute('uv',new THREE.BufferAttribute(U,2));if(C)bg.setAttribute('color',new THREE.BufferAttribute(C,3));
     const mm=new THREE.Mesh(bg,m);mm.castShadow=mm.receiveShadow=true;G.add(mm);}}
-function addAt(group,x,z,ry=0,yOff=0){const y=finalHeight(x,z)+yOff;group.position.set(x,y,z);group.rotation.y=ry;group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});mergeGroup(group);scene.add(group);return group;}
+// Bauwerk an p=[x,z] setzen; steht der echte Grundriss (Bounding-Box) auf einer Straße oder im Fluss, wird es auf den
+// nächsten freien Platz geschoben (p wird angepasst). o.rect: eigener Grundriss [x0,x1,z0,z1] (lokal), o.fixed: nicht schieben
+function landFit(group,p,ry,o){let R=o.rect;if(!R){group.position.set(0,0,0);group.rotation.set(0,0,0);group.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(group);R=[b.min.x,b.max.x,b.min.z,b.max.z];}
+  const c=Math.cos(ry),sn=Math.sin(ry),st=Math.max(2.5,Math.min(6,(R[1]-R[0])/5,(R[3]-R[2])/5)),clr=o.clr||6.2;
+  const free=(px,pz)=>{for(let u=R[0];u<=R[1]+0.01;u+=st)for(let v=R[2];v<=R[3]+0.01;v+=st){const x=px+c*u+sn*v,z=pz-sn*u+c*v;
+      if(nearestRoad(x,z,clr))return false;const vr=nearVRoad(x,z,9);if(vr&&vr.d<(vr.s.w||4)+1)return false;if(riverDist(x,z).d<RIVER_HW+3)return false;}return true;};
+  if(o.fixed)return R;
+  for(let r=0;r<=(o.maxR||130);r+=3){const n=r?Math.max(8,Math.round(r*1.2)):1;for(let a=0;a<n;a++){const an=a/n*Math.PI*2,x=p[0]+Math.cos(an)*r,z=p[1]+Math.sin(an)*r;
+    if(free(x,z)){if(r)console.log('Bauwerk verschoben um',r,'m');p[0]=x;p[1]=z;return R;}}}
+  console.warn('Kein freier Platz für Bauwerk bei',p.map(Math.round));return R;}
+function addAt(group,p,ry=0,yOff=0,o={}){const R=landFit(group,p,ry,o),x=p[0],z=p[1],y=finalHeight(x,z)+yOff;
+  {const c=Math.cos(ry),sn=Math.sin(ry),cs=[[R[0],R[2]],[R[1],R[2]],[R[0],R[3]],[R[1],R[3]]].map(([u,v])=>[x+c*u+sn*v,z-sn*u+c*v]);
+    if(!o.noCam){group.position.set(0,0,0);group.rotation.set(0,0,0);group.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(group);camOccAdd([cs[0],cs[1],cs[3],cs[2]],y+bb.max.y);}
+    const xs=cs.map(q=>q[0]),zs=cs.map(q=>q[1]);LANDMARK_FOOT.push({x:(Math.min(...xs)+Math.max(...xs))/2,z:(Math.min(...zs)+Math.max(...zs))/2,hx:(Math.max(...xs)-Math.min(...xs))/2,hz:(Math.max(...zs)-Math.min(...zs))/2});}group.position.set(x,y,z);group.rotation.y=ry;group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});mergeGroup(group);scene.add(group);return group;}
 function box(w,h,d,mat,x=0,y=0,z=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y+h/2,z);return m;}
 function gothicTex(cols,rows,base='#cdbca3'){return canvasTex(512,512,(x,w,h)=>{x.fillStyle=base;x.fillRect(0,0,w,h);
   for(let k=0;k<4000;k++){const v=Math.random()*30-15;x.fillStyle=`rgba(${120+v},${100+v},${80+v},.08)`;x.fillRect(Math.random()*w,Math.random()*h,6,3);}
@@ -801,7 +877,7 @@ function buildMuenster(p){
   const helm=spire(8.2,56,new THREE.MeshStandardMaterial({map:helmTex,roughness:0.9}),8);helm.position.set(-55,103,0);G.add(helm);
   const fin=new THREE.Mesh(new THREE.SphereGeometry(0.9,8,6),stoneD);fin.position.set(-55,160.5,0);G.add(fin);
   for(let i=0;i<8;i++){const a=i/8*Math.PI*2,pn=spire(0.9,9,stoneD,4);pn.position.set(-55+Math.cos(a)*9.6,103,Math.sin(a)*9.6);G.add(pn);}
-  addAt(G,p[0],p[1],0,-1);LANDMARK_FOOT.push({x:p[0]+2,z:p[1],hx:72,hz:28});LANDMARK_FOOT.push({x:p[0]-60,z:p[1],hx:140,hz:62});return G;}
+  addAt(G,p,0,-1,{fixed:true});LANDMARK_FOOT.push({x:p[0]+2,z:p[1],hx:72,hz:28});LANDMARK_FOOT.push({x:p[0]-60,z:p[1],hx:140,hz:62});return G;}
 function buildGeorg(p){
   const G=new THREE.Group(),brick=new THREE.MeshStandardMaterial({map:canvasTex(256,256,(x,w,h)=>{x.fillStyle='#9c4a36';x.fillRect(0,0,w,h);
     for(let r=0;r<64;r++)for(let c=0;c<16;c++){const v=Math.random()*30-15;x.fillStyle=`rgb(${150+v},${72+v/2},${54+v/2})`;x.fillRect(c*16+(r%2)*8,r*4,15,3);}},true),roughness:0.9}),
@@ -814,7 +890,7 @@ function buildGeorg(p){
   const h=spire(6.5,30,copper,8);h.position.set(0,56,22);G.add(h);
   for(const sx of [-1,1])for(const sz of [-1,1]){const t=spire(1.4,12,copper,6);t.position.set(sx*8.5,52,22+sz*4.5);G.add(t);}
   const cross=box(0.4,3,0.4,std(0xd4af37,0.4,0.8),0,86,22);G.add(cross);
-  addAt(G,p[0],p[1],0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:16,hz:32});}
+  addAt(G,p,0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:16,hz:32});}
 function buildPaulus(p){
   const G=new THREE.Group(),conc=std(0xbfb8ab,0.95),roof=std(0x70716f,0.8,0,{side:THREE.DoubleSide});
   G.add(box(48,20,22,conc,0,0,0));const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(22.5,9,48);r.rotation.y=Math.PI/2;r.position.set(0,20,0);G.add(r);
@@ -822,7 +898,7 @@ function buildPaulus(p){
   for(const s of [-1,1]){const t=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.4,40,16),conc);t.position.set(26,20,s*8);G.add(t);
     const pom=new THREE.Mesh(new THREE.SphereGeometry(4.2,16,12),conc);pom.scale.set(1,1.25,1);pom.position.set(26,44,s*8);G.add(pom);
     const sp=spire(0.8,6,conc,6);sp.position.set(26,48.5,s*8);G.add(sp);}
-  addAt(G,p[0],p[1],0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:40,hz:20});}
+  addAt(G,p,0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:40,hz:20});}
 function buildRathaus(p){
   const G=new THREE.Group(),paint=new THREE.MeshStandardMaterial({map:canvasTex(512,256,(x,w,h)=>{x.fillStyle='#e7cfa3';x.fillRect(0,0,w,h);
     const cols=['#a8382f','#2f6b8a','#c9952e','#3d7a4a','#7a3b6e'];for(let k=0;k<14;k++){x.fillStyle=cols[k%5];x.globalAlpha=0.75;x.fillRect(k*w/14+4,40,w/14-8,90);}
@@ -832,19 +908,19 @@ function buildRathaus(p){
   G.add(box(48,17,20,paint,0,0,0));const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(20.5,13,48);r.rotation.y=Math.PI/2;r.position.set(0,17,0);G.add(r);
   // Stufengiebel im Osten
   for(let i=0;i<5;i++){G.add(box(1.2,3,20-i*4,paint,24.6,17+i*2.6,0));}
-  addAt(G,p[0],p[1],0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:28,hz:14});}
+  addAt(G,p,0,-0.5);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:28,hz:14});}
 function buildStadthaus(p){const G=new THREE.Group(),w=std(0xf7f7f4,0.5),gl=std(0x5c7187,0.2,0.4);
   G.add(box(34,16,24,w,0,0,0));const c=new THREE.Mesh(new THREE.CylinderGeometry(12,12,16,32,1,false,0,Math.PI),w);c.position.set(17,8,0);c.rotation.y=-Math.PI/2;G.add(c);
-  G.add(box(30,3,0.4,gl,0,6,-12.2));G.add(box(0.4,10,20,gl,-17.2,3,0));addAt(G,p[0],p[1],0.12,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:30,hz:16});}
+  G.add(box(30,3,0.4,gl,0,6,-12.2));G.add(box(0.4,10,20,gl,-17.2,3,0));addAt(G,p,0.12,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:30,hz:16});}
 function buildMetzgerturm(p){const G=new THREE.Group(),st=std(0xd9cdb6,0.9),roof=std(0x9c4a32,0.8,0,{side:THREE.DoubleSide});
   const t=box(8,28,8,new THREE.MeshStandardMaterial({map:gothicTex(1,3,'#d9cdb6'),roughness:0.9}),0,0,0);G.add(t);
   const r=spire(6.2,10,roof,4);r.rotation.y=Math.PI/4;r.position.set(0,28,0);G.add(r);G.rotation.z=0.035;
-  addAt(G,p[0],p[1],0,-0.5);G.rotation.z=0.04;LANDMARK_FOOT.push({x:p[0],z:p[1],hx:8,hz:8});}
+  addAt(G,p,0,-0.5);G.rotation.z=0.04;LANDMARK_FOOT.push({x:p[0],z:p[1],hx:8,hz:8});}
 function buildSchiefesHaus(p){const G=new THREE.Group(),tim=new THREE.MeshStandardMaterial({map:canvasTex(256,256,(x,w,h)=>{x.fillStyle='#f1e9d6';x.fillRect(0,0,w,h);
     x.strokeStyle='#5a3a22';x.lineWidth=7;for(let i=0;i<=4;i++){x.beginPath();x.moveTo(i*w/4,0);x.lineTo(i*w/4,h);x.stroke();}for(let j=0;j<=3;j++){x.beginPath();x.moveTo(0,j*h/3);x.lineTo(w,j*h/3);x.stroke();}
     for(let i=0;i<4;i++){x.beginPath();x.moveTo(i*w/4,h/3);x.lineTo((i+1)*w/4,2*h/3);x.stroke();}x.fillStyle='#3d4f61';for(let i=0;i<4;i++)x.fillRect(i*w/4+18,h/3+12,26,30);},false),roughness:0.9}),roof=std(0x8a3b2a,0.8,0,{side:THREE.DoubleSide});
   const b=box(10,11,9,tim,0,0,0);G.add(b);const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(9.5,6,10.5);r.position.set(0,11,0);G.add(r);G.rotation.z=0.09;
-  addAt(G,p[0],p[1],0.4,-0.3);G.rotation.z=0.1;LANDMARK_FOOT.push({x:p[0],z:p[1],hx:8,hz:8});
+  addAt(G,p,0.4,-0.3);G.rotation.z=0.1;LANDMARK_FOOT.push({x:p[0],z:p[1],hx:8,hz:8});
   // Blau-Kanal im Fischerviertel
   const ch=new THREE.Mesh(new THREE.PlaneGeometry(7,120),std(0x4f7f7a,0.2,0.1));ch.rotation.x=-Math.PI/2;ch.rotation.z=0.75;ch.position.set(p[0]+12,finalHeight(p[0]+12,p[1])-0.4,p[1]+35);scene.add(ch);}
 function buildHbf(p){const G=new THREE.Group(),w=std(0xe4e0d8,0.8),gl=std(0x4f6578,0.2,0.4),roof=std(0x6b6e72,0.7,0,{side:THREE.DoubleSide});
@@ -853,7 +929,7 @@ function buildHbf(p){const G=new THREE.Group(),w=std(0xe4e0d8,0.8),gl=std(0x4f65
   const tracks=new THREE.Group(),rail=std(0x6a6a6a,0.5,0.6),ballast=std(0x8d857c,1);
   for(let k=0;k<10;k++){const tx=-30-k*6;tracks.add(box(4,0.3,900,ballast,tx,0,-170));for(const s of [-0.72,0.72])tracks.add(box(0.12,0.4,900,rail,tx+s,0.3,-170));}
   for(let k=0;k<4;k++){const px=-33-k*12;tracks.add(box(3,0.9,220,std(0xb5b0a6,0.9),px,0,-40));tracks.add(box(4,0.3,200,roof,px,4.2,-40));for(let i=0;i<10;i++)tracks.add(box(0.3,4.2,0.3,rail,px,0,-130+i*20));}
-  G.add(tracks);addAt(G,p[0],p[1],0,-0.3);LANDMARK_FOOT.push({x:p[0]-35,z:p[1]-170,hx:80,hz:460});}
+  G.add(tracks);addAt(G,p,0,-0.3,{rect:[-15,15,-62,62]});LANDMARK_FOOT.push({x:p[0]-35,z:p[1]-170,hx:80,hz:460});}
 function buildWilhelmsburg(p){const G=new THREE.Group(),lime=new THREE.MeshStandardMaterial({map:canvasTex(256,128,(x,w,h)=>{x.fillStyle='#d8d2c2';x.fillRect(0,0,w,h);
     x.fillStyle='#3e4650';for(let r=0;r<3;r++)for(let k=0;k<12;k++)x.fillRect(6+k*21,14+r*38,9,18);},true),roughness:0.95}),roof=std(0x7c8186,0.6,0.3,{side:THREE.DoubleSide});
   lime.map.repeat.set(8,1);
@@ -862,13 +938,13 @@ function buildWilhelmsburg(p){const G=new THREE.Group(),lime=new THREE.MeshStand
   G.add(box(84,19,18,lime,-58,0,56));G.add(box(84,19,18,lime,58,0,56));G.add(box(32,8,18,lime,0,11,56));
   for(const [x,z,w,d] of [[0,-56,200,18],[-91,0,18,94],[91,0,18,94],[-58,56,84,18],[58,56,84,18]]){const r=new THREE.Mesh(new THREE.BoxGeometry(w+1,1.2,d+1),roof);r.position.set(x,19.6,z);G.add(r);}
   for(const s of [-1,1]){const t=box(14,30,14,lime,s*24,0,58);G.add(t);const tr=new THREE.Mesh(new THREE.BoxGeometry(15,1.5,15),roof);tr.position.set(s*24,30.7,58);G.add(tr);}
-  addAt(G,p[0],p[1],0,-0.8);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:108,hz:72});}
+  addAt(G,p,0,-0.8);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:108,hz:72});}
 function buildFort(p,size,name){const G=new THREE.Group(),wall=std(0xb7a68c,0.95),grass=std(0x5f8a45,1);
   const n=5;for(let i=0;i<n;i++){const a0=i/n*Math.PI*2,a1=(i+1)/n*Math.PI*2,x0=Math.cos(a0)*size,z0=Math.sin(a0)*size,x1=Math.cos(a1)*size,z1=Math.sin(a1)*size;
     const l=Math.hypot(x1-x0,z1-z0),w=box(l,8,6,wall,0,0,0);w.position.set((x0+x1)/2,4,(z0+z1)/2);w.rotation.y=-Math.atan2(z1-z0,x1-x0);G.add(w);
     const top=new THREE.Mesh(new THREE.BoxGeometry(l,2,10),grass);top.position.set((x0+x1)/2,8.5,(z0+z1)/2);top.rotation.y=-Math.atan2(z1-z0,x1-x0);G.add(top);}
   G.add(box(size*0.7,10,size*0.35,std(0xc9b99c,0.9),0,0,0));
-  addAt(G,p[0],p[1],0,-1);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:size+10,hz:size+10});}
+  addAt(G,p,0,-1);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:size+10,hz:size+10});}
 function buildUni(p){const G=new THREE.Group(),c=std(0xc5c7c4,0.85),gl=std(0x4f6578,0.2,0.4),r=std(0x7a7d80,0.8);
   // Kammstruktur: langer Rückgrat-Gang Ost–West mit Flügeln nach Nord und Süd, farbige Treppentürme je Bereich
   const accents=[0xd9822b,0x2f7fbf,0x4c9a4a,0xc0392b,0xe0b83a,0x7d5ba6,0x2a9d8f];
@@ -881,21 +957,20 @@ function buildUni(p){const G=new THREE.Group(),c=std(0xc5c7c4,0.85),gl=std(0x4f6
     G.add(box(10,22,10,acc,x,0,0));}
   // Forum/Mensa und Bibliothek
   G.add(box(60,12,40,std(0xd8d2c4,0.8),40,0,-110));G.add(box(60.4,3,40.4,gl,40,4,-110));
-  addAt(G,p[0],p[1],0,-1);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:330,hz:130});
+  addAt(G,p,0,-1);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:330,hz:130});
   // Science Park / Uni West
   const SP=new THREE.Group();for(let k=0;k<5;k++){const b=box(38,14,26,std([0xe6e3dc,0xd2d7da,0xdcd2c2][k%3],0.6),k*58,0,(k%2)*34);SP.add(b);SP.add(box(38.4,3,26.4,gl,k*58,6,(k%2)*34));}
-  addAt(SP,p[0]-520,p[1]+60,0.1,-1);LANDMARK_FOOT.push({x:p[0]-400,z:p[1]+70,hx:180,hz:60});
+  addAt(SP,[p[0]-520,p[1]+60],0.1,-1);
   // Universitätsklinikum: mehrere große Bettenhäuser
   const K=new THREE.Group(),kw=std(0xe2e2df,0.8);
   K.add(box(160,24,60,kw,0,0,0));K.add(box(160.4,3,60.4,gl,0,12,0));K.add(box(60,36,24,kw,-30,0,-50));K.add(box(60.4,2.5,24.4,gl,-30,20,-50));
   K.add(box(90,18,40,std(0xd6dade,0.7),120,0,20));K.add(box(90.4,3,40.4,gl,120,8,20));K.add(box(14,1,14,std(0xdd3333,0.6),-30,36.2,-50)); // Hubschrauberlandeplatz
-  addAt(K,ULM.places.uniklinik[0],ULM.places.uniklinik[1],0.2,-1);
-  LANDMARK_FOOT.push({x:ULM.places.uniklinik[0]+40,z:ULM.places.uniklinik[1],hx:150,hz:80});}
+  addAt(K,[...ULM.places.uniklinik],0.2,-1);}
 function buildCityWall(){ // Stadtmauer am Nordufer zwischen Adlerbastei und Herdbrücke
   const mat=new THREE.MeshStandardMaterial({map:canvasTex(256,64,(x,w,h)=>{x.fillStyle='#bfae92';x.fillRect(0,0,w,h);for(let r=0;r<8;r++)for(let c=0;c<16;c++){const v=Math.random()*24-12;x.fillStyle=`rgb(${180+v},${165+v},${138+v})`;x.fillRect(c*16+(r%2)*8,r*8,15,7);}},true),roughness:0.95});
   mat.map.repeat.set(20,1);const P=[],I=[],UV=[],r=ULM.river;
   const pts=[];for(let i=0;i<r.length;i++){if(r[i][0]<-330||r[i][0]>330)continue;const a=r[Math.max(0,i-1)],b=r[Math.min(r.length-1,i+1)];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz);tx/=l;tz/=l;
-    let nx=-tz,nz=tx;if(nz>0){nx=-nx;nz=-nz;}pts.push([r[i][0]+nx*(RIVER_HW+7),r[i][1]+nz*(RIVER_HW+7)]);}
+    let nx=-tz,nz=tx,sd=1;if(nz>0){nx=-nx;nz=-nz;sd=-1;}const w=(sd>0?RIVW.p[i]:RIVW.m[i])+7;pts.push([r[i][0]+nx*w,r[i][1]+nz*w]);}
   let u=0;pts.forEach((q,i)=>{const h0=WATER_Y-1,h1=Math.max(finalHeight(q[0],q[1])+5,WATER_Y+9);if(i)u+=Math.hypot(q[0]-pts[i-1][0],q[1]-pts[i-1][1])/12;
     P.push(q[0],h0,q[1],q[0],h1,q[1]);UV.push(u,0,u,1);if(i<pts.length-1){const k=i*2;I.push(k,k+2,k+1,k+1,k+2,k+3);}});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();
@@ -913,7 +988,7 @@ function buildVisualRoads(){
       if(i)v+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1])/18;
       const rdst=riverDist(p[i][0],p[i][1]).d,deck=WATER_Y+7.5,bw=1-sstep((rdst-RIVER_HW-6)/34);
       if(rdst<RIVER_HW+8)span.push([p[i][0],p[i][1]]);else if(span.length){bridgeRails(span,q=>deck+0.18,Wd-0.4);span.length=0;}
-      for(const s of [-1,1]){const x=p[i][0]-tz*s*Wd,z=p[i][1]+tx*s*Wd,th=finalHeight(x,z);let y=th+(Math.max(th,deck)-th)*bw;P.push(x,y+0.18,z);UV.push(s<0?0:1,v);}
+      for(const s of [-1,1]){const x=p[i][0]-tz*s*Wd,z=p[i][1]+tx*s*Wd,th=Math.max(groundH(x,z),groundH(p[i][0],p[i][1]));let y=th+(Math.max(th,deck)-th)*bw;P.push(x,y+0.22,z);UV.push(s<0?0:1,v);}
       if(i<p.length-1){const k=i*2;I.push(k,k+1,k+2,k+1,k+3,k+2);}}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();
     const m=new THREE.Mesh(g,mat);m.receiveShadow=true;scene.add(m);if(span.length)bridgeRails(span,q=>WATER_Y+7.68,Wd-0.4);}}
@@ -950,23 +1025,23 @@ function plasterTex(base,lines,winCol){return canvasTex(256,256,(x,w,h)=>{x.fill
 function buildKornhaus(){const ry=0.08,p=placeFree(9.99497,48.39900,24,11,ry),G=new THREE.Group(),m=new THREE.MeshStandardMaterial({map:plasterTex('#e9dcc2','#c7b48f'),roughness:0.9}),roof=std(0x9c4a32,0.8,0,{side:THREE.DoubleSide});
   m.map.repeat.set(3,1);G.add(box(48,14,20,m,0,0,0));const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(20.6,19,48.6);r.rotation.y=Math.PI/2;r.position.set(0,14,0);G.add(r);
   for(const s of [-1,1]){const gb=voluteGable(20,22,std(0xe9dcc2,0.9),1.2);gb.rotation.y=Math.PI/2;gb.position.set(s*24.3,14,0);G.add(gb);}
-  addAt(G,p[0],p[1],ry,-0.4);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:27,hz:27});landmarkLabel('Kornhaus',p,40);}
+  addAt(G,p,ry,-0.4);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:27,hz:27});landmarkLabel('Kornhaus',p,40);}
 function buildSchwoerhaus(){const ry=0.5,p=placeFree(9.9904,48.3962,11,8,ry),G=new THREE.Group(),m=new THREE.MeshStandardMaterial({map:plasterTex('#f3ead8',null),roughness:0.9}),roof=std(0x8a3b2a,0.8,0,{side:THREE.DoubleSide});
   G.add(box(16,12,22,m,0,0,0));const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(16.5,11,22.4);r.position.set(0,12,0);G.add(r);
   for(const s of [-1,1]){const gb=voluteGable(16,13,std(0xf3ead8,0.9),1);gb.position.set(0,12,s*11.2);G.add(gb);}
-  G.add(box(3,4,0.6,std(0x6b4a2e),0,0,11.3));addAt(G,p[0],p[1],ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:13,hz:13});landmarkLabel('Schwörhaus',p,30);}
+  G.add(box(3,4,0.6,std(0x6b4a2e),0,0,11.3));addAt(G,p,ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:13,hz:13});landmarkLabel('Schwörhaus',p,30);}
 function buildBibliothek(){const p=placeFree(9.9930,48.3966,16,16,0),G=new THREE.Group(),gl=new THREE.MeshStandardMaterial({map:canvasTex(256,256,(x,w,h)=>{x.fillStyle='#7fb6d6';x.fillRect(0,0,w,h);
     x.strokeStyle='#e8f2f8';x.lineWidth=3;for(let i=0;i<=w;i+=21){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(w,i);x.stroke();}
     x.fillStyle='rgba(255,255,255,.35)';x.fillRect(0,0,w,h*0.3);},true),roughness:0.15,metalness:0.3});
   const py=new THREE.Mesh(new THREE.ConeGeometry(29/Math.SQRT2,36,4,1),gl);py.rotation.y=Math.PI/4;py.position.y=18;G.add(py);
-  addAt(G,p[0],p[1],0,0);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:17,hz:17});landmarkLabel('Stadtbibliothek',p,42);}
+  addAt(G,p,0,0);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:17,hz:17});landmarkLabel('Stadtbibliothek',p,42);}
 function buildTheater(){const p=placeFree(9.9866,48.4015,30,22,0.3),G=new THREE.Group(),c=std(0xcfcac0,0.9),gl=std(0x45596b,0.2,0.4);
   for(let k=0;k<3;k++){const h=new THREE.Mesh(new THREE.CylinderGeometry(15-k*2,15-k*2,8+k*5,6),c);h.position.set(-18+k*16,(8+k*5)/2,(k%2)*8);G.add(h);
     const band=new THREE.Mesh(new THREE.CylinderGeometry(15.2-k*2,15.2-k*2,2.2,6),gl);band.position.set(-18+k*16,4,(k%2)*8);G.add(band);}
-  G.add(box(16,24,16,c,18,0,0));addAt(G,p[0],p[1],0.3,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:36,hz:26});landmarkLabel('Theater Ulm',p,30);}
+  G.add(box(16,24,16,c,18,0,0));addAt(G,p,0.3,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:36,hz:26});landmarkLabel('Theater Ulm',p,30);}
 function buildZeughaus(){const ry=0.2,p=placeFree(10.001133,48.400734,26,9,ry),G=new THREE.Group(),m=new THREE.MeshStandardMaterial({map:plasterTex('#e7c79a','#c79f6a','#41505e'),roughness:0.9}),roof=std(0x7a4030,0.8,0,{side:THREE.DoubleSide});
   m.map.repeat.set(3,1);G.add(box(52,14,16,m,0,0,0));const r2=new THREE.Mesh(gableGeo(),roof);r2.scale.set(16.6,9,52.6);r2.rotation.y=Math.PI/2;r2.position.set(0,14,0);G.add(r2);
-  G.add(box(6,7,0.8,std(0xb08a5a),0,0,8.2));addAt(G,p[0],p[1],ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:28,hz:28});landmarkLabel('Zeughaus',p,28);}
+  G.add(box(6,7,0.8,std(0xb08a5a),0,0,8.2));addAt(G,p,ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:28,hz:28});landmarkLabel('Zeughaus',p,28);}
 function buildStadion(){const ry=0.15,p=placeFree(10.00972,48.40444,62,46,ry),G=new THREE.Group(),con=std(0xd6d2ca,0.9),seat=std(0xc8102e,0.7),grass=std(0x4caf50,1),roof=std(0xf2f2f2,0.6);
   const pitch=new THREE.Mesh(new THREE.PlaneGeometry(68,105),new THREE.MeshStandardMaterial({map:canvasTex(128,256,(x,w,h)=>{for(let i=0;i<12;i++){x.fillStyle=i%2?'#4caf50':'#43a047';x.fillRect(0,i*h/12,w,h/12);}
     x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(4,4,w-8,h-8);x.beginPath();x.moveTo(4,h/2);x.lineTo(w-4,h/2);x.stroke();x.beginPath();x.arc(w/2,h/2,14,0,7);x.stroke();x.strokeRect(w*0.25,4,w*0.5,30);x.strokeRect(w*0.25,h-34,w*0.5,30);},false),roughness:1}));
@@ -977,29 +1052,29 @@ function buildStadion(){const ry=0.15,p=placeFree(10.00972,48.40444,62,46,ry),G=
     g.position.set(x,0,z);g.rotation.y=rot;G.add(g);};
   stand(105,14,12,-48,0,-Math.PI/2,true);stand(105,12,9,48,0,Math.PI/2,false);stand(70,12,8,0,62,0,false);
   for(const [x,z] of [[-44,-60],[44,-60],[-44,60],[44,60]]){G.add(box(1.2,34,1.2,con,x,0,z));G.add(box(6,3,1,std(0xffffff,0.3,0,{emissive:0xfff3c4,emissiveIntensity:0.6}),x,34,z));}
-  addAt(G,p[0],p[1],ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:70,hz:70});landmarkLabel('Donaustadion',p,40);}
+  addAt(G,p,ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:70,hz:70});landmarkLabel('Donaustadion',p,40);}
 function buildJohannBaptist(){const ry=-0.3,p=placeFree(10.000386,48.394978,22,12,ry),G=new THREE.Group(),st=new THREE.MeshStandardMaterial({map:canvasTex(128,128,(x,w,h)=>{x.fillStyle='#b9a68a';x.fillRect(0,0,w,h);
     for(let r=0;r<16;r++)for(let k=0;k<8;k++){const v=Math.random()*40-20;x.fillStyle=`rgb(${170+v},${140+v},${110+v})`;x.fillRect(k*16+(r%2)*8,r*8,15,7);}},true),roughness:0.95}),roof=std(0x7a4b36,0.8,0,{side:THREE.DoubleSide});
   st.map.repeat.set(4,3);G.add(box(46,18,22,st,0,0,0));const r=new THREE.Mesh(gableGeo(),roof);r.scale.set(22.6,12,46.4);r.rotation.y=Math.PI/2;r.position.set(0,18,0);G.add(r);
   G.add(box(11,42,11,st,-28,0,0));const sp=spire(8.2,16,roof,4);sp.rotation.y=Math.PI/4;sp.position.set(-28,42,0);G.add(sp);
-  addAt(G,p[0],p[1],ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:30,hz:30});landmarkLabel('St. Johann Baptist (Neu-Ulm)',p,64);}
+  addAt(G,p,ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:30,hz:30});landmarkLabel('St. Johann Baptist (Neu-Ulm)',p,64);}
 function buildMaritim(){const ry=0.55,p=placeFree(10.0012,48.3992,40,26,ry),G=new THREE.Group(),w=std(0xeef0f2,0.6),gl=std(0x355a7a,0.15,0.5),cc=std(0xd9d6cf,0.7);
   // Hotelhochhaus (ca. 17 Etagen) und Congress Centrum davor
   G.add(box(40,58,16,w,10,0,-8));for(let f=0;f<17;f++)G.add(box(40.4,1.5,16.4,gl,10,3+f*3.3,-8));G.add(box(42,2,18,cc,10,58,-8));
   G.add(box(56,12,30,cc,-6,0,14));G.add(box(56.4,8,30.4,gl,-6,2,14));G.add(box(58,1.2,32,std(0x8a8f96,0.6),-6,12,14));
-  addAt(G,p[0],p[1],ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:42,hz:42});landmarkLabel('Maritim Hotel & Congress Centrum',p,66);}
+  addAt(G,p,ry,-0.3);LANDMARK_FOOT.push({x:p[0],z:p[1],hx:42,hz:42});landmarkLabel('Maritim Hotel & Congress Centrum',p,66);}
 function buildLandmarksUlm(){
-  const P=ULM.places;
-  buildMuenster(P.muenster);buildGeorg(P.georg);buildPaulus(P.paulus);buildRathaus([P.rathaus[0],P.rathaus[1]-31]);buildStadthaus(P.stadthaus);
-  buildMetzgerturm(P.metzgerturm);buildSchiefesHaus(P.schiefeshaus);buildHbf([P.hbf[0]+103,P.hbf[1]]);buildWilhelmsburg(P.wilhelmsburg);
-  buildFort(P.kuhberg,62,'Fort Oberer Kuhberg');buildFort([P.albeck[0]+30,P.albeck[1]-66],52,'Fort Albeck');buildUni(P.uni);
+  const P0=ULM.places,P={};for(const k in P0)P[k]=[...P0[k]];P.rathaus[1]-=31;P.hbf[0]+=103;P.albeck[0]+=30;P.albeck[1]-=66;
+  buildMuenster(P.muenster);buildGeorg(P.georg);buildPaulus(P.paulus);buildRathaus(P.rathaus);buildStadthaus(P.stadthaus);
+  buildMetzgerturm(P.metzgerturm);buildSchiefesHaus(P.schiefeshaus);buildHbf(P.hbf);buildWilhelmsburg(P.wilhelmsburg);
+  buildFort(P.kuhberg,62,'Fort Oberer Kuhberg');buildFort(P.albeck,52,'Fort Albeck');buildUni(P.uni);
   buildCityWall();buildBridges();buildVisualRoads();
   buildKornhaus();buildSchwoerhaus();buildBibliothek();buildTheater();buildZeughaus();buildStadion();buildJohannBaptist();buildMaritim();
   if(OSM.data)OSM.built=buildOsmBuildings();
   const n=buildCityUlm();console.log('Gebäude',n);
   landmarkLabel('Ulmer Münster · 161,5 m',P.muenster,172);landmarkLabel('St. Georg',P.georg,94);landmarkLabel('Pauluskirche',P.paulus,58);
-  landmarkLabel('Rathaus',[P.rathaus[0],P.rathaus[1]-31],38);landmarkLabel('Hauptbahnhof',[P.hbf[0]+103,P.hbf[1]],24);landmarkLabel('Wilhelmsburg',P.wilhelmsburg,40);
-  landmarkLabel('Fort Oberer Kuhberg',P.kuhberg,22);landmarkLabel('Fort Albeck',[P.albeck[0]+30,P.albeck[1]-66],20);landmarkLabel('Universität Ulm',P.uni,28);
+  landmarkLabel('Rathaus',P.rathaus,38);landmarkLabel('Hauptbahnhof',P.hbf,24);landmarkLabel('Wilhelmsburg',P.wilhelmsburg,40);
+  landmarkLabel('Fort Oberer Kuhberg',P.kuhberg,22);landmarkLabel('Fort Albeck',P.albeck,20);landmarkLabel('Universität Ulm',P.uni,28);
   landmarkLabel('Metzgerturm',P.metzgerturm,44);landmarkLabel('Stadthaus',P.stadthaus,24);{const rp=ULM.river.reduce((b,p)=>Math.hypot(p[0]-260,p[1]-300)<Math.hypot(b[0]-260,b[1]-300)?p:b);landmarkLabel('Donau',rp,10);}
   // Start/Ziel und Bergwertungen
   makeArch(12,'START · ZIEL · MÜNSTER','#1f6fd1');
@@ -2232,7 +2307,7 @@ function flowers(count,ok){const stem=new THREE.CylinderGeometry(0.02,0.02,0.45,
   const head=new THREE.IcosahedronGeometry(0.13,0);head.translate(0,0.5,0);
   const sm=new THREE.InstancedMesh(stem,std(0x3f8f3a),count),hm=new THREE.InstancedMesh(head,std(0xffffff,0.8,0,{flatShading:true}),count);
   const dm=new THREE.Object3D(),col=new THREE.Color(),cols=[0xe8463c,0xffd23f,0xffffff,0xb06fe0,0xff8fb8,0x3e8fe0];let k=0,tries=0;
-  while(k<count&&tries<count*20){tries++;const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(6.5,18),[x,z]=lateralPoint(i,off);if(!ok(x,z))continue;
+  while(k<count&&tries<count*20){tries++;const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(6.5,18),[x,z]=lateralPoint(i,off);if(!ok(x,z)||nearestRoad(x,z,7.2))continue; // in Haarnadelkurven nicht auf dem anderen Ast
     const cl=cols[Math.floor(Math.random()*cols.length)];for(let q=0;q<5&&k<count;q++){const fx=x+rnd(-1.4,1.4),fz=z+rnd(-1.4,1.4);
       dm.position.set(fx,groundH(fx,fz)-0.04,fz);const s=rnd(0.8,1.5);dm.scale.set(s,s,s);dm.rotation.set(0,rnd(0,6),0);dm.updateMatrix();sm.setMatrixAt(k,dm.matrix);hm.setMatrixAt(k,dm.matrix);col.set(cl);hm.setColorAt(k,col);k++;}}
   sm.count=hm.count=k;sm.frustumCulled=hm.frustumCulled=false;scene.add(sm,hm);}
@@ -2445,6 +2520,11 @@ function buildOsmBuildings(){
     let A=0;for(let i=0;i<P.length;i++){const a=P[i],c=P[(i+1)%P.length];A+=a[0]*c[1]-c[0]*a[1];}A/=2;if(Math.abs(A)<12)continue;if(A<0)P.reverse();
     if(!footFree(cx,cz,0))continue; // eigene Wahrzeichen-Modelle haben Vorrang
     {const nr=nearestRoad(cx,cz,30);if(nr&&nr.d<6)continue;let onRoad=false;for(const p of P){const q=nearestRoad(p[0],p[1],5);if(q&&q.d<4.6){onRoad=true;break;}}if(onRoad)continue;}
+    // Wände dürfen weder die Strecke noch eine Nebenstraße schneiden und nicht im Fluss stehen (Kanten alle 2 m prüfen)
+    {let rad=0;for(const p of P)rad=Math.max(rad,Math.hypot(p[0]-cx,p[1]-cz));const wet=riverDist(cx,cz).d<RIVER_HW+rad+4;let bad=false;
+      for(let i=0;i<P.length&&!bad;i++){const a=P[i],c=P[(i+1)%P.length],l=Math.hypot(c[0]-a[0],c[1]-a[1]),k=Math.max(1,Math.ceil(l/2));
+        for(let q=0;q<k;q++){const x=a[0]+(c[0]-a[0])*q/k,z=a[1]+(c[1]-a[1])*q/k,nr=nearestRoad(x,z,6);
+          if(nr&&nr.d<5.1||wet&&riverDist(x,z).d<RIVER_HW-1){bad=true;break;}const vr=nearVRoad(x,z,8);if(vr&&vr.d<(vr.s.w||4)-0.8){bad=true;break;}}}if(bad)continue;}
     const area=Math.abs(A),bt=b.b;let floors=b.l||(bt==='house'||bt==='detached'||bt==='semidetached_house'?2:bt==='garage'||bt==='garages'||bt==='shed'||bt==='carport'||bt==='roof'?1:bt==='industrial'||bt==='warehouse'?2:area<120?2:3+Math.floor(rng()*2));
     let H=b.h||floors*3.2+0.6;if(bt==='church'||bt==='cathedral')H=Math.max(H,16);H=Math.min(H,90);
     let y0=1e9;for(const p of P)y0=Math.min(y0,finalHeight(p[0],p[1]));y0-=0.6;const top=y0+H+0.6;
@@ -2469,7 +2549,7 @@ function buildOsmBuildings(){
       tri(T(c0),Rr(r0),T(c1));tri(T(c1),Rr(r0),Rr(r1));tri(T(c2),T(c3),Rr(r1));tri(T(c3),Rr(r0),Rr(r1));tri(T(c3),T(c0),Rr(r0));tri(T(c1),Rr(r1),T(c2));
       // Giebeldreiecke aus Wandfarbe
       if(rs!=='hipped'){col.set(wc);tri(T(c3),T(c0),Rr(r0));tri(T(c1),T(c2),Rr(r1));col.set(rc);}}
-    MAPPOLY.push(P);cnt++;}
+    MAPPOLY.push(P);camOccAdd(P,top);cnt++;}
   const wallMat=new THREE.MeshStandardMaterial({map:winTile(),vertexColors:true,roughness:0.9,side:THREE.DoubleSide}),roofMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.85,flatShading:true,side:THREE.DoubleSide});
   for(const t of tiles.values()){
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(t.w.p,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(t.w.n,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(t.w.u,2));g.setAttribute('color',new THREE.Float32BufferAttribute(t.w.c,3));
@@ -2500,6 +2580,9 @@ function updateCamera(dt){
   const rx=-r.tz,rz=r.tx,lat=V.lat;
   const tp=new THREE.Vector3(rb.x+rx*lat,Math.max(rb.h,r.h)+V.up,rb.z+rz*lat);
   const tl=new THREE.Vector3(la.x+rx*0.8,la.h+1.0,la.z+rz*0.8);
+  // Haus zwischen Kamera und Fahrer (enge Kurven in der Altstadt)? Dann näher heran und etwas höher
+  if(CAMOCC.size&&V.back>0){const px=r.x+rx*0.8,pz=r.z+rz*0.8,py=r.h+1.4,dx=tp.x-px,dy=tp.y-py,dz=tp.z-pz,Ld=Math.hypot(dx,dz);
+    for(let t=1.2;t<=Ld+0.6;t+=0.8){const q=Math.min(1,t/Ld);if(camBlocked(px+dx*q,pz+dz*q,py+dy*q)){const f=Math.max(0.2,(t-1.4)/Ld);tp.set(px+dx*f,py+dy*f+(1-f)*1.2,pz+dz*f);break;}}}
   if(S.cam===3){tl.set(r.x+rx*0.8,r.h+1.0,r.z+rz*0.8);}
   const k=1-Math.exp(-dt*5);camPos.lerp(tp,k);camLook.lerp(tl,k);
   const groundH=finalHeight(camPos.x,camPos.z)+0.8;if(camPos.y<groundH)camPos.y=groundH;
@@ -2827,13 +2910,13 @@ function clearWorld(){
   HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
-  RIV=null;VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
+  RIV=null;RIVW=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
   LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;
   OSM.data=null;OSM.built=0;OSM.embedded=false;
   ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
   for(const p of NET.peers.values())p.obj=null;}
 async function buildWorld(){
-  buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();
+  buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();
   $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';}
 // Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
 function resetRide(){

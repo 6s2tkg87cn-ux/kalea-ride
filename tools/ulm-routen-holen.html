@@ -20,7 +20,8 @@ const Q=`[out:json][timeout:300][maxsize:536870912][bbox:${BB.s},${BB.w},${BB.n}
  way[highway=path][!bicycle][access!~"^(private|no)$"];)->.w;
 .w out body qt;.w >;out skel qt;
 relation[route=bicycle];out body qt;
-way[waterway~"^(river|canal)$"];out geom qt;
+way[waterway~"^(river|canal|stream)$"];out geom qt;
+(way[natural=water];relation[natural=water];way[waterway=riverbank];relation[waterway=riverbank];);out geom(${BB.s},${BB.w},${BB.n},${BB.e}) qt;
 node[place~"^(city|town|village|suburb|hamlet|quarter)$"];out qt;
 nwr[historic~"^(monastery|castle|ruins|tower|city_gate)$"][name];out center qt;
 nwr[amenity=place_of_worship][name];out center qt;
@@ -41,17 +42,19 @@ async function overpass(){const t0=Date.now();
   throw new Error('Kein OpenStreetMap-Server hat geantwortet. Bitte später nochmal probieren.');}
 
 // kompakt: Knoten als Ganzzahlen (Grad × 100 000), Wege mit Knotennummern statt OSM-IDs
-function compact(js){const idx=new Map(),nl=[],ways=[],rels=[],water=[],places=[],pois=[];
+function compact(js){const idx=new Map(),nl=[],ways=[],rels=[],water=[],areas=[],places=[],pois=[];
   for(const e of js.elements)if(e.type==='node'&&!e.tags&&e.lat!==undefined&&!idx.has(e.id)){idx.set(e.id,nl.length/2);nl.push(I5(e.lat),I5(e.lon));}
   for(const e of js.elements){const t=e.tags||{};
     if(e.type==='way'&&t.highway&&e.nodes){const f=(t.bridge&&t.bridge!=='no'?1:0)|(t.tunnel&&t.tunnel!=='no'?2:0)|(t.oneway==='yes'||t.oneway==='1'?4:0)|(t.oneway==='-1'?8:0)|(t['oneway:bicycle']==='no'||/opposite/.test(t.cycleway||'')?16:0)|(t.segregated==='yes'?32:0)|(t.cycleway||t['cycleway:left']||t['cycleway:right']||t['cycleway:both']?64:0);
       const nd=e.nodes.map(id=>idx.has(id)?idx.get(id):-1);if(nd.includes(-1))continue;
       ways.push([e.id,t.highway,t.name||'',t.surface||'',t.bicycle||'',f,t.tracktype||'',t.layer||'',t.maxspeed||'',nd]);}
+    else if((t.natural==='water'||t.waterway==='riverbank')&&(e.geometry||e.members)){const ring=g=>{const r=[];for(const p of g)if(p)r.push(I5(p.lat),I5(p.lon));return r;};
+      const rings=e.type==='way'?[['outer',ring(e.geometry)]]:e.members.filter(m=>m.geometry).map(m=>[m.role||'outer',ring(m.geometry)]);areas.push([t.water||t.waterway||'',t.name||'',rings]);}
     else if(e.type==='way'&&t.waterway&&e.geometry){const g=[];for(const p of e.geometry)g.push(I5(p.lat),I5(p.lon));water.push([t.waterway,t.name||'',t.width||'',g]);}
     else if(e.type==='relation'&&t.route==='bicycle')rels.push([e.id,t.name||'',t.ref||'',t.network||'',e.members.filter(m=>m.type==='way').map(m=>[m.ref,m.role||''])]);
     else if(e.type==='node'&&t.place)places.push([t.place,t.name||'',I5(e.lat),I5(e.lon)]);
     else if(t.name&&(e.center||e.lat!==undefined)){const c=e.center||e;pois.push([t.historic||t.amenity||t.tourism,t.name,I5(c.lat),I5(c.lon),t.building||'',t.religion||'']);}}
-  return {nl,ways,rels,water,places,pois,ts:(js.osm3s&&js.osm3s.timestamp_osm_base)||''};}
+  return {nl,ways,rels,water,areas,places,pois,ts:(js.osm3s&&js.osm3s.timestamp_osm_base)||''};}
 
 // Höhenraster über Open-Meteo (max. 100 Punkte pro Anfrage), ca. 110 m Abstand
 async function elevation(){const dlat=0.001,dlon=0.0015,nlat=Math.round((BB.n-BB.s)/dlat)+1,nlon=Math.round((BB.e-BB.w)/dlon)+1,tot=nlat*nlon,h=new Array(tot).fill(null);
@@ -68,7 +71,7 @@ async function elevation(){const dlat=0.001,dlon=0.0015,nlat=Math.round((BB.n-BB
 
 $('b').onclick=async()=>{$('b').disabled=true;$('t3').textContent='';
   try{const js=await overpass();$('t1').textContent='Verarbeite …';await sleep(30);
-    const d=compact(js);$('t1').innerHTML=`<b>✔</b> ${d.ways.length.toLocaleString('de-DE')} Wege, ${d.rels.length} Radrouten, ${d.water.length} Flussabschnitte`;
+    const d=compact(js);$('t1').innerHTML=`<b>✔</b> ${d.ways.length.toLocaleString('de-DE')} Wege, ${d.rels.length} Radrouten, ${d.water.length} Flussabschnitte, ${d.areas.length} Wasserflächen`;
     $('t2').textContent='Frage Höhen ab …';d.elev=await elevation();
     $('t2').innerHTML=d.elev.fails?`<b>⚠</b> ${d.elev.fails} Pakete fehlen – die Datei ist trotzdem brauchbar.`:'<b>✔</b> Höhenraster komplett';
     d.v=1;d.bbox=BB;const blob=new Blob([JSON.stringify(d)],{type:'application/json'});
