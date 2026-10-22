@@ -15,7 +15,7 @@ Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (V
 src/index.html            Markup + CSS (Comic-Look, Schrift Fredoka) + <script>-Einbindungen
 src/app.js                das ganze Programm (~2400 Zeilen, in Abschnitte gegliedert, s. u.)
 src/data/ulm-data.js      const ULM_DATA = {origin, grid (Höhen), roads, rivers, zones, places, routes[8]} – erzeugt/ergänzt mit tools/ulm_routen.py
-src/data/osm-buildings.js const OSM_RAW  = 9336 echte Ulmer Gebäude (OSM, ODbL), kompakt kodiert
+src/data/osm-buildings.js const OSM_RAW  = 22746 echte Ulmer Gebäude entlang aller 8 Routen (OSM, ODbL), kompakt kodiert
 src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tools/sounds_build.py)
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
