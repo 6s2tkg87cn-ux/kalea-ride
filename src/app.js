@@ -1123,74 +1123,171 @@ function textSprite(t){const c=document.createElement('canvas');c.width=256;c.he
   x.fillStyle='#fffaf0';x.strokeStyle='#1e0f3a';x.lineWidth=5;x.beginPath();x.moveTo(x0+r,6);x.arcTo(x1,6,x1,58,r);x.arcTo(x1,58,x0,58,r);x.arcTo(x0,58,x0,6,r);x.arcTo(x0,6,x1,6,r);x.closePath();x.fill();x.stroke();
   x.fillStyle='#1e0f3a';x.textAlign='center';x.textBaseline='middle';x.fillText(t,128,34);
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthWrite:false}));s.scale.set(1.3,0.33,1);return s;}
-const LIMB_GEO=new THREE.CylinderGeometry(1,1,1,8);
-function limb(mat,r){const m=new THREE.Mesh(LIMB_GEO,mat);m.userData.r=r;m.castShadow=true;return m;}
-const _d=new THREE.Vector3(),_q=new THREE.Quaternion();
-function setLimb(m,a,b){_d.subVectors(b,a);const l=_d.length();m.position.addVectors(a,b).multiplyScalar(0.5);m.scale.set(m.userData.r,l,m.userData.r);m.quaternion.setFromUnitVectors(UP,_d.normalize());}
-function ik(hip,foot,l1,l2,bend,out){const d=_d.subVectors(foot,hip);let Ld=Math.min(d.length(),l1+l2-1e-3);const dn=d.clone().normalize();
-  const c=clamp((l1*l1+Ld*Ld-l2*l2)/(2*l1*Ld),-1,1),ang=Math.acos(c);
-  const perp=bend.clone().sub(dn.clone().multiplyScalar(bend.dot(dn))).normalize();
-  return out.copy(hip).addScaledVector(dn,Math.cos(ang)*l1).addScaledVector(perp,Math.sin(ang)*l1);}
-function wheelGeo(){const parts=[[tr(new THREE.TorusGeometry(0.335,0.024,8,40),[0,0,0],[0,Math.PI/2,0]),0x161616],[tr(new THREE.TorusGeometry(0.31,0.016,6,40),[0,0,0],[0,Math.PI/2,0]),0x3a3d42],
-  [tr(new THREE.CylinderGeometry(0.03,0.03,0.11,10),[0,0,0],[0,0,Math.PI/2]),0x999999]];
-  for(let k=0;k<18;k++){const a=k/18*Math.PI*2;parts.push([tr(new THREE.CylinderGeometry(0.0025,0.0025,0.3,3),[0,Math.cos(a)*0.155,Math.sin(a)*0.155],[a,0,0]),0xbfc3c8]);}
-  return merge(parts);}
-const WHEEL=wheelGeo();
-function makeRider(jersey,label,frameCol){
-  const g=new THREE.Group(),std=(c,r=0.6,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
-  const jm=std(jersey,0.55),black=std(0x18191b,0.7),skin=std(0xe3b48e,0.75),shoe=std(0xf4f4f4,0.5);
-  const wmat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.5,metalness:0.2});
-  const wR=new THREE.Mesh(WHEEL,wmat),wF=new THREE.Mesh(WHEEL,wmat);wR.position.set(0,0.335,-0.41);wF.position.set(0,0.335,0.6);g.add(wR,wF);
-  const fc=frameCol||0x20232a,acc=0xd8d8d8;
-  const BB=[0,0.29,0],SC=[0,0.8,-0.17],HT=[0,0.86,0.45],HB=[0,0.7,0.48],RA=[0,0.335,-0.41],FA=[0,0.335,0.6];
-  const fparts=[[tube(BB,HB,0.022),fc],[tube(SC,HT,0.017),fc],[tube(BB,SC,0.02),fc],
-    [tube([0.045,0.29,0],[0.06,0.335,-0.41],0.011),fc],[tube([-0.045,0.29,0],[-0.06,0.335,-0.41],0.011),fc],
-    [tube([0.03,0.79,-0.17],[0.06,0.335,-0.41],0.009),fc],[tube([-0.03,0.79,-0.17],[-0.06,0.335,-0.41],0.009),fc],
-    [tube(HB,HT,0.024),fc],[tube([0.03,0.7,0.48],[0.05,0.335,0.6],0.012),fc],[tube([-0.03,0.7,0.48],[-0.05,0.335,0.6],0.012),fc],
-    [tube(SC,[0,0.92,-0.235],0.013),acc],[tr(new THREE.BoxGeometry(0.13,0.04,0.26),[0,0.94,-0.24]),0x111111],
-    [tube(HT,[0,0.9,0.55],0.014),0x222222],[tube([-0.21,0.9,0.55],[0.21,0.9,0.55],0.013),0x222222],
-    [tube([0.21,0.9,0.55],[0.21,0.86,0.63],0.012),0x222222],[tube([-0.21,0.9,0.55],[-0.21,0.86,0.63],0.012),0x222222],
-    [tube([0.21,0.86,0.63],[0.21,0.76,0.6],0.012),0x222222],[tube([-0.21,0.86,0.63],[-0.21,0.76,0.6],0.012),0x222222],
-    [tr(new THREE.CylinderGeometry(0.1,0.1,0.01,24),[0.06,0.29,0],[0,0,Math.PI/2]),0x9ea3a9]];
-  const frame=new THREE.Mesh(merge(fparts),new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.35,metalness:0.35}));g.add(frame);
-  const crank=new THREE.Group();crank.position.set(0,0.29,0);g.add(crank);
-  [1,-1].forEach(s=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.17,0.03),std(0x8d9298,0.3,0.6));arm.position.set(s*0.085,s*0.085,0);crank.add(arm);});
-  // Körper
-  const torso=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.14,1,12),jm),pelvis=new THREE.Mesh(new THREE.SphereGeometry(0.15,12,10),black);
-  const headM=new THREE.Mesh(new THREE.SphereGeometry(0.105,14,12),skin),helm=new THREE.Mesh(new THREE.SphereGeometry(0.13,14,10,0,Math.PI*2,0,Math.PI*0.55),std(frameCol===0xf2f2f2||frameCol===0xe8e8e8?0xf4f4f4:0x24262b,0.4));
-  const glasses=new THREE.Mesh(new THREE.BoxGeometry(0.17,0.035,0.03),std(0x101010,0.2,0.5));
-  const hip=new THREE.Vector3(0,0.99,-0.2),sh=new THREE.Vector3(0,1.36,0.23),headP=new THREE.Vector3(0,1.5,0.35);
-  setLimbFixed(torso,hip,sh,1);pelvis.position.copy(hip);pelvis.scale.set(1.1,0.9,1.2);headM.position.copy(headP);helm.position.set(headP.x,headP.y+0.02,headP.z-0.01);helm.scale.set(1,1,1.25);helm.rotation.x=-0.25;
-  glasses.position.set(0,headP.y+0.005,headP.z+0.095);
-  g.add(torso,pelvis,headM,helm,glasses);
-  const neck=limb(skin,0.045);setLimb(neck,sh,headP);g.add(neck);
-  // Arme (statisch, mit gebeugten Ellenbogen)
-  [1,-1].forEach(s=>{const S0=new THREE.Vector3(s*0.18,1.34,0.21),H0=new THREE.Vector3(s*0.2,0.9,0.6),E=ik(S0,H0,0.3,0.29,new THREE.Vector3(s*0.5,-0.3,-0.7),new THREE.Vector3());
-    const ua=limb(jm,0.048),fa=limb(skin,0.04);setLimb(ua,S0,E);setLimb(fa,E,H0);const hand=new THREE.Mesh(new THREE.SphereGeometry(0.045,8,6),black);hand.position.copy(H0);
-    const shM=new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8),jm);shM.position.copy(S0);g.add(ua,fa,hand,shM);});
-  // Beine (IK pro Frame)
-  const legs=[1,-1].map(s=>{const th=limb(black,0.068),shin=limb(skin,0.048),foot=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.06,0.25),shoe),knee=new THREE.Mesh(new THREE.SphereGeometry(0.052,8,6),skin);
-    foot.castShadow=true;g.add(th,shin,foot,knee);return {s,th,shin,foot,knee};});
-  // unbewegliche Körperteile (Oberkörper, Kopf, Helm, Arme) zu einem Mesh zusammenfassen – spart ~19 Zeichenaufrufe pro Fahrer
-  {const keep=new Set([wR,wF,frame,...legs.flatMap(L=>[L.th,L.shin,L.foot,L.knee])]),parts=[],drop=[];
-    for(const o of g.children){if(!o.isMesh||keep.has(o))continue;o.updateMatrix();const gg=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();gg.applyMatrix4(o.matrix);parts.push([gg,o.material.color.getHex()]);drop.push(o);}
-    for(const o of drop)g.remove(o);g.add(new THREE.Mesh(merge(parts),new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6})));}
-  g.userData={legs,crank,wR,wF,hip};
+// Fahrer und Rennrad als EIN Mesh mit Knochen (SkinnedMesh): jedes Teil hängt starr an einem Knochen, so braucht ein
+// Fahrer samt Rad nur einen Zeichenaufruf (vorher 14) und kann trotzdem viel feiner gebaut sein.
+// Koordinaten: Ursprung am Boden unter dem Tretlager, +z = Fahrtrichtung, +y = oben, rechte Seite des Fahrers = −x.
+const RB={bike:0,crank:1,wR:2,wF:3,torso:4,head:5,uaL:6,faL:7,uaR:8,faR:9,thL:10,shL:11,ftL:12,thR:13,shR:14,ftR:15};
+const RIG={BB:new THREE.Vector3(0,0.27,0),RA:new THREE.Vector3(0,0.335,-0.405),FA:new THREE.Vector3(0,0.335,0.585),
+  thigh:0.44,shin:0.44,ua:0.29,fa:0.27,torso:0.56,crank:0.17};
+function rgHex(c){return new THREE.Color(c);}
+// Teil = Geometrie (beliebig) + Farbe (Hex oder Funktion (x,y,z)→Hex) + Knochen
+function rPart(list,geo,col,bone){const g=geo.index?geo.toNonIndexed():geo;if(!g.attributes.normal)g.computeVertexNormals();list.push({g,col,bone});}
+function rTube(a,b,r,seg=7){return tube(a,b,r,seg);}
+// Glied entlang +y von 0 bis len, Radius r0→r1, mit Ringen für Farbbänder
+function rLimb(len,r0,r1,seg=9,rings=4){const g=new THREE.CylinderGeometry(r1,r0,len,seg,rings,false);g.translate(0,len/2,0);return g;}
+function rLathe(prof,seg){return new THREE.LatheGeometry(prof.map(([r,y])=>new THREE.Vector2(r,y)),seg);}
+// Farbbänder mit harten Kanten: je Band ein eigenes Stück (sonst verlaufen die Farben über die Dreiecke)
+function rRadius(prof,y){for(let i=0;i<prof.length-1;i++){const [r0,y0]=prof[i],[r1,y1]=prof[i+1];if(y>=y0&&y<=y1)return r0+(r1-r0)*(y-y0)/Math.max(1e-6,y1-y0);}return y<prof[0][1]?prof[0][0]:prof[prof.length-1][0];}
+function rLatheBands(list,prof,seg,bands,bone,sx=1,sz=1){for(const [y0,y1,col] of bands){const P=[[rRadius(prof,y0),y0]];for(const q of prof)if(q[1]>y0&&q[1]<y1)P.push(q);P.push([rRadius(prof,y1),y1]);
+    const g=rLathe(P,seg);if(sx!==1||sz!==1){g.scale(sx,1,sz);g.computeVertexNormals();}rPart(list,g,col,bone);}}
+function rLimbBands(list,len,r0,r1,seg,bands,bone){rLatheBands(list,[[r0,0],[r1,len]],seg,bands.map(([a,b,c])=>[a,b,c]),bone);
+  const cap=new THREE.CircleGeometry(r1,seg);cap.rotateX(-Math.PI/2);cap.translate(0,len,0);rPart(list,cap,bands[bands.length-1][2],bone);}
+function rBuild(parts){let n=0;for(const p of parts)n+=p.g.attributes.position.count;
+  const P=new Float32Array(n*3),Nn=new Float32Array(n*3),C=new Float32Array(n*3),SI=new Uint16Array(n*4),SW=new Float32Array(n*4),c=new THREE.Color();let o=0;
+  for(const p of parts){const pa=p.g.attributes.position,na=p.g.attributes.normal,cnt=pa.count,fn=typeof p.col==='function';if(!fn)c.set(p.col);
+    P.set(pa.array,o*3);Nn.set(na.array,o*3);
+    for(let i=0;i<cnt;i++){if(fn)c.set(p.col(pa.getX(i),pa.getY(i),pa.getZ(i)));const k=o+i;C[k*3]=c.r;C[k*3+1]=c.g;C[k*3+2]=c.b;SI[k*4]=p.bone;SW[k*4]=1;}o+=cnt;}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('normal',new THREE.BufferAttribute(Nn,3));g.setAttribute('color',new THREE.BufferAttribute(C,3));
+  g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(SI,4));g.setAttribute('skinWeight',new THREE.BufferAttribute(SW,4));
+  g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,0.9,0.1),1.6);return g;}
+// Rad (Knochen in der Nabe, Achse = x): Hochprofilfelge, Reifen, Nabe, Speichen, beim Hinterrad Kassette
+function rWheel(parts,bone,rear,rimCol,tireSide){const lo=S.quality==='low',ns=lo?12:20,ts=lo?24:36;
+  const rim=rLathe([[0.3225,-0.0105],[0.305,-0.0125],[0.29,-0.008],[0.284,0],[0.29,0.008],[0.305,0.0125],[0.3225,0.0105]],ts);rim.rotateZ(Math.PI/2);
+  rPart(parts,rim,(x,y,z)=>{const r=Math.hypot(y,z);return r>0.297&&r<0.309&&Math.abs(x)>0.009?rimCol:0x1b1c1f;},bone);
+  const tire=new THREE.TorusGeometry(0.3235,0.0125,lo?5:6,ts);tire.rotateY(Math.PI/2);
+  rPart(parts,tire,(x,y,z)=>Math.abs(x)>0.007&&Math.hypot(y,z)<0.324?tireSide:0x18181a,bone);
+  const hub=new THREE.CylinderGeometry(0.019,0.019,0.1,10);hub.rotateZ(Math.PI/2);rPart(parts,hub,0xa9adb3,bone);
+  for(let k=0;k<ns;k++){const a=k/ns*Math.PI*2,s=k%2?1:-1;rPart(parts,tube([s*0.028,Math.cos(a)*0.024,Math.sin(a)*0.024],[0,Math.cos(a+0.05)*0.285,Math.sin(a+0.05)*0.285],0.0016,3),0x2a2c30,bone);}
+  if(rear)for(let k=0;k<7;k++){const d=new THREE.CylinderGeometry(0.026+k*0.0045,0.026+k*0.0045,0.0035,18);d.rotateZ(Math.PI/2);d.translate(-0.022-k*0.0055,0,0);rPart(parts,d,0x9aa0a6,bone);}}
+function makeRider(jersey,label,frameCol,opts={}){
+  const g=new THREE.Group(),parts=[],fc=frameCol||0x20232a,jc=rgHex(jersey),lum=jc.r*0.3+jc.g*0.59+jc.b*0.11;
+  const acc=jc.clone().lerp(new THREE.Color(lum>0.55?0x1e0f3a:0xffffff),lum>0.55?0.45:0.6).getHex(),jer=jc.getHex();
+  const h=[...(label||'Du')].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7),skins=[0xe8b896,0xd9a27c,0xb97d55,0x7f5236,0xf0c8a8,0xe0ac88];
+  const skin=opts.skin||(label?skins[h%skins.length]:0xe0ac88),helmet=opts.helmet||(h%3===0?0xf4f4f2:h%3===1?fc:jer),shoe=h%2?0xf2f2f2:0x1d1e22,sock=h%4===1?0x1d1e22:0xf4f4f2;
+  const B=RIG.BB,RA=RIG.RA,FA=RIG.FA,v=(x,y,z)=>[x,y,z];
+  // ---- Rahmen & Anbauteile (Knochen bike) ----
+  const SC=v(0,0.80,-0.165),HT=v(0,0.845,0.447),HB=v(0,0.705,0.48),bb=[B.x,B.y,B.z],ra=[RA.x,RA.y,RA.z],fa=[FA.x,FA.y,FA.z];
+  const F=(geo,c)=>rPart(parts,geo,c,RB.bike);
+  F(rTube(bb,HB,0.026,9),fc);F(rTube(SC,HT,0.018,8),fc);F(rTube(bb,SC,0.02,8),fc);F(rTube(HB,HT,0.025,10),fc);
+  for(const s of [1,-1]){F(rTube([s*0.02,0.27,-0.02],[s*0.058,0.335,-0.405],0.011,6),fc);F(rTube([s*0.018,0.785,-0.18],[s*0.058,0.335,-0.405],0.0085,6),fc);
+    F(rTube([s*0.03,0.69,0.487],[s*0.05,0.335,0.585],0.012,6),fc);}
+  F(rTube([0,0.705,0.48],[0,0.67,0.49],0.03,8),fc); // Gabelkrone
+  {const sb=new THREE.SphereGeometry(0.03,10,8);sb.translate(0,0.27,0);F(sb,0x2a2c30);} // Tretlager
+  F(rTube(SC,[0,0.935,-0.21],0.0135,8),0x2a2c30); // Sattelstütze
+  {const sd=new THREE.BoxGeometry(0.14,0.035,0.27,4,1,6),p=sd.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i),t=(z+0.135)/0.27;p.setX(i,p.getX(i)*(1-0.68*sstep((t-0.25)/0.6)));p.setY(i,p.getY(i)-Math.pow(p.getX(i)/0.07,2)*0.006+t*0.004);}
+    sd.computeVertexNormals();sd.translate(0,0.957,-0.215);F(sd,(x,y,z)=>Math.abs(x)>0.045&&z<-0.17?acc:0x151618);}
+  F(rTube(HT,[0,0.87,0.452],0.016,8),0x2a2c30);F(rTube([0,0.87,0.452],[0,0.884,0.56],0.016,8),0x2a2c30); // Spacer, Vorbau
+  F(rTube([-0.2,0.884,0.56],[0.2,0.884,0.56],0.0125,8),0x26282c);
+  for(const s of [1,-1]){const cv=new THREE.CatmullRomCurve3([[s*0.2,0.884,0.56],[s*0.206,0.884,0.615],[s*0.21,0.865,0.66],[s*0.212,0.81,0.668],[s*0.21,0.772,0.632],[s*0.209,0.772,0.58]].map(q=>new THREE.Vector3(...q)));
+    F(new THREE.TubeGeometry(cv,14,0.0125,6,false),0x141517);
+    const hood=new THREE.BoxGeometry(0.03,0.048,0.075);hood.rotateX(-0.35);hood.translate(s*0.206,0.902,0.632);F(hood,0x18191b);
+    F(rTube([s*0.207,0.885,0.655],[s*0.212,0.79,0.685],0.0065,5),0x4a4d52);}
+  {const comp=new THREE.BoxGeometry(0.05,0.012,0.075);comp.translate(0,0.9,0.6);F(comp,0x1b1c1f);}
+  // Flaschen am Unter- und Sattelrohr
+  for(const [a,b2,o,c] of [[bb,HB,[0,0.048,0.012],h%2?0xf4f4f2:jer],[bb,SC,[0,0.01,0.05],0x2a2c30]]){const A=new THREE.Vector3(...a),Bv=new THREE.Vector3(...b2),d=Bv.clone().sub(A),m=A.clone().addScaledVector(d,0.42).add(new THREE.Vector3(...o));
+    const e0=m.clone().addScaledVector(d.normalize(),-0.1),e1=m.clone().addScaledVector(d,0.1);F(rTube(e0.toArray(),e1.toArray(),0.034,10),c);F(rTube(e1.toArray(),e1.clone().addScaledVector(d,0.03).toArray(),0.014,6),0x222222);}
+  // Antrieb (Kette, Schaltwerk, Umwerfer) auf der rechten Seite (−x)
+  F(rTube([-0.068,0.372,0],[-0.05,0.39,-0.405],0.0045,4),0x5d6066);F(rTube([-0.068,0.17,0],[-0.05,0.2,-0.39],0.0045,4),0x5d6066);
+  {const rd=new THREE.BoxGeometry(0.018,0.1,0.05);rd.translate(-0.06,0.26,-0.42);F(rd,0x2a2c30);const fd=new THREE.BoxGeometry(0.015,0.05,0.06);fd.translate(-0.045,0.39,-0.05);F(fd,0x2a2c30);}
+  for(const [y,z] of [[0.66,0.505],[0.79,-0.2]]){const br=new THREE.BoxGeometry(0.08,0.03,0.03);br.translate(0,y,z);F(br,0x2a2c30);}
+  // ---- Kurbel (dreht sich, Knochen crank, Ursprung im Tretlager) ----
+  const K=(geo,c)=>rPart(parts,geo,c,RB.crank);
+  for(const [r,c] of [[0.104,0x2c2e33],[0.074,0x6c7077]]){const d=new THREE.CylinderGeometry(r,r,0.004,30);d.rotateZ(Math.PI/2);d.translate(-0.07,0,0);K(d,c);}
+  K(rTube([-0.084,0,0],[-0.084,-RIG.crank,0],0.012,6),0x2a2c30);K(rTube([0.084,0,0],[0.084,RIG.crank,0],0.012,6),0x2a2c30);K(rTube([-0.084,0,0],[0.084,0,0],0.012,6),0x8d9298);
+  // ---- Räder ----
+  const rimCol=h%3===0?0xd8dce0:acc;rWheel(parts,RB.wR,true,rimCol,0x1d1e21);rWheel(parts,RB.wF,false,rimCol,0x1d1e21);
+  // ---- Oberkörper (Knochen torso: y = Wirbelsäule von der Hüfte aufwärts, +z = Brust/Bauch, −z = Rücken) ----
+  {const TP=[[0.001,-0.07],[0.11,-0.06],[0.152,0],[0.148,0.08],[0.134,0.19],[0.138,0.29],[0.158,0.39],[0.17,0.46],[0.164,0.52],[0.12,0.565],[0.06,0.59],[0.001,0.596]];
+    rLatheBands(parts,TP,S.quality==="low"?11:16,[[-0.07,0.1,0x141517],[0.1,0.37,jer],[0.37,0.425,acc],[0.425,0.565,jer],[0.565,0.596,acc]],RB.torso,1.2,0.74);
+    // drei Rückentaschen und Reißverschluss
+    for(const x of [-0.085,0,0.085]){const pk=new THREE.BoxGeometry(0.075,0.11,0.012);pk.translate(x,0.17,-0.108);rPart(parts,pk,jc.clone().multiplyScalar(0.8).getHex(),RB.torso);}
+    {const zp=new THREE.BoxGeometry(0.008,0.44,0.006);zp.translate(0,0.36,0.118);rPart(parts,zp,acc,RB.torso);}
+    for(const s of [1,-1]){const sh=new THREE.SphereGeometry(0.068,10,8);sh.scale(1,0.9,1);sh.translate(s*0.17,0.515,0.0);rPart(parts,sh,jer,RB.torso);}}
+  // ---- Kopf (Knochen head, aufrecht, +z = Blickrichtung) ----
+  {const H=(geo,c)=>rPart(parts,geo,c,RB.head);
+    const hd=new THREE.SphereGeometry(0.1,14,12);hd.scale(0.88,1.02,1.04);H(hd,skin);
+    for(const s of [1,-1]){const e=new THREE.SphereGeometry(0.018,6,5);e.scale(0.5,1,0.8);e.translate(s*0.088,-0.005,0);H(e,skin);}
+    H(rTube([0,-0.05,-0.03],[0,-0.16,-0.11],0.046,8),skin);
+    const hm=new THREE.SphereGeometry(0.117,16,9,0,Math.PI*2,0,Math.PI*0.53);hm.scale(0.98,0.95,1.27);hm.rotateX(-0.28);hm.translate(0,0.022,-0.018);H(hm,helmet);
+    const pad=new THREE.SphereGeometry(0.106,12,7,0,Math.PI*2,0,Math.PI*0.53);pad.scale(0.95,0.95,1.12);pad.rotateX(-0.28);pad.translate(0,0.018,-0.012);H(pad,0x232428);
+    {const hr=new THREE.SphereGeometry(0.104,12,8,Math.PI*1.05,Math.PI*0.9,Math.PI*0.3,Math.PI*0.34);hr.scale(0.9,1.02,1.06);H(hr,opts.hair||[0x3b2a1e,0x6b4a2b,0x1e1a17,0xa07a4a][h%4]);}
+    {const ns=new THREE.ConeGeometry(0.014,0.035,5);ns.rotateX(Math.PI/2);ns.translate(0,-0.025,0.108);H(ns,skin);}
+    for(const x of [-0.045,0,0.045]){const vt=new THREE.BoxGeometry(0.014,0.01,0.15);vt.rotateX(-0.05);vt.translate(x,0.124-Math.abs(x)*0.3,-0.02);H(vt,0x202226);}
+    for(const s of [1,-1])H(rTube([s*0.092,0.01,0.0],[s*0.07,-0.09,0.03],0.005,4),0x202226);
+    const gl=new THREE.TorusGeometry(0.093,0.013,5,14,Math.PI*0.72);gl.rotateX(Math.PI/2);gl.rotateY(-Math.PI*0.14);gl.scale(0.96,0.9,1.07);gl.translate(0,0.0,0.004);
+    H(gl,(x,y,z)=>z>0.06?(h%2?0x2b4c7e:0x6b3a1f):0x18191b);
+    if(opts.pony){H(rTube([0,0.0,-0.115],[0,-0.13,-0.17],0.026,7),opts.hair||0x5a3b22);}}
+  // ---- Arme ----
+  for(const [ua,fa] of [[RB.uaL,RB.faL],[RB.uaR,RB.faR]]){
+    rLimbBands(parts,RIG.ua,0.05,0.041,9,[[0,0.15,jer],[0.15,0.17,acc],[0.17,RIG.ua,skin]],ua);
+    {const e=new THREE.SphereGeometry(0.042,8,6);rPart(parts,e,skin,fa);}
+    rLimbBands(parts,RIG.fa,0.04,0.031,8,[[0,0.215,skin],[0.215,RIG.fa,0x1d1e22]],fa);
+    const hand=new THREE.BoxGeometry(0.05,0.085,0.04);hand.translate(0,RIG.fa+0.035,0);rPart(parts,hand,0x1d1e22,fa);}
+  // ---- Beine ----
+  for(const [th,sh,ft] of [[RB.thL,RB.shL,RB.ftL],[RB.thR,RB.shR,RB.ftR]]){
+    rLimbBands(parts,RIG.thigh,0.08,0.056,10,[[0,0.33,0x141517],[0.33,0.355,acc],[0.355,RIG.thigh,skin]],th);
+    const kn=new THREE.SphereGeometry(0.052,9,7);rPart(parts,kn,skin,sh);
+    rLatheBands(parts,[[0.05,0],[0.056,0.06],[0.061,0.13],[0.053,0.24],[0.041,0.33],[0.035,0.4],[0.034,0.44],[0.001,0.445]],10,[[0,0.35,skin],[0.35,0.445,sock]],sh);
+    // Schuh: Ursprung = Pedalachse unter dem Fußballen
+    const sh2=new THREE.BoxGeometry(0.094,0.07,0.27,2,2,4),p=sh2.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);if(z>0.05)p.setX(i,p.getX(i)*(1-(z-0.05)*2.2));if(z>0.07&&p.getY(i)>0)p.setY(i,p.getY(i)-(z-0.07)*0.25);}
+    sh2.computeVertexNormals();sh2.translate(0,0.05,-0.04);rPart(parts,sh2,(x,y,z)=>y<0.02?0x1d1e22:Math.abs(x)>0.03&&y>0.06&&z>-0.08&&z<0.02?acc:shoe,ft);
+    const pd=new THREE.BoxGeometry(0.075,0.02,0.09);pd.translate(0,-0.002,0);rPart(parts,pd,0x1b1c1f,ft);}
+  // ---- zusammensetzen ----
+  const geo=rBuild(parts),bones=[];for(let i=0;i<16;i++){const b=new THREE.Bone();b.matrixAutoUpdate=false;bones.push(b);}
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.55,metalness:0.08});mat.skinning=true;
+  const mesh=new THREE.SkinnedMesh(geo,mat);for(const b of bones)mesh.add(b);mesh.bind(new THREE.Skeleton(bones),new THREE.Matrix4());
+  mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);
+  g.userData={mesh,bones,stand:0,tuck:0,lean:0,t:0,seed:(h%1000)/100};
   animRider(g,0,0);
   if(label){const sp=textSprite(label);sp.position.y=2.05;g.add(sp);g.userData.label=sp;}
-  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
-  scene.add(g);return g;
-}
-function setLimbFixed(m,a,b,r){_d.subVectors(b,a);const l=_d.length();m.position.addVectors(a,b).multiplyScalar(0.5);m.scale.set(1,l,1);m.quaternion.setFromUnitVectors(UP,_d.normalize());}
-const _h=new THREE.Vector3(),_p=new THREE.Vector3(),_k=new THREE.Vector3(),_a=new THREE.Vector3(),FWD=new THREE.Vector3(0,0.15,1);
-function animRider(o,phase,wheelAng){const u=o.userData;u.crank.rotation.x=-phase;u.wR.rotation.x=-wheelAng;u.wF.rotation.x=-wheelAng;
-  for(const L of u.legs){const ph=-phase+(L.s>0?0:Math.PI);
-    _p.set(L.s*0.12,0.29+Math.cos(ph)*0.17,Math.sin(ph)*-0.17);
-    _a.set(_p.x,_p.y+0.06,_p.z-0.02);_h.set(L.s*0.09,u.hip.y,u.hip.z);
-    ik(_h,_a,0.45,0.45,FWD,_k);setLimb(L.th,_h,_k);setLimb(L.shin,_k,_a);L.knee.position.copy(_k);
-    L.foot.position.set(_p.x,_p.y+0.03,_p.z+0.05);L.foot.rotation.x=Math.sin(ph)*0.25-0.1;}}
-function placeRider(o,dist,lat){const r=roadAt(dist),a=roadAt(dist+2),rx=-r.tz,rz=r.tx;
-  o.position.set(r.x+rx*lat,r.h+0.25,r.z+rz*lat);o.lookAt(a.x+rx*lat,a.h+0.25,a.z+rz*lat);}
+  scene.add(g);return g;}
+const _rm=new THREE.Matrix4(),_rb=new THREE.Matrix4(),_rx=new THREE.Vector3(),_ry=new THREE.Vector3(),_rz=new THREE.Vector3(),_ra=new THREE.Vector3(),_rk=new THREE.Vector3(),
+  _rh=new THREE.Vector3(),_rs=new THREE.Vector3(),_rt=new THREE.Vector3(),_rq=new THREE.Vector3(),_rw=new THREE.Vector3(),_rp=new THREE.Vector3(),_rf=new THREE.Matrix4();
+// Knochenmatrix aus Startpunkt a, Achsrichtung (y) zum Punkt b und einer Seitenrichtung side (≈ x)
+function rBoneTo(bone,M,a,b,side){_ry.subVectors(b,a).normalize();_rz.crossVectors(side,_ry).normalize();_rx.crossVectors(_ry,_rz);
+  bone.matrix.makeBasis(_rx,_ry,_rz).setPosition(a).premultiply(M);bone.matrixWorldNeedsUpdate=true;}
+function ikKnee(hip,foot,l1,l2,bend,out){const d=_rq.subVectors(foot,hip),L=Math.min(d.length(),l1+l2-1e-3);d.normalize();
+  const c=clamp((l1*l1+L*L-l2*l2)/(2*l1*L),-1,1),s=Math.sqrt(1-c*c);_rw.copy(bend).addScaledVector(d,-bend.dot(d)).normalize();
+  return out.copy(hip).addScaledVector(d,c*l1).addScaledVector(_rw,s*l1);}
+const RX1=new THREE.Vector3(1,0,0),BEND_LEG=new THREE.Vector3(0,0.1,1),BEND_ARM=new THREE.Vector3(0,-0.35,-1);
+// st: {v (m/s), w (W/kg), g (Steigung), ped (tritt)} – daraus Haltung: sitzen, Wiegetritt (steil/Sprint), Abfahrtshaltung
+function animRider(o,phase,wheelAng,st){const u=o.userData,b=u.bones,now=performance.now()/1000,dt=Math.min(0.2,u.t?now-u.t:0);u.t=now;
+  if(st){const tS=(st.w>8.5||(st.g>0.075&&st.w>3.0&&Math.sin(now*0.11+u.seed*3)>-0.1))&&st.v>1.2?1:0,tT=st.v>12.5&&st.w<1.2&&st.g<-0.02?1:0;
+    u.stand+=(tS-u.stand)*Math.min(1,dt*2.2);u.tuck+=(tT-u.tuck)*Math.min(1,dt*1.5);}
+  const S1=u.stand,T1=u.tuck*(1-S1),rock=S1*0.12*Math.sin(phase),sway=S1*0.025*Math.sin(phase);
+  // Rad (ganz) im Wiegetritt seitlich kippen
+  _rb.makeRotationZ(rock);
+  b[RB.bike].matrix.copy(_rb);
+  b[RB.crank].matrix.makeRotationX(-phase).setPosition(RIG.BB).premultiply(_rb);
+  b[RB.wR].matrix.makeRotationX(-wheelAng).setPosition(RIG.RA).premultiply(_rb);
+  b[RB.wF].matrix.makeRotationX(-wheelAng).setPosition(RIG.FA).premultiply(_rb);
+  // Hüfte und Oberkörper
+  const bob=0.005*Math.sin(phase*2)*(1-S1);
+  _rh.set(sway,0.985+0.095*S1-0.02*T1+bob,-0.195+0.17*S1+0.02*T1);
+  const th=(38+8*S1-16*T1)*Math.PI/180,roll=-rock*0.7+0.03*Math.sin(phase)*(1-S1);
+  _rs.set(_rh.x,_rh.y+Math.sin(th)*RIG.torso,_rh.z+Math.cos(th)*RIG.torso);
+  _rt.set(Math.cos(roll),Math.sin(roll),0);rBoneTo(b[RB.torso],_rb,_rh,_rs,_rt);
+  const hp=_rp.set(_rs.x,_rs.y+0.13-0.04*T1,_rs.z+0.1+0.02*T1);b[RB.head].matrix.makeRotationX(0.12-0.25*T1+0.15*S1).setPosition(hp).premultiply(_rb);
+  // Arme: Schulter → Hände an den Bremsgriffen (Abfahrt: im Unterlenker)
+  const tm=b[RB.torso].matrix;
+  for(const [s,ua,fa] of [[1,RB.uaL,RB.faL],[-1,RB.uaR,RB.faR]]){
+    const sh=_ra.set(s*0.17,0.515,0).applyMatrix4(_rf.copy(_rb).invert().multiply(tm));
+    const hand=_rk.set(s*0.205,0.905-0.115*T1,0.6-0.01*T1);
+    const el=ikKnee(sh,hand,RIG.ua,RIG.fa,_rt.set(s*0.6,BEND_ARM.y,BEND_ARM.z),new THREE.Vector3());
+    rBoneTo(b[ua],_rb,sh,el,RX1);rBoneTo(b[fa],_rb,el,hand,RX1);}
+  // Beine: Pedal → Fuß (Ballen über der Achse, Knöchel dahinter) → Knie per IK
+  for(const [s,th2,sh2,ft] of [[1,RB.thL,RB.shL,RB.ftL],[-1,RB.thR,RB.shR,RB.ftR]]){const ph=-phase+(s>0?0:Math.PI);
+    const pd=_rp.set(s*0.12,RIG.BB.y+Math.cos(ph)*RIG.crank,Math.sin(ph)*-RIG.crank),pitch=0.15+0.2*Math.sin(ph)-0.08*Math.cos(ph);
+    b[ft].matrix.makeRotationX(pitch).setPosition(pd).premultiply(_rb);
+    const ank=_ra.set(0,0.085,-0.1).applyMatrix4(_rf.makeRotationX(pitch).setPosition(pd));
+    const hip=_rh.clone().add(_rt.set(s*0.085,0,0)),kn=ikKnee(hip,ank,RIG.thigh,RIG.shin,BEND_LEG,new THREE.Vector3());
+    rBoneTo(b[th2],_rb,hip,kn,RX1);rBoneTo(b[sh2],_rb,kn,ank,RX1);}
+  for(const bn of b)bn.matrixWorldNeedsUpdate=true;}
+// Fahrer auf die Straße setzen; in Kurven legt er sich je nach Tempo hinein (dir=−1: Gegenverkehr)
+function placeRider(o,dist,lat,v,dir=1){const r=roadAt(dist),a=roadAt(dist+2),rx=-r.tz,rz=r.tx;
+  o.position.set(r.x+rx*lat,r.h+0.25,r.z+rz*lat);o.lookAt(a.x+rx*lat,a.h+0.25,a.z+rz*lat);
+  if(v){const p=roadAt(dist-3),q=roadAt(dist+3);let da=Math.atan2(q.tx,q.tz)-Math.atan2(p.tx,p.tz);da=Math.atan2(Math.sin(da),Math.cos(da));
+    const tgt=-dir*clamp(Math.atan(v*v*(da/6)/9.81),-0.55,0.55),u=o.userData;u.lean+=(tgt-u.lean)*0.12;o.rotateZ(u.lean);}}
 /* ================= Mitfahrer & Gegenverkehr ================= */
 // Rollen: „Gruppe“ fährt mit dir (richtet sich nach deiner Leistung der letzten ~30 s und bleibt in deiner Nähe),
 // „langsam“ überholst du, „schnell“ überholt dich ab und zu. Wer weit weg ist, wird außer Sicht neu eingesetzt,
@@ -1202,7 +1299,7 @@ function initRiders(){
   player=makeRider(0xeb567b,null,0x1b1d22);
   BOTS=BOT_DEFS.map(([name,color,frame,role])=>({name,color,role,mass:60+Math.random()*22,str:role==='group'?rnd(0.93,1.07):role==='slow'?rnd(0.66,0.8):rnd(1.18,1.32),
     climb:rnd(0.88,1.12),off:rnd(-20,16),cad:rnd(82,94),dist:0,v:0,P:0,wkg:0,lat:0,latT:0,fat:0,surge:0,surgeT:rnd(60,200),seed:Math.random()*100,phase:Math.random()*6,wheel:0,active:true,
-    obj:makeRider(color,name,frame)}));
+    obj:makeRider(color,name,frame,{pony:['Lena K.','Aylin','Marie','Hanna'].includes(name)})}));
   placeBotsStart();applyBotVis();initOncoming();}
 // Startaufstellung relativ zu dir (auch beim Wiedereinschalten mitten in der Fahrt)
 function placeBotsStart(){const gd=[-14,-7,8,15];let gk=0,sk=0,fk=0;
@@ -1248,8 +1345,8 @@ function stepOncoming(dt){const on=S.life&&S.started;
     const gOpp=-gradeAt(o.d),vT=o.base*clamp(1-6*gOpp,0.45,1.6);o.v+=(vT-o.v)*Math.min(1,dt*0.5);o.d-=o.v*dt;
     o.phase+=(gOpp<-0.03&&o.v>9?0:1.45)*Math.PI*2*dt;o.wheel+=o.v/0.335*dt;
     if(o.d<S.dist-60||o.d>S.dist+1500)respawnOnc(o);
-    placeRider(o.obj,o.d,o.lat);o.obj.rotateY(Math.PI);const d2=o.obj.position.distanceToSquared(camera.position);
-    o.obj.visible=d2<320*320;if(d2<200*200)animRider(o.obj,o.phase,o.wheel);}}
+    placeRider(o.obj,o.d,o.lat,o.v,-1);o.obj.rotateY(Math.PI);const d2=o.obj.position.distanceToSquared(camera.position);
+    o.obj.visible=d2<320*320;if(d2<200*200)animRider(o.obj,o.phase,o.wheel,{v:o.v,w:2,g:-gradeAt(o.d)});}}
 
 /* ================= Physik ================= */
 function draftFactor(d,self){
@@ -1732,7 +1829,7 @@ function netStep(dt,now){
   // Fremde Fahrer bewegen (Vorhersage + weiches Nachziehen)
   for(const p of NET.peers.values()){if(now-p.recv>12000){if(p.obj)scene.remove(p.obj);NET.peers.delete(p.id);updateNetUi();continue;}
     const tgt=p.d+p.v*(now-p.recv)/1000;p.disp+=p.v*dt;p.disp+=(tgt-p.disp)*Math.min(1,dt*2.5);if(Math.abs(tgt-p.disp)>80)p.disp=tgt;
-    if(p.obj){placeRider(p.obj,p.disp,p.lat);p.phase+=(p.cad||0)/60*Math.PI*2*dt;p.wheel+=p.v/0.335*dt;if(p.obj.position.distanceToSquared(camera.position)<200*200)animRider(p.obj,p.phase,p.wheel);}}
+    if(p.obj){placeRider(p.obj,p.disp,p.lat,p.v);p.phase+=(p.cad||0)/60*Math.PI*2*dt;p.wheel+=p.v/0.335*dt;if(p.obj.position.distanceToSquared(camera.position)<200*200)animRider(p.obj,p.phase,p.wheel,{v:p.v,w:p.wkg||0,g:gradeAt(p.disp)});}}
   netRubber(dt);
   // eigenen Zustand senden (2× pro Sekunde)
   if(NET.client&&now-NET.lastPub>480){NET.lastPub=now;
@@ -2221,7 +2318,7 @@ function toonMat(m,cache){
   const t=new THREE.MeshToonMaterial({color:m.color,map:m.map||null,gradientMap:toonGrad(),vertexColors:m.vertexColors,side:m.side,transparent:m.transparent,opacity:m.opacity,alphaTest:m.alphaTest,
     emissive:m.emissive||new THREE.Color(0),emissiveIntensity:m.emissiveIntensity!==undefined?m.emissiveIntensity:1,depthWrite:m.depthWrite,fog:m.fog});
   t.polygonOffset=m.polygonOffset;t.polygonOffsetFactor=m.polygonOffsetFactor;t.polygonOffsetUnits=m.polygonOffsetUnits;
-  if(m.flatShading)t.flatShading=true;t.userData=m.userData;cache.set(m,t);return t;}
+  if(m.flatShading)t.flatShading=true;if(m.skinning)t.skinning=true;t.userData=m.userData;cache.set(m,t);return t;}
 function toonify(root){const cache=new Map();
   root.traverse(o=>{if(!o.isMesh||o.material&&o.material.isShaderMaterial)return;
     o.material=Array.isArray(o.material)?o.material.map(m=>toonMat(m,cache)):toonMat(o.material,cache);});}
@@ -2615,8 +2712,8 @@ function frame(now){
   const idle=!S.started||S.paused||!$('setup').classList.contains('hidden')||!$('statsView').classList.contains('hidden'),cap=idle?30:(S.fps||60);
   if(now-PERF.lastF<1000/cap-1.5)return;PERF.lastF=now;perfTick(now);const dt=Math.min(0.1,(now-last)/1000);last=now;const t=now/1000;
   if(S.riding&&!S.paused)stepPhysics(dt);
-  placeRider(player,S.dist,0.8);animRider(player,S.legPhase,S.wheel);
-  for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel);if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
+  placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
+  for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
   stepLife(dt,t);
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
