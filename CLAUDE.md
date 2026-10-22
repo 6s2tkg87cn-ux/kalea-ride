@@ -20,8 +20,9 @@ src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tool
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
 tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; aktualisiert auch
-                          die Abfrage in ulm-haeuser-holen.html (Häuser entlang aller Routen)
-tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass und speichert ulm-haeuser.json
+                          die Kartenstücke/Routenlinien in ulm-haeuser-holen.html (Häuser entlang aller Routen)
+tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (95 Kartenstücke à 1,2 km nacheinander,
+                          mit Wiederholung; behält nur Häuser ≤ 220 m an den Routen) und speichert ulm-haeuser.json
 tools/ulm-routen-holen.html   Hilfsseite: Straßen/Radwege/Radrouten/Flüsse/Wasserflächen (Overpass) rund um Ulm → ulm-routen.json (Höhen holt Claude selbst: AWS-Terrarium-Kacheln)
 tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
 ```

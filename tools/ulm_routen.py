@@ -581,23 +581,39 @@ def dp(P, tol):
     return [P[0], P[-1]]
 
 
-def write_house_query():
-    """tools/ulm-haeuser-holen.html: Abfrage auf alle Routen (Häuser im Umkreis von 200 m) aktualisieren."""
+def write_house_query(C=1200, R=220, CORE=650):
+    """tools/ulm-haeuser-holen.html: Kartenstücke (C m) entlang aller Routen und die Routenlinien eintragen.
+    Die Seite fragt die Stücke nacheinander ab und behält nur Häuser im Umkreis von R m (bzw. CORE m ums Münster)."""
     U = json.loads(open(DATA, encoding='utf-8').read().split('const ULM_DATA=', 1)[1].strip().rstrip(';'))
-    parts = []
+    cells, lines = set(), []
     for r in U['routes']:
         P = list(zip(r['x'], r['z']))
         P.append(P[0])
+        for (ax, az), (bx, bz) in zip(P, P[1:]):
+            n = max(1, int(math.hypot(bx - ax, bz - az) / 40))
+            for k in range(n + 1):
+                x, z = ax + (bx - ax) * k / n, az + (bz - az) * k / n
+                for i in range(math.floor((x - R - 20) / C), math.floor((x + R + 20) / C) + 1):
+                    for j in range(math.floor((z - R - 20) / C), math.floor((z + R + 20) / C) + 1):
+                        cells.add((i, j))
         h = len(P) // 2
-        S = dp(P[:h + 1], 12)[:-1] + dp(P[h:], 12)
-        ll = ','.join(f'{xz2ll(x, z)[0]:.4f},{xz2ll(x, z)[1]:.4f}' for x, z in S)
-        parts.append(f'way[building](around:200,{ll});')
-    q = '[out:json][timeout:240];(' + ''.join(parts) + 'way[building](around:650,48.3986,9.9925););out geom qt;'
+        S = dp(P[:h + 1], 6)[:-1] + dp(P[h:], 6)
+        lines.append([v for x, z in S for v in (round(x), round(z))])
+    for i in range(math.floor(-CORE / C), math.floor(CORE / C) + 1):
+        for j in range(math.floor(-CORE / C), math.floor(CORE / C) + 1):
+            cells.add((i, j))
+    bb = []
+    for i, j in sorted(cells, key=lambda c: (c[1], c[0])):
+        n, w = xz2ll(i * C, j * C)
+        s, e = xz2ll((i + 1) * C, (j + 1) * C)
+        bb.append([round(s, 5), round(w, 5), round(n, 5), round(e, 5)])
+    d = json.dumps({'cells': bb, 'routes': lines, 'r': R, 'core': CORE}, separators=(',', ':'))
     p = os.path.join(ROOT, 'tools', 'ulm-haeuser-holen.html')
     s = open(p, encoding='utf-8').read()
-    s = re.sub(r"const Q='[^']*';", "const Q='" + q + "';", s, count=1)
+    s, k = re.subn(r'^const D=.*;$', lambda m: 'const D=' + d + ';', s, count=1, flags=re.M)
+    assert k == 1, 'Platzhalter „const D=…;“ fehlt in ulm-haeuser-holen.html'
     open(p, 'w', encoding='utf-8').write(s)
-    print(f'{p}: Abfrage für {len(parts)} Routen ({len(q) // 1024} KB)')
+    print(f'{p}: {len(bb)} Kartenstücke, {len(lines)} Routen ({len(d) // 1024} KB)')
 
 
 if __name__ == '__main__':
