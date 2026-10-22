@@ -2689,8 +2689,9 @@ function buildOsmBuildings(){
   const lim=S.quality==='low'?4500:S.quality==='medium'?9000:20000;
   const wallCols=[0xf3e9d2,0xefd9b8,0xe8d0c0,0xf6f0e1,0xd9e2d6,0xf2dcc8,0xe6e0cf,0xf4d9a8,0xd8e4ec,0xf1c9b5,0xe9e4dc,0xd8d2c8],roofCols=[0x9c4a32,0x8a3b2a,0xa65a3c,0x7a4030,0x6e3a2e,0xb0583a];
   const tiles=new Map();const tileOf=(x,z)=>{const k=Math.floor(x/CHUNK)+'|'+Math.floor(z/CHUNK);if(!tiles.has(k))tiles.set(k,{w:{p:[],n:[],u:[],c:[]},r:{p:[],c:[],u:[]},cx:(Math.floor(x/CHUNK)+0.5)*CHUNK,cz:(Math.floor(z/CHUNK)+0.5)*CHUNK});return tiles.get(k);};
-  // Häuser nach Nähe zur Strecke sortieren, damit bei Begrenzung die wichtigen bleiben
-  const list=d.b.map(b=>{let sx=0,sz=0;const n=b.p.length/2;for(let i=0;i<n;i++){sx+=b.p[i*2];sz+=b.p[i*2+1];}const cx=sx/n,cz=sz/n,nr=nearestRoad(cx,cz,400);return {b,cx,cz,dr:nr?nr.d:400};}).sort((a,b)=>a.dr-b.dr).slice(0,lim);
+  // Häuser nach Nähe zur Strecke sortieren, damit bei Begrenzung die wichtigen bleiben; nur im Weltbereich (Häuser anderer Umland-Routen weglassen)
+  const A=ULM.area;
+  const list=d.b.map(b=>{let sx=0,sz=0;const n=b.p.length/2;for(let i=0;i<n;i++){sx+=b.p[i*2];sz+=b.p[i*2+1];}const cx=sx/n,cz=sz/n,nr=nearestRoad(cx,cz,400);return {b,cx,cz,dr:nr?nr.d:400};}).filter(o=>o.cx>A.x0+300&&o.cx<A.x1-300&&o.cz>A.z0+300&&o.cz<A.z1-300).sort((a,b)=>a.dr-b.dr).slice(0,lim);
   const col=new THREE.Color();let cnt=0;
   for(const {b,cx,cz} of list){let P=[];for(let i=0;i<b.p.length;i+=2)P.push([b.p[i],b.p[i+1]]);
     if(P.length>3&&Math.hypot(P[0][0]-P[P.length-1][0],P[0][1]-P[P.length-1][1])<0.3)P.pop();if(P.length<3)continue;
