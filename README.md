@@ -32,7 +32,7 @@ Zum Entwickeln reicht es, `src/index.html` direkt im Browser zu öffnen.
 **Häuser aktualisieren:** `tools/ulm-haeuser-holen.html` im Browser öffnen → `ulm-haeuser.json` speichern →
 `python3 tools/osm_embed.py ulm-haeuser.json`.
 
-**Neue Ulm-Routen:** `tools/ulm-routen-holen.html` im Browser öffnen → `ulm-routen.json` (Wege, Radrouten, Höhen) speichern.
+**Neue Ulm-Routen:** `tools/ulm-routen-holen.html` im Browser öffnen → `ulm-routen.json` (Wege, Radrouten, Flüsse, Wasserflächen) speichern; Höhen kommen aus den Terrarium-Höhenkacheln (AWS).
 
 ## Daten & Lizenzen
 - Straßen und Gebäude © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende, ODbL
