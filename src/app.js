@@ -406,6 +406,8 @@ function terrH(x,z){const T=TERR;if(!T)return finalHeight(x,z);const fx=(x-T.x0)
   const a=Y[iz*nx+ix],b=Y[(iz+1)*nx+ix],c=Y[(iz+1)*nx+ix+1],d=Y[iz*nx+ix+1];
   return u+v<=1?a+(d-a)*u+(b-a)*v:c+(b-c)*(1-u)+(d-c)*(1-v);}
 function groundH(x,z){if(!TERR||nearestRoad(x,z,9.5))return finalHeight(x,z);return terrH(x,z);}
+// Boden für Figuren neben der Fahrbahn: immer das sichtbare Gelände (neben Brücken und Dämmen liegt es tiefer als die Straße)
+function standH(x,z){return TERR?terrH(x,z):groundH(x,z);}
 function scatter(geo,mat,count,pick,opts={}){
   const buckets=new Map(),dm=new THREE.Object3D(),col=new THREE.Color(),lo=geo.userData&&geo.userData.lo,CH=lo?CHUNK*1.5:CHUNK;let n=0,tries=0;
   if(S.quality==='low')count=Math.round(count*0.5);
@@ -695,8 +697,9 @@ function buildTerrainUlm(){
   geo.setAttribute('color',new THREE.BufferAttribute(cols,3));
   const detail=grassDetailTex();detail.repeat.set(W/7,H/7);
   const mesh=new THREE.Mesh(geo,detailBlend(new THREE.MeshStandardMaterial({vertexColors:true,map:detail,roughness:1})));mesh.receiveShadow=true;scene.add(mesh);
-  // äußerer Boden bis zum Horizont
-  const outer=new THREE.Mesh(new THREE.PlaneGeometry(60000,60000),new THREE.MeshStandardMaterial({color:0x6f8a52,roughness:1}));outer.rotation.x=-Math.PI/2;outer.position.y=WATER_Y-6.5;scene.add(outer);
+  // äußerer Boden bis zum Horizont – unter dem tiefsten Gelände (flussabwärts liegt das Donautal tiefer als in Ulm)
+  let ymin=WATER_Y-6.5;for(let i=1;i<P.length;i+=3)ymin=Math.min(ymin,P[i]-3);
+  const outer=new THREE.Mesh(new THREE.PlaneGeometry(60000,60000),new THREE.MeshStandardMaterial({color:0x6f8a52,roughness:1}));outer.rotation.x=-Math.PI/2;outer.position.y=ymin;scene.add(outer);
 }
 /* ---- Donau ---- */
 function buildRiverUlm(){
@@ -1641,7 +1644,9 @@ function updateWorkoutHud(){
 const KOM={act:null,shownT:0,store:null};
 function komStore(){if(!KOM.store){try{KOM.store=JSON.parse(localStorage.getItem('kalea_kom')||'{}');}catch(e){KOM.store={};}}return KOM.store;}
 function komSave(){try{localStorage.setItem('kalea_kom',JSON.stringify(KOM.store));}catch(e){}}
-function komPB(c){const e=komStore()[c.key];return e&&e.pb?e.pb:null;}
+// Bestzeit gilt nur, wenn der Anstieg noch gleich lang ist (Strecke geändert → neue Wertung)
+function komSame(e,c){return !e.len||Math.abs(e.len-c.len)<60;}
+function komPB(c){const e=komStore()[c.key];return e&&e.pb&&komSame(e,c)?e.pb:null;}
 function stepKom(prev,cur,dt){
   const a=KOM.act;
   if(a){a.t+=dt;a.e+=S.power*(T.pedaling?1:0)*dt;if(S.hr){a.hr+=S.hr*dt;a.hrT+=dt;}
@@ -1653,6 +1658,7 @@ function stepKom(prev,cur,dt){
     if(prev<ds0&&cur>=ds0){const frac=(cur-ds0)/Math.max(0.01,cur-prev);KOM.act={c,d0:ds0,t:dt*frac,e:0,hr:0,hrT:0,splits:[0]};break;}}}
 function finishKom(a,t){
   const c=a.c,st=komStore(),e=st[c.key]||(st[c.key]={name:c.name,world:WORLD,len:c.len,gain:c.gain,hist:[]});
+  if(!komSame(e,c)){e.pb=null;e.hist=[];e.len=c.len;e.gain=c.gain;}
   const res={t:Math.round(t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,kg:S.mass,date:Date.now(),sim:S.sim,route:ROUTE.name};
   if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.name=c.name;e.len=c.len;e.gain=c.gain;e.hist.unshift(res);e.hist=e.hist.slice(0,20);
   if(isPb)e.pb={...res,splits:a.splits};komSave();REC.koms.push({name:c.name,t:res.t,p:res.p,len:c.len,pb:isPb});showKomBanner(c,res,pb,isPb);}
@@ -1681,7 +1687,7 @@ function komTable(){
   for(const c of CLIMBS){known.add(c.key);rows.push([c.key,c.name,c,st[c.key]]);}
   for(const k in st)if(!known.has(k)&&st[k].world===WORLD)rows.push([k,st[k].name,null,st[k]]);
   if(!rows.length)return '<p class="hint">Diese Route hat keine Bergwertung.</p>';
-  return '<table class="kt"><tr><th>Anstieg</th><th>Bestzeit</th><th>Ø W</th><th>Letzte</th></tr>'+rows.map(([k,n,c,e])=>{const pb=e&&e.pb,l=e&&e.hist[0];
+  return '<table class="kt"><tr><th>Anstieg</th><th>Bestzeit</th><th>Ø W</th><th>Letzte</th></tr>'+rows.map(([k,n,c,e])=>{if(e&&c&&!komSame(e,c))e=null;const pb=e&&e.pb,l=e&&e.hist[0];
     return `<tr><td>${n}${c?` <small>${(c.len/1000).toFixed(1)} km · ${Math.round(c.gain)} hm</small>`:' <small>(andere Route)</small>'}</td><td><b>${pb?fmtTime(pb.t):'–'}</b>${pb?`<small>${new Date(pb.date).toLocaleDateString('de-DE')}</small>`:''}</td><td>${pb?pb.p:'–'}</td><td>${l?fmtTime(l.t):'–'}</td></tr>`;}).join('')+'</table>';}
 function confetti(){const c=$('fx'),x=c.getContext('2d'),W=c.width=innerWidth,H=c.height=innerHeight,P=[];const cols=['#490cb8','#9d20a3','#eb567b','#f8d74e','#ffffff','#f48fa8'];
   for(let i=0;i<160;i++)P.push({x:W/2+(Math.random()-0.5)*200,y:H*0.25,vx:(Math.random()-0.5)*14,vy:-Math.random()*12-4,r:Math.random()*6.28,c:cols[i%cols.length],s:5+Math.random()*7});
@@ -2612,7 +2618,8 @@ function applyMapMode(){document.body.classList.toggle('map-on',MAP.mode!=='off'
 /* ================= Echte Häuser aus OpenStreetMap (© OpenStreetMap-Mitwirkende, ODbL) ================= */
 function osmUnpack(R){const b=[];for(const r of R.b){const f=r[0],p=[];let x=f[0],z=f[1];p.push(x/5,z/5);for(let i=2;i<f.length;i+=2){x+=f[i];z+=f[i+1];p.push(x/5,z/5);}
   b.push({p,b:R.t[r[1]]||'yes',h:r[2]||0,l:r[3]||0,rs:R.r[r[4]||0]||'',rc:r[5]||'',bc:r[6]||''});}
-  return {b,ts:Date.parse(R.ts)||Date.now(),embedded:true};}
+  let cov=null;if(R.cov){const C=R.cov,g=new Uint8Array(C.nx*C.nz);let k=0,v=0;for(const n of C.runs){if(v)g.fill(1,k,k+n);k+=n;v^=1;}cov={...C,g};}
+  return {b,ts:Date.parse(R.ts)||Date.now(),embedded:true,cov};}
 let OSM_EMBED=null;
 const OSM={data:null,polys:[],radius:190,core:620};
 const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
@@ -2679,7 +2686,9 @@ function osmSlim(js){const out=[];const add=(geom,t)=>{if(!geom||geom.length<4)r
   return {b:out,ts:Date.now()};}
 async function osmLoadCached(){if(!IS_ULM)return;const d=await idbGet(osmKey());if(d&&d.b&&d.b.length){OSM.data=d;return;}
   if(!OSM_EMBED&&typeof OSM_RAW!=='undefined')OSM_EMBED=osmUnpack(OSM_RAW);if(OSM_EMBED&&OSM_EMBED.b.length){OSM.data=OSM_EMBED;OSM.embedded=true;}}
-function osmCovered(x,z){if(!OSM.data)return false;if(Math.hypot(x-ULM.places.muenster[0],z-ULM.places.muenster[1])<OSM.core-20)return true;const nr=nearestRoad(x,z,OSM.radius-25);return !!nr;}
+function osmCovered(x,z){if(!OSM.data)return false;
+  const C=OSM.data.cov;if(C){const i=Math.floor((x-C.x0)/C.c),j=Math.floor((z-C.z0)/C.c);return i>=0&&j>=0&&i<C.nx&&j<C.nz&&C.g[j*C.nx+i]===1;} // fest eingebaute Häuser: nur wo gesucht wurde
+  if(Math.hypot(x-ULM.places.muenster[0],z-ULM.places.muenster[1])<OSM.core-20)return true;const nr=nearestRoad(x,z,OSM.radius-25);return !!nr;}
 // Mindest-Rechteck (für Satteldächer)
 function minRect(P){let best=null;const n=P.length;for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);if(l<0.5)continue;const ux=dx/l,uz=dz/l;
     let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;for(const p of P){const u=p[0]*ux+p[1]*uz,v=-p[0]*uz+p[1]*ux;u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
@@ -2706,8 +2715,8 @@ function buildOsmBuildings(){
     const area=Math.abs(A),bt=b.b;let floors=b.l||(bt==='house'||bt==='detached'||bt==='semidetached_house'?2:bt==='garage'||bt==='garages'||bt==='shed'||bt==='carport'||bt==='roof'?1:bt==='industrial'||bt==='warehouse'?2:area<120?2:3+Math.floor(rng()*2));
     let H=b.h||floors*3.2+0.6;if(bt==='church'||bt==='cathedral')H=Math.max(H,16);H=Math.min(H,90);
     let y0=1e9;for(const p of P)y0=Math.min(y0,finalHeight(p[0],p[1]));y0-=0.6;const top=y0+H+0.6;
-    const R=minRect(P),short=R?Math.min(R.u1-R.u0,R.v1-R.v0):0;
-    let rs=b.rs;if(!rs)rs=(short<16&&area<450&&bt!=='garage'&&bt!=='garages'&&bt!=='industrial'&&bt!=='commercial'&&bt!=='retail')?(rng()<0.75?'gabled':'hipped'):'flat';
+    const R0=minRect(P),R=R0&&area/R0.A>0.8?R0:null,short=R?Math.min(R.u1-R.u0,R.v1-R.v0):0; // Schrägdach nur auf fast rechteckigen Häusern (sonst ragt es übers Rechteck hinaus)
+    let rs=b.rs;if(!rs)rs=(short<16&&area<450&&bt!=='garage'&&bt!=='garages'&&bt!=='industrial'&&bt!=='commercial'&&bt!=='retail')?(rng()<0.75?'gabled':'hipped'):'flat';if(!R)rs='flat';
     const t=tileOf(cx,cz),wc=b.bc?safeCol(b.bc,pick(wallCols),'wall'):pick(wallCols),rc=b.rc?safeCol(b.rc,pick(roofCols),'roof'):pick(roofCols);
     // Wände: echte Umrisse, UV = Fensterachsen (3,4 m) × Etagen (3,1 m)
     // Sockel (unten ca. 1 m dunkler) und Wand darüber
@@ -2967,8 +2976,8 @@ function stepWalkers(dt){const W=LIFE.wm;if(!W)return;const on=S.life&&S.started
     else{w.d+=w.dir*w.sp*dt;if(w.d<S.dist-80||w.d>S.dist+900)respawnWalker(w);}
     if(w.hide){for(const m of Object.values(W))m.setMatrixAt(w.k,_Z0);continue;}
     let r=roadAt(w.d),x=r.x-r.tz*w.off,z=r.z+r.tx*w.off;
-    if(Math.abs(w.d-w.yd)>2){if(!freeSpot(x,z,4.5)){w.dir=-w.dir;w.d+=w.dir*2.5;r=roadAt(w.d);x=r.x-r.tz*w.off;z=r.z+r.tx*w.off;} // vor Wasser/Haus umdrehen
-      w.y=groundH(x,z)-0.03;w.yd=w.d;}
+    if(Math.abs(w.d-w.yd)>2){if(!freeSpot(x,z,4.5)){w.dir=-w.dir;w.d+=w.dir*2.5;r=roadAt(w.d);x=r.x-r.tz*w.off;z=r.z+r.tx*w.off;}w.yd=w.d;} // vor Wasser/Haus umdrehen
+    w.y=standH(x,z)-0.03;
     w.ph+=dt*w.sp*(w.jog?2.4:3.4);const sw=Math.sin(w.ph)*(w.jog?0.7:0.42),bob=Math.abs(Math.cos(w.ph))*(w.jog?0.07:0.03);
     _wo.position.set(x,w.y+bob,z);_wo.rotation.set(w.jog?0.12:0,Math.atan2(r.tx,r.tz)+(w.dir<0?Math.PI:0),0,'YXZ');_wo.scale.setScalar(w.s);_wo.updateMatrixWorld(true);
     W.shirt.setMatrixAt(w.k,_wo.matrixWorld);W.skin.setMatrixAt(w.k,_wo.matrixWorld);
@@ -2980,7 +2989,7 @@ function stepWalkers(dt){const W=LIFE.wm;if(!W)return;const on=S.life&&S.started
 
 // ---- Stehende Menschen (Plätze, Strand) ----
 function staticPeople(list){const G=personGeos(),a=[],b=[],c=[];
-  for(const p of list){const s=rnd(0.9,1.06),base={x:p.x,z:p.z,y:p.y!==undefined?p.y:groundH(p.x,p.z)-0.03,sx:s,sy:s,sz:s,ry:p.ry!==undefined?p.ry:rnd(0,6.28),rx:p.rx||0};
+  for(const p of list){const s=rnd(0.9,1.06),base={x:p.x,z:p.z,y:p.y!==undefined?p.y:standH(p.x,p.z)-0.03,sx:s,sy:s,sz:s,ry:p.ry!==undefined?p.ry:rnd(0,6.28),rx:p.rx||0};
     a.push({...base,c:pick(SHIRTS)});b.push({...base,c:pick(SKINS)});c.push({...base,c:pick(PANTS)});}
   if(list.length)LIFE.statics.push(...chunkedInstances(G.shirt,lifeMat(true),a),...chunkedInstances(G.skin,lifeMat(true),b),...chunkedInstances(G.legs,lifeMat(true),c));}
 function scatterPeople(L,cx,cz,w,h,n,ok){for(let t=0,c=0;t<n*15&&c<n;t++){const x=cx+rnd(-w,w),z=cz+rnd(-h,h);if(!freeSpot(x,z)||(ok&&!ok(x,z)))continue;L.push({x,z});c++;}}

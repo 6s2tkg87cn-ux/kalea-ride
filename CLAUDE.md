@@ -18,7 +18,8 @@ src/data/ulm-data.js      const ULM_DATA = {origin, grid (Höhen), roads, rivers
 src/data/osm-buildings.js const OSM_RAW  = 22746 echte Ulmer Gebäude entlang aller 8 Routen (OSM, ODbL), kompakt kodiert
 src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tools/sounds_build.py)
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
-tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js
+tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js (mit Abdeckung `cov`: wo gesucht wurde;
+                          nur dort ersetzt die App ausgedachte Häuser, `osmCovered`; `--routes=` = Routenstand beim Holen)
 tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; aktualisiert auch
                           die Kartenstücke/Routenlinien in ulm-haeuser-holen.html (Häuser entlang aller Routen)
 tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (95 Kartenstücke à 1,2 km, alle Server gleichzeitig,
@@ -73,7 +74,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Leben am Rand** (`LIFE`, `buildLife`, `stepLife`, Schalter `S.life`): Fußgänger/Jogger mit Hunden als Pool rund um
   dich (`stepWalkers`, drehen vor Wasser/Häusern um), Menschen auf Plätzen/Strand, Kühe, Pferde, Störche, Enten und
   Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Alles InstancedMesh;
-  `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser.
+  `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser. Figuren stehen auf dem
+  sichtbaren Gelände (`standH` = `terrH`), nicht auf Straßenhöhe – sonst schweben sie neben Brücken und Dämmen.
 - **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
@@ -103,7 +105,16 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Bebauung und Karte richten sich danach. Ortschaften an den Umland-Routen kommen als Zonen aus `ULM_DATA.zones`
   (`ulmZone` mit 500-m-Raster `ZONEG`). Klöster Wiblingen/Oberelchingen (`buildKloster`) nur, wenn im Bereich.
 - **Routen Ulm:** Große Runde, Donau, Michelsberg, Eselsberg, Kuhberg (Innenstadt) sowie Donau & Kloster Elchingen
-  (27 km), Iller & Kloster Wiblingen (25 km), Blautal & Hochsträß (33 km) – Start/Ziel jeweils Neue Straße am Münster.
+  (25 km), Iller & Kloster Wiblingen (24 km), Blautal & Hochsträß (31 km) – Start/Ziel jeweils Neue Straße am Münster.
+  **Echte Runden, nie hin und zurück:** Der Router in `tools/ulm_routen.py` nutzt nur den Teil des Wegenetzes ohne
+  Sackgassen/Wendeschleifen (Brücken-Kanten entfernt), wendet nie auf der Stelle, meidet Haarnadeln und befahrene Kanten
+  (×30) und weicht gefundenen Wenden automatisch aus. `route_issues` meldet Wenden, Hin-und-zurück und kleine Schleifen.
+  Die alten Innenstadt-Runden bleiben, nur ihre Wenden sind über `OLD_PATCHES`/`splice_route` ersetzt (Michelsberg und
+  Eselsberg abgeschnitten, Kuhberg vom Fort über den Weg hinunter, Safranberg oben entlang und über die Serpentinen zur
+  Donau; markiert mit `fix:1`). Bestzeiten gelten nur, solange ein Anstieg gleich lang bleibt (`komSame`, ±60 m).
+- **Äußerer Boden:** Die große Bodenfläche bis zum Horizont liegt unter dem tiefsten Gelände (flussabwärts ist das
+  Donautal tiefer als in Ulm – vorher ragte sie bei Elchingen über die Straße). Schrägdächer echter Häuser nur auf fast
+  rechteckigen Grundrissen (Fläche/Mindest-Rechteck > 0,8), sonst ragt das Dach über die Straße.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
