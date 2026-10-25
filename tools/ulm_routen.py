@@ -5,7 +5,8 @@ Aufruf:  python3 tools/ulm_routen.py ulm-routen.json
 Ergebnis: src/data/ulm-data.js wird ergänzt
   - grid:   Höhenraster (Terrarium-Höhenkacheln, gleiche Quelle wie EU-DEM, +1,41 m wie das alte Raster), größer
   - rivers: Donau, Iller, Blau mit Mittellinie, halber Breite je Seite (aus OSM-Wasserflächen) und Wasserspiegel
-  - routes: drei neue Runden (Routing auf OSM-Wegen, Radwege bevorzugt), Höhen aus dem Raster
+  - routes: drei neue Runden (Routing auf OSM-Wegen, Radwege bevorzugt, ohne Sackgassen und Wenden), Höhen aus dem
+            Raster; bei den alten Innenstadt-Runden werden nur die Wenden ersetzt (OLD_PATCHES, einmalig: fix=1)
   - places/zones: Ortschaften und Klöster entlang der neuen Routen
 Braucht numpy und Pillow; Höhenkacheln werden in ~/.cache/kalea-terrarium zwischengespeichert.
 Daten © OpenStreetMap-Mitwirkende (ODbL); Höhen: Mapzen/AWS Terrain Tiles (u. a. EU-DEM, Copernicus).
@@ -324,40 +325,183 @@ class Graph:
                         st.append(v)
             if len(comp) > len(best):
                 best = comp
-        self.nodes = np.array(sorted(n for n in best if n in self.adj))
+        # Sackgassen und „Lollis“ (Wendeschleifen am Ende einer Stichstraße) weglassen: Brücken-Kanten im Sinne der
+        # Graphentheorie entfernen und den größten Rest behalten. Eine Runde über so eine Kante müsste dort wenden.
+        disc, low, cut, t = {}, {}, set(), 0
+        for r0 in best:
+            if r0 in disc:
+                continue
+            disc[r0] = low[r0] = t; t += 1
+            st = [(r0, -1, iter(und[r0]))]
+            while st:
+                u, pu, it = st[-1]
+                v = next(it, None)
+                if v is None:
+                    st.pop()
+                    if st:
+                        w = st[-1][0]
+                        low[w] = min(low[w], low[u])
+                        if low[u] > disc[w]:
+                            cut.add((w, u)); cut.add((u, w))
+                    continue
+                if v == pu:
+                    continue
+                if v in disc:
+                    low[u] = min(low[u], disc[v])
+                else:
+                    disc[v] = low[v] = t; t += 1
+                    st.append((v, u, iter(und[v])))
+        seen, core = set(), set()
+        for s0 in best:
+            if s0 in seen:
+                continue
+            comp, st = {s0}, [s0]
+            seen.add(s0)
+            while st:
+                u = st.pop()
+                for v in und[u]:
+                    if v not in seen and (u, v) not in cut:
+                        seen.add(v); comp.add(v); st.append(v)
+            if len(comp) > len(core):
+                core = comp
+        self.core = core
+        self.nodes = np.array(sorted(n for n in core if n in self.adj))
 
-    def nearest(self, lat, lon, avoid=('primary', 'primary_link', 'secondary')):
+    def near_nodes(self, zones):
+        out = set()
+        X, Z = self.osm.x[self.nodes], self.osm.z[self.nodes]
+        for x, z, r in zones:
+            out |= set(self.nodes[np.hypot(X - x, Z - z) < r].tolist())
+        return frozenset(out)
+
+    def corridor_nodes(self, lines, r=12.0):
+        """Knoten höchstens r m neben den Linien (bisherige Route nachfahren)."""
+        if not hasattr(self, 'cells'):
+            self.cells = {}
+            for n in self.nodes.tolist():
+                self.cells.setdefault((int(self.osm.x[n] // 20), int(self.osm.z[n] // 20)), []).append(n)
+        out = set()
+        for (ax, az), (bx, bz) in [seg for pts in lines for seg in zip(pts, pts[1:])]:
+            k = max(1, int(math.hypot(bx - ax, bz - az) / 5))
+            for q in range(k + 1):
+                x, z = ax + (bx - ax) * q / k, az + (bz - az) * q / k
+                for i in range(int(x // 20) - 1, int(x // 20) + 2):
+                    for j in range(int(z // 20) - 1, int(z // 20) + 2):
+                        for n in self.cells.get((i, j), ()):
+                            if math.hypot(self.osm.x[n] - x, self.osm.z[n] - z) < r:
+                                out.add(n)
+        return frozenset(out)
+
+    def nearest(self, lat, lon, avoid=('primary', 'primary_link', 'secondary'), among=None):
         x, z = ll2xz(lat, lon)
+        if among:
+            ok = sorted(among)
+            d = np.hypot(self.osm.x[ok] - x, self.osm.z[ok] - z)
+            if d.min() < 25:
+                return int(ok[int(np.argmin(d))])
         ok = [n for n in self.nodes if all(self.way[w]['hw'] not in avoid for _, _, _, w in self.adj[n])]
         ok = np.array(ok)
         d = np.hypot(self.osm.x[ok] - x, self.osm.z[ok] - z)
         return int(ok[np.argmin(d)])
 
-    def route(self, a, b, used=None, reuse=1.0):
-        """Dijkstra; bereits befahrene Kanten (used) kosten mehr, damit die Runde nicht hin und zurück führt."""
-        dist, prev, pq = {a: 0.0}, {}, [(0.0, a)]
+    def route(self, a, b, used=None, reuse=1.0, came=None, avoid=frozenset(), corr=None):
+        """A* über (Knoten, Vorgänger): nie auf der Stelle wenden, keine Sackgassen, scharfe Abbieger kosten etwas.
+        Bereits befahrene Kanten (used, beide Richtungen) kosten das reuse-Fache, damit die Runde nicht zurückführt."""
+        X, Z, core = self.osm.x, self.osm.z, self.core
+        bx, bz = X[b], Z[b]
+        H = lambda n: (0.4 if corr else 0.55) * math.hypot(X[n] - bx, Z[n] - bz)
+        s0 = (a, came if came is not None else -1)
+        dist, prev, pq = {s0: 0.0}, {}, [(H(a), 0.0, s0)]
+        end = None
         while pq:
-            d, u = heapq.heappop(pq)
-            if u == b:
-                break
-            if d > dist.get(u, 1e18):
+            f, d, st = heapq.heappop(pq)
+            if d > dist.get(st, 1e18):
                 continue
+            u, p = st
+            if u == b and st != s0:
+                end = st
+                break
+            if p >= 0:
+                ix, iz = X[u] - X[p], Z[u] - Z[p]
+                il = math.hypot(ix, iz) or 1
             for v, c, l, w in self.adj.get(u, []):
+                if v == p or v not in core:
+                    continue
+                if corr:
+                    c = l if (v in corr and u in corr) else c * 6
+                if p >= 0 and l > 0.5:
+                    cos = (ix * (X[v] - X[u]) + iz * (Z[v] - Z[u])) / (il * l)
+                    if cos < -0.85:              # Spitzkehre über einen Nachbarknoten = Wende
+                        continue
+                    if cos < 0.3:
+                        c += 25 * (0.3 - cos)    # Abbiegen kostet ein wenig (gerade Wege bevorzugen)
+                    if cos < -0.4:
+                        c += 400                 # Haarnadel (Rampe im Zickzack, spitzer Abzweig): möglichst meiden
                 if used and ((u, v) in used or (v, u) in used):
                     c *= reuse
+                if v in avoid:
+                    c *= 25
                 nd = d + c
-                if nd < dist.get(v, 1e18):
-                    dist[v] = nd
-                    prev[v] = (u, w)
-                    heapq.heappush(pq, (nd, v))
-        if b not in prev and a != b:
+                ns = (v, u)
+                if nd < dist.get(ns, 1e18):
+                    dist[ns] = nd
+                    prev[ns] = (st, w)
+                    heapq.heappush(pq, (nd + H(v), nd, ns))
+        if end is None:
             raise RuntimeError('kein Weg gefunden')
-        path, cur = [(b, None)], b
-        while cur != a:
-            cur, w = prev[cur]
-            path.append((cur, w))
+        path, st = [(b, None)], end
+        while st != s0:
+            st, w = prev[st]
+            path.append((st[0], w))
         path.reverse()
         return path                 # [(Knoten, Weg zum nächsten Knoten), …, (Ziel, None)]
+
+
+def route_issues(X, Z):
+    """Wenden (Richtung kehrt sich innerhalb von ±25 m um) und Stücke, die hin und zurück befahren werden."""
+    X, Z = np.asarray(X), np.asarray(Z)
+    n = len(X)
+    d = np.concatenate([[0], np.cumsum(np.hypot(np.diff(X), np.diff(Z)))])
+    tx, tz = np.gradient(X), np.gradient(Z)
+    l = np.hypot(tx, tz) + 1e-9
+    tx, tz = tx / l, tz / l
+    out = []
+    for i in range(n):
+        a, b = np.searchsorted(d, d[i] - 25), min(n - 1, np.searchsorted(d, d[i] + 25))
+        ux, uz, vx, vz = X[i] - X[a], Z[i] - Z[a], X[b] - X[i], Z[b] - Z[i]
+        la, lb = math.hypot(ux, uz), math.hypot(vx, vz)
+        if la > 5 and lb > 5 and (ux * vx + uz * vz) / (la * lb) < -0.7:
+            if not out or d[i] - out[-1][1] > 60:
+                out.append(['Wende', d[i]])
+    grid = {}
+    for i in range(n):
+        grid.setdefault((int(X[i] // 20), int(Z[i] // 20)), []).append(i)
+    last = -1e9
+    for i in range(n):
+        gx, gz = int(X[i] // 20), int(Z[i] // 20)
+        hit = False
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                for j in grid.get((gx + dx, gz + dz), []):
+                    if j > i and d[j] - d[i] > 60 and d[-1] - (d[j] - d[i]) > 60 and math.hypot(X[i] - X[j], Z[i] - Z[j]) < 12 \
+                            and tx[i] * tx[j] + tz[i] * tz[j] < -0.8:
+                        hit = True
+        if hit:
+            if d[i] - last > 60:
+                out.append(['hin und zurück', d[i]])
+            last = d[i]
+    # kleine Schleifen (z. B. um einen Häuserblock): nach 100–1500 m wieder an derselben Stelle
+    last = -1e9
+    for i in range(0, n, 2):
+        j = np.searchsorted(d, d[i] + 100)
+        k = np.searchsorted(d, d[i] + 1500)
+        if j >= n or d[i] - last < 1500:
+            continue
+        dd = np.hypot(X[j:k] - X[i], Z[j:k] - Z[i])
+        if len(dd) and dd.min() < 15 and d[-1] > 3000:
+            out.append(['Schleife', d[i]])
+            last = d[i]
+    return out
 
 
 # ---------------- Routen bauen ----------------
@@ -376,23 +520,46 @@ def label(info):
     return HW_NAME.get(info['hw'], 'Straße')
 
 
-def build_route(G, dem, wps, rid, name, desc, climb_names):
+def build_route(G, dem, wps, rid, name, desc, climb_names, corridor=None):
+    """corridor: Linien (lokale Meter), denen die Route möglichst folgen soll (bisherige Runde nachfahren)."""
     osm = G.osm
-    nodes = [G.nearest(*p) for p in wps]
-    full, used = [], set()
-    for a, b in zip(nodes, nodes[1:] + nodes[:1]):
-        seg = G.route(a, b, used, 4.0)
-        used |= {(seg[i][0], seg[i + 1][0]) for i in range(len(seg) - 1)}
-        full = full[:-1] + seg if full else seg
-    # dicht abtasten (≤ 5 m), Weg-Infos mitnehmen
-    P, info = [], []
-    for (n, w), (m, _) in zip(full, full[1:]):
-        a, b = (osm.x[n], osm.z[n]), (osm.x[m], osm.z[m])
-        l = math.hypot(b[0] - a[0], b[1] - a[1])
-        k = max(1, int(math.ceil(l / 5)))
-        for q in range(k):
-            P.append((a[0] + (b[0] - a[0]) * q / k, a[1] + (b[1] - a[1]) * q / k))
-            info.append(G.way[w])
+    corr = G.corridor_nodes(corridor) if corridor else None
+    nodes = [G.nearest(*p, among=corr) for p in wps]
+
+    def trace(avoid):
+        full, used = [], set()
+        for a, b in zip(nodes, nodes[1:] + nodes[:1]):
+            try:
+                seg = G.route(a, b, used, 30.0, full[-2][0] if len(full) > 1 else None, avoid, corr)
+            except RuntimeError:
+                print(f'   ⚠ kein Weg ohne Wende zum Wegpunkt bei {osm.lat[b]:.5f}, {osm.lon[b]:.5f}')
+                seg = G.route(a, b, used, 30.0, None, avoid, corr)
+            used |= {(seg[i][0], seg[i + 1][0]) for i in range(len(seg) - 1)}
+            full = full[:-1] + seg if full else seg
+        # dicht abtasten (≤ 5 m), Weg-Infos mitnehmen
+        P, info = [], []
+        for (n, w), (m, _) in zip(full, full[1:]):
+            a, b = (osm.x[n], osm.z[n]), (osm.x[m], osm.z[m])
+            l = math.hypot(b[0] - a[0], b[1] - a[1])
+            k = max(1, int(math.ceil(l / 5)))
+            for q in range(k):
+                P.append((a[0] + (b[0] - a[0]) * q / k, a[1] + (b[1] - a[1]) * q / k))
+                info.append(G.way[w])
+        return P, info
+
+    # Wenden/Hin-und-zurück automatisch umgehen: Stelle meiden und neu suchen (höchstens 8-mal)
+    zones, best = [], None
+    for it in range(8):
+        P, info = trace(G.near_nodes(zones))
+        iss = route_issues([p[0] for p in P], [p[1] for p in P])
+        if best is None or len(iss) < best[0]:
+            best = (len(iss), P, info)
+        if not iss:
+            break
+        dP = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(np.array(P), axis=0).T))])
+        for kind, at in iss:
+            zones.append((*P[int(np.searchsorted(dP, at))], 40.0))
+    _, P, info = best
     P = np.array(P)
     # Hin- und Rückweg teilen sich am Start oft dieselbe Straße: dieses doppelte Stück abschneiden,
     # damit die Runde sauber schließt (Start = erster Punkt, der nicht mehr neben dem Rückweg liegt)
@@ -404,6 +571,13 @@ def build_route(G, dem, wps, rid, name, desc, climb_names):
             i0, j0 = i, int(tail[np.argmin(dd)])
     if i0:
         P, info = P[i0 + 1:j0], info[i0 + 1:j0]
+    Q, h, labels = shape(P, info, dem)
+    return finish(Q, h, labels, rid, name, desc, climb_names)
+
+
+def shape(P, info, dem):
+    """Dichte Punkte (5 m) → geglättete Linie mit Höhen und Straßennamen, 10 m Abstand."""
+    P = np.asarray(P, dtype=float)
     # Ecken leicht runden (gleitendes Mittel über ±10 m), Start bleibt fest
     Q = P.copy()
     for _ in range(2):
@@ -425,19 +599,23 @@ def build_route(G, dem, wps, rid, name, desc, climb_names):
     h = smooth(smooth(h, 7), 7)       # Rauschen des Höhenmodells (Häuser, Böschungen) über ±35 m glätten
     # nur jeden 2. Punkt behalten (10 m Abstand; die App tastet ohnehin neu ab)
     keep = list(range(0, len(Q), 2))
-    Q, h, info = Q[keep], h[keep], [info[i] for i in keep]
+    return Q[keep], h[keep], [label(info[i]) for i in keep]
+
+
+def finish(Q, h, labels, rid, name, desc, climb_names):
+    """Länge, Höhenmeter, Straßennamen-Abschnitte und Anstiege → Routen-Eintrag für ULM_DATA."""
+    Q, h = np.asarray(Q, dtype=float), np.asarray(h, dtype=float)
     # Abstände
     d = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(Q, axis=0).T))])
     L = float(d[-1])
     gain = float(np.clip(np.diff(h), 0, None).sum())
     # Straßennamen-Abschnitte (kurze Stücke < 80 m dem Vorgänger zuschlagen)
     segs = []
-    for k, inf in enumerate(info):
-        lb = label(inf)
+    for k, lb in enumerate(labels):
         if not segs or segs[-1][1] != lb:
             segs.append([k, lb])
     merged = []
-    for s, nxt in zip(segs, segs[1:] + [[len(info), None]]):
+    for s, nxt in zip(segs, segs[1:] + [[len(labels), None]]):
         if merged and d[min(nxt[0], len(d) - 1)] - d[s[0]] < 80:
             continue
         if merged and merged[-1][1] == s[1]:
@@ -482,7 +660,67 @@ def build_route(G, dem, wps, rid, name, desc, climb_names):
              'h': [round(float(v), 1) for v in h], 'segs': merged, 'climbs': climbs, 'len': round(L), 'gain': round(gain)}
     print(f'{name}: {L / 1000:.1f} km, {gain:.0f} Hm, {len(merged)} Abschnitte, Anstiege: ' +
           ', '.join(f"{c['name']} {c['len'] / 1000:.1f} km/{c['gain']:.0f} Hm/Ø {c['avg']} %/max {c['max']:.0f} %" for c in climbs))
+    for kind, at in route_issues(Q[:, 0], Q[:, 1]):
+        lat, lon = xz2ll(*Q[np.searchsorted(d, at)])
+        print(f'   ⚠ {kind} bei {at / 1000:.2f} km ({lat:.5f}, {lon:.5f})')
     return route
+
+
+def splice_route(G, dem, old, patches, climb_names):
+    """Bestehende Runde behalten, nur einzelne Stücke (von m, bis m, Wegpunkte) neu routen – z. B. statt einer Wende
+    am Ende einer Sackgasse. Höhen der neuen Stücke werden an beiden Enden an die alte Runde angeglichen."""
+    osm = G.osm
+    X, Z, H = (np.array(old[k], dtype=float) for k in ('x', 'z', 'h'))
+    n = len(X)
+    d = np.concatenate([[0], np.cumsum(np.hypot(np.diff(X), np.diff(Z)))])
+    lab = [''] * n
+    for (k, lb), nxt in zip(old['segs'], old['segs'][1:] + [[n, None]]):
+        lab[k:nxt[0]] = [lb] * (nxt[0] - k)
+    NX, NZ = osm.x[G.nodes], osm.z[G.nodes]
+
+    def snap(i0, i1):                 # Punkt der alten Runde, der am nächsten an einem Knoten liegt
+        best = None
+        for i in range(max(0, i0), min(n - 1, i1) + 1):
+            dd = np.hypot(NX - X[i], NZ - Z[i])
+            j = int(np.argmin(dd))
+            if best is None or dd[j] < best[0]:
+                best = (dd[j], i, int(G.nodes[j]))
+        return best[1], best[2]
+
+    oQ, oh, ol, last = [], [], [], 0
+    for a_m, b_m, vias in sorted(patches):
+        ia, A = snap(np.searchsorted(d, a_m - 60), np.searchsorted(d, a_m))
+        ib, B = snap(np.searchsorted(d, b_m), np.searchsorted(d, b_m + 60))
+        nodes = [A] + [G.nearest(*v) for v in vias] + [B]
+        _, came = snap(ia - 6, ia - 3)
+        full, used = [], set()
+        for a, b in zip(nodes, nodes[1:]):
+            prv = full[-2][0] if len(full) > 1 else (came if came != A else None)
+            try:
+                seg = G.route(a, b, used, 30.0, prv)
+            except RuntimeError:
+                seg = G.route(a, b, used, 30.0)
+            used |= {(seg[i][0], seg[i + 1][0]) for i in range(len(seg) - 1)}
+            full = full[:-1] + seg if full else seg
+        P, info = [], []
+        for (u, w), (v, _) in zip(full, full[1:]):
+            l = math.hypot(osm.x[v] - osm.x[u], osm.z[v] - osm.z[u])
+            k = max(1, int(math.ceil(l / 5)))
+            for q in range(k):
+                P.append((osm.x[u] + (osm.x[v] - osm.x[u]) * q / k, osm.z[u] + (osm.z[v] - osm.z[u]) * q / k))
+                info.append(G.way[w])
+        P.append((osm.x[full[-1][0]], osm.z[full[-1][0]]))
+        info.append(info[-1])
+        Qp, hp, lp = shape(P, info, dem)
+        hp = hp + np.linspace(H[ia] - hp[0], H[ib] - hp[-1], len(hp))
+        oQ += list(zip(X[last:ia], Z[last:ia])) + [tuple(q) for q in Qp]
+        oh += list(H[last:ia]) + list(hp)
+        ol += lab[last:ia] + lp
+        last = ib + 1
+    oQ += list(zip(X[last:], Z[last:]))
+    oh += list(H[last:])
+    ol += lab[last:]
+    return finish(np.array(oQ), np.array(oh), ol, old['id'], old['name'], old['desc'], climb_names)
 
 
 # ---------------- neue Routen (Wegpunkte: lat, lon) ----------------
@@ -490,18 +728,28 @@ START = (48.39723, 9.99356)        # Neue Straße am Münsterplatz, wie die übr
 NEW_ROUTES = [
     dict(id='elchingen', name='Donau & Kloster Elchingen',
          desc='Auf dem Donauradweg nach Thalfingen, hinauf zum Kloster Oberelchingen und über Pfuhl und Neu-Ulm zurück.',
-         wps=[START, (48.4068, 10.0175), (48.4250, 10.0293), (48.4378, 10.0509), (48.45235, 10.08806), (48.4136, 10.0693),
-              (48.4104, 10.0403), (48.4010, 10.0150), (48.3955, 10.0005)],
+         wps=[START, (48.41735, 10.01441), (48.42451, 10.02610), (48.42972, 10.03974), (48.45235, 10.08806), (48.4136, 10.0693),
+              (48.4010, 10.0150), (48.3955, 10.0005)],
          climbs=['Klosterberg Elchingen']),
     dict(id='iller', name='Iller & Kloster Wiblingen',
          desc='Durch Neu-Ulm an die Iller, auf dem Iller-Radweg bis Kirchberg und am Kloster Wiblingen vorbei zurück.',
-         wps=[START, (48.3930, 10.0030), (48.3678, 10.0118), (48.3234, 10.0204), (48.3394, 10.0006), (48.3617, 9.9912), (48.3830, 9.9700)],
-         climbs=[]),
+         wps=[START, (48.3930, 10.0030), (48.3678, 10.0093), (48.3234, 10.0204), (48.3394, 10.0006), (48.3617, 9.9912)],
+         climbs=['Oberkirchberg']),
     dict(id='blau', name='Blautal & Hochsträß',
          desc='Durch Söflingen ins Blautal bis Arnegg, steil hinauf nach Ermingen, über die Hochfläche und am Kuhberg zurück.',
-         wps=[START, (48.3958, 9.9546), (48.4176, 9.9210), (48.4183, 9.9068), (48.3826, 9.8985), (48.3638, 9.8810), (48.3730, 9.9359), (48.3850, 9.9680)],
-         climbs=['Erminger Steige', 'Allewind']),
+         wps=[START, (48.3958, 9.9546), (48.41781, 9.91439), (48.4183, 9.9068), (48.37967, 9.8957), (48.3638, 9.8810), (48.3730, 9.9359)],
+         climbs=['Erminger Steige', 'Allewind', 'Hochsträß']),
 ]
+# Ältere Innenstadt-Runden: bleiben, wie sie sind, nur Wenden am Ende von Sackgassen werden ersetzt
+# (von m, bis m auf der ursprünglichen Runde, Wegpunkte dazwischen; ohne Wegpunkte = Stichstraße abschneiden)
+KUHBERG = [(48.38513, 9.95346), (48.38390, 9.95281), (48.38426, 9.95817)]          # vom Fort über den Weg hinunter
+SAFRANBERG = [(48.41656, 10.00113), (48.42321, 10.01818), (48.41981, 10.01371), (48.41086, 10.01006)]  # oben entlang, Serpentinen zur Donau
+OLD_PATCHES = {
+    'gross': ([(3100, 3720, []), (15230, 17050, KUHBERG), (22900, 26500, SAFRANBERG)], ['Michelsberg', 'Eselsberg', 'Kuhberg', 'Safranberg']),
+    'michel': ([(3100, 3720, [])], ['Michelsberg']),
+    'esel': ([(1290, 1700, [])], ['Eselsberg']),
+    'kuh': ([(5140, 6960, KUHBERG)], ['Kuhberg']),
+}
 # Ortschaften entlang der neuen Routen → Bebauungszonen in der App (Typ, Radius x/z in m, Dichte)
 ZONE_TYPES = {'town': ('sub', 650, 0.65), 'village': ('sub', 380, 0.6), 'suburb': ('sub', 500, 0.6), 'hamlet': ('sub', 140, 0.45)}
 LANDMARKS = {'wiblingen': (48.36166, 9.99119), 'elchingen': (48.45235, 10.08806)}
@@ -555,7 +803,14 @@ def main():
     U['zones'] = zones
     for k, (la, lo) in LANDMARKS.items():
         U['places'][k] = [round(v, 1) for v in ll2xz(la, lo)]
-    old = [r for r in U['routes'] if r['id'] not in {n['id'] for n in routes}]
+    old = []
+    for r in U['routes']:
+        if r['id'] in {n['id'] for n in routes}:
+            continue
+        if r['id'] in OLD_PATCHES and not r.get('fix'):      # nur einmal (Strecken-Meter beziehen sich aufs Original)
+            r = splice_route(G, dem, r, *OLD_PATCHES[r['id']])
+            r['fix'] = 1
+        old.append(r)
     U['routes'] = old + routes
     head = ('/* Ulm-Daten: Höhen EU-DEM (Copernicus; über OpenTopoData bzw. AWS Terrain Tiles), Straßen, Radwege und '
             'Gewässer © OpenStreetMap-Mitwirkende (ODbL). Erzeugt mit tools/ulm_routen.py */\n')
