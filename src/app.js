@@ -1742,41 +1742,51 @@ function showLapBanner(res,pb,isPb,nr){
 const REC={s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false};
 const ZONES=[{n:'Z1 Regeneration',lo:0,hi:0.55,c:'#9aa3ad'},{n:'Z2 Grundlage',lo:0.55,hi:0.75,c:'#3e8fe0'},{n:'Z3 Tempo',lo:0.75,hi:0.90,c:'#2fbf62'},
   {n:'Z4 Schwelle',lo:0.90,hi:1.05,c:'#f2c230'},{n:'Z5 VO2max',lo:1.05,hi:1.20,c:'#ff7a1a'},{n:'Z6 Anaerob',lo:1.20,hi:1.50,c:'#e8463c'},{n:'Z7 Sprint',lo:1.50,hi:99,c:'#9b5de5'}];
-function zoneOf(p){const f=p/S.ftp;return ZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
+function zoneOf(p,ftp){const f=p/(ftp||S.ftp);return ZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
 function recStep(dt){if(REC.ended)return;REC.acc+=dt;if(REC.acc<1)return;REC.acc-=1;
   const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.odo),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
 function bestAvg(arr,win){if(arr.length<win)return null;let s=0,b=0;for(let i=0;i<arr.length;i++){s+=arr[i];if(i>=win)s-=arr[i-win];if(i>=win-1)b=Math.max(b,s/win);}return b;}
-function rideSummary(){
-  const A=REC.s,n=A.length,P=A.map(x=>x.p);if(!n)return null;
+// Die laufende Fahrt als „Fahrt-Objekt“ – gespeicherte Fahrten haben dieselbe Form (s. saveRide/rideLoad)
+function curRide(){return {id:REC.start,start:REC.start,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
+function rideSummary(R){R=R||curRide();
+  const A=R.s,n=A.length,P=A.map(x=>x.p),ftp=R.ftp||S.ftp;if(!n)return null;
   const mov=A.filter(x=>x.v>0.5).length,dist=Math.max(0,A[n-1].d-A[0].d+(A[0].d>0?0:0));
   let gain=0;for(let i=1;i<n;i++){const dh=A[i].h-A[i-1].h;if(dh>0)gain+=dh;}
   const avgP=P.reduce((a,b)=>a+b,0)/n,maxP=Math.max(...P);
   let np=0;{const r=[];let s=0;for(let i=0;i<n;i++){s+=P[i];if(i>=30)s-=P[i-30];if(i>=29)r.push(Math.pow(s/30,4));}np=r.length?Math.pow(r.reduce((a,b)=>a+b,0)/r.length,0.25):avgP;}
-  const IF=np/S.ftp,tss=n*np*IF/(S.ftp*3600)*100,kj=P.reduce((a,b)=>a+b,0)/1000;
+  const IF=np/ftp,tss=n*np*IF/(ftp*3600)*100,kj=P.reduce((a,b)=>a+b,0)/1000;
   const hrs=A.filter(x=>x.hr>0).map(x=>x.hr),cads=A.filter(x=>x.c>0).map(x=>x.c);
-  const zt=ZONES.map(()=>0);for(const p of P){const z=zoneOf(p);if(z>=0&&p>0)zt[z]++;}
+  const zt=ZONES.map(()=>0);for(const p of P){const z=zoneOf(p,ftp);if(z>=0&&p>0)zt[z]++;}
   const curve=[[5,'5 s'],[30,'30 s'],[60,'1 min'],[300,'5 min'],[600,'10 min'],[1200,'20 min'],[3600,'60 min']].map(([w,l])=>({w,l,p:bestAvg(P,w)}));
   return {n,mov,dist,time:A[n-1].t,avgV:mov?dist/mov:0,maxV:Math.max(...A.map(x=>x.v)),gain,avgP,maxP,np,IF,tss,kj,kcal:kj*1.0,
     avgHr:hrs.length?hrs.reduce((a,b)=>a+b,0)/hrs.length:0,maxHr:hrs.length?Math.max(...hrs):0,avgCad:cads.length?cads.reduce((a,b)=>a+b,0)/cads.length:0,zt,curve};}
-function saveRideHistory(sum){try{const h=JSON.parse(localStorage.getItem('kalea_rides')||'[]');
-  h.unshift({date:Date.now(),world:WORLD,route:ROUTE.name,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV});
-  localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,30)));}catch(e){}}
+// Fahrten: Übersicht in localStorage (kalea_rides, neueste zuerst), alle Messwerte in IndexedDB (ride_<id>)
+const RIDES_MAX=500;
+function saveRideHistory(sum,R){R=R||curRide();if(!sum)return;try{const h=rideHistory().filter(e=>e.id!==R.id);
+  h.unshift({id:R.id,date:R.start,world:R.world,route:R.name,rid:R.route,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV,hr:Math.round(sum.avgHr||0)});
+  h.sort((a,b)=>b.date-a.date);const drop=h.slice(RIDES_MAX);for(const e of drop)if(e.id)idbDel('ride_'+e.id);
+  localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,RIDES_MAX)));}catch(e){}
+  idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,laps:R.laps,koms:R.koms,s:R.s.slice()});}
+async function rideLoad(id){const r=await idbGet('ride_'+id);return r&&r.s?r:null;}
+async function rideDelete(id){try{localStorage.setItem('kalea_rides',JSON.stringify(rideHistory().filter(e=>e.id!==id)));}catch(e){}await idbDel('ride_'+id);}
+// Fenster schließen/App wechseln mitten in der Fahrt: Fahrt trotzdem sichern (wird beim Weiterfahren überschrieben)
+function autosaveRide(){if(!REC.ended&&REC.s.length>=60)saveRideHistory(rideSummary());}
 function rideHistory(){try{return JSON.parse(localStorage.getItem('kalea_rides')||'[]');}catch(e){return [];}}
 function endRide(){if(!REC.s.length){status('Noch keine Daten – erst ein Stück fahren.');return;}
   REC.ended=true;S.riding=false;S.paused=true;S.v=0;const sum=rideSummary();saveRideHistory(sum);sendResistance(true);
   if(typeof netEndRide==='function')netEndRide();
   $('bStart').textContent='Neue Fahrt';$('bStart').onclick=newRide;$('bEnd').classList.add('hidden');showStats(true);}
 function kpi(v,u,l,c){return `<div class="kpi" style="--kc:${c}"><b>${v}<small>${u}</small></b><span>${l}</span></div>`;}
-function showStats(final){
-  const sum=rideSummary(),el=$('statsView');$('setup').classList.add('hidden');
+function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
+  const sum=rideSummary(R),el=$('statsView');$('setup').classList.add('hidden');
   if(!sum){el.innerHTML=`<div class="sv-card"><div class="sv-head"><h2>Statistik</h2><button id="svClose">Schließen</button></div><p class="hint" style="padding:20px">Noch keine Daten – fahr ein Stück, dann erscheinen hier deine Werte und Diagramme.</p></div>`;el.classList.remove('hidden');$('svClose').onclick=closeStats;return;}
-  const hh=sum.avgHr>0,wkg=sum.avgP/S.mass;
-  const komRows=REC.koms.map(k=>`<tr><td>⛰ ${k.name}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${(k.len/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
-  const lapRows=REC.laps.map(k=>`<tr><td>🏁 Runde ${k.n}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${(L/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
-  const hist=rideHistory().slice(final?1:0,8);
+  const hh=sum.avgHr>0,wkg=sum.avgP/(R.mass||S.mass);
+  const komRows=(R.koms||[]).map(k=>`<tr><td>⛰ ${k.name}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${(k.len/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
+  const lapRows=(R.laps||[]).map(k=>`<tr><td>🏁 Runde ${k.n}</td><td><b>${fmtTime(k.t)}</b>${k.pb?' <span class="pbtag">Bestzeit!</span>':''}</td><td>${k.p} W</td><td>${((R.L||L)/k.t*3.6).toFixed(1)} km/h</td></tr>`).join('');
+  const hist=arch?[]:rideHistory().filter(h=>h.id!==R.id).slice(0,8);
   el.innerHTML=`<div class="sv-card">
-    <div class="sv-head"><div><h2>${final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${ROUTE.name} · ${new Date(REC.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}</p></div>
-      <div class="sv-btns">${final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
+    <div class="sv-head"><div><h2>${arch?'Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE'):final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${R.name} · ${new Date(R.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:arch?'numeric':undefined})}${arch?' · '+new Date(R.start).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':''}</p></div>
+      <div class="sv-btns">${arch?'<button id="svList" class="primary">Alle Fahrten</button><button id="svDel">Löschen</button>':final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
     <div class="sv-body">
       <div class="kpis">${kpi((sum.dist/1000).toFixed(2),'km','Distanz','#490cb8')}${kpi(fmtTime(sum.time),'','Fahrzeit','#f8d74e')}${kpi((sum.avgV*3.6).toFixed(1),'km/h','Ø Tempo','#7ad35a')}
         ${kpi(Math.round(sum.gain),'hm','Höhenmeter','#e8463c')}${kpi(Math.round(sum.avgP),'W','Ø Leistung','#eb567b')}${kpi(Math.round(sum.np),'W','Normalized Power','#f48fa8')}
@@ -1786,24 +1796,52 @@ function showStats(final){
       <h3>Verlauf <small>über die Strecke – mit dem Finger oder der Maus darüberfahren</small></h3>
       <div class="sv-chartwrap"><canvas id="svSeries"></canvas><div id="svTip" class="sv-tip hidden"></div></div>
       <div class="sv-two">
-        <div><h3>Zeit in Leistungszonen <small>FTP ${S.ftp} W</small></h3><canvas id="svZones"></canvas></div>
+        <div><h3>Zeit in Leistungszonen <small>FTP ${R.ftp||S.ftp} W</small></h3><canvas id="svZones"></canvas></div>
         <div><h3>Beste Leistung <small>Watt über die Dauer</small></h3><canvas id="svCurve"></canvas></div>
       </div>
       <div class="sv-two">
         <div><h3>Deine Spur</h3><canvas id="svMap"></canvas></div>
         <div>${lapRows?`<h3>Runden dieser Fahrt</h3><table class="kt">${lapRows}</table>`:''}${komRows?`<h3>Bergwertungen dieser Fahrt</h3><table class="kt">${komRows}</table>`:'<h3>Bergwertungen</h3><p class="hint">Auf dieser Fahrt noch keine Bergwertung gefahren.</p>'}
-          ${hist.length?`<h3>Frühere Fahrten</h3><table class="kt"><tr><th>Datum</th><th>Route</th><th>km</th><th>Zeit</th><th>Ø W</th></tr>${hist.map(h=>`<tr><td>${new Date(h.date).toLocaleDateString('de-DE')}</td><td>${h.route}</td><td>${(h.dist/1000).toFixed(1)}</td><td>${fmtTime(h.time)}</td><td>${h.avgP}</td></tr>`).join('')}</table>`:''}</div>
+          ${hist.length?`<h3>Frühere Fahrten <small>antippen zum Ansehen</small></h3><table class="kt rides">${histRows(hist)}</table>`:''}</div>
       </div></div></div>`;
   el.classList.remove('hidden');if(!final)S.paused=true;
   $('svClose').onclick=closeStats;if($('svBack'))$('svBack').onclick=()=>{closeStats();};if($('svEnd'))$('svEnd').onclick=endRide;
   if($('svNew'))$('svNew').onclick=newRide;
-  $('svTcx').onclick=exportTcx;$('svFit').onclick=exportFit;
-  requestAnimationFrame(()=>{drawSeries(sum);drawZones(sum);drawCurve(sum);drawTrack();});}
-function closeStats(){$('statsView').classList.add('hidden');if(REC.ended){openMenu();return;}S.paused=false;}
+  if($('svList'))$('svList').onclick=()=>{closeStats();$('ridesDet').open=true;renderRides();$('ridesDet').scrollIntoView({block:'start'});};
+  if($('svDel'))$('svDel').onclick=async()=>{const b=$('svDel');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen?';return;}await rideDelete(R.id);closeStats();renderRides();toast('Fahrt gelöscht');};
+  wireHistRows(el);
+  $('svTcx').onclick=()=>exportTcx(R);$('svFit').onclick=()=>exportFit(R);
+  requestAnimationFrame(()=>{drawSeries(sum,R);drawZones(sum);drawCurve(sum,R);drawTrack(R);});}
+let SVR=null; // die gerade angezeigte Fahrt
+function closeStats(){$('statsView').classList.add('hidden');const arch=SVR&&SVR.id!==REC.start;SVR=null;if(REC.ended||arch||!S.started){openMenu();return;}S.paused=false;}
+// Liste der Fahrten (Statistik und Menü „Meine Fahrten“)
+function histRows(list){return '<tr><th>Datum</th><th>Route</th><th>km</th><th>Zeit</th><th>hm</th><th>Ø W</th></tr>'+list.map(h=>`<tr${h.id?` data-ride="${h.id}" class="link"`:''}><td>${new Date(h.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})}</td><td>${h.route}${h.id?'':' <small>(nur Übersicht)</small>'}</td><td>${(h.dist/1000).toFixed(1)}</td><td>${fmtTime(h.time)}</td><td>${Math.round(h.gain||0)}</td><td>${h.avgP}</td></tr>`).join('');}
+function wireHistRows(root){root.querySelectorAll('tr[data-ride]').forEach(tr=>tr.onclick=()=>openRide(+tr.dataset.ride));}
+async function openRide(id){if(id===REC.start&&REC.s.length){showStats(REC.ended);return;}const R=await rideLoad(id);if(!R){toast('Zu dieser Fahrt sind keine Einzelwerte gespeichert');return;}showStats(true,R);}
+function renderRides(){const h=rideHistory(),el=$('ridesList');if(!el)return;
+  if(!h.length){el.innerHTML='<p class="hint">Noch keine gespeicherten Fahrten. Nach „Fahrt beenden“ landet jede Fahrt hier.</p>';return;}
+  let km=0,t=0;for(const e of h){km+=e.dist/1000;t+=e.time;}
+  el.innerHTML=`<p class="hint"><b>${h.length}</b> ${h.length===1?'Fahrt':'Fahrten'} · <b>${Math.round(km).toLocaleString('de-DE')}</b> km · <b>${Math.floor(t/3600)} h ${Math.round(t%3600/60)} min</b> Fahrzeit – antippen zum Ansehen</p><div class="rides-wrap"><table class="kt rides">${histRows(h)}</table></div>`;wireHistRows(el);}
+// Sicherung: alle Fahrten mit Messwerten, Bestzeiten und Rundenzeiten als Datei (für ein anderes Gerät)
+async function backupRides(){const h=rideHistory(),rides=[];for(const e of h)if(e.id){const r=await rideLoad(e.id);if(r)rides.push(r);}
+  const data={app:'kalea-ride',v:1,date:Date.now(),list:h,rides,kom:komStore(),laps:lapStore()};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download=`KaleaRide_Sicherung_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast('💾 Sicherung mit '+h.length+(h.length===1?' Fahrt':' Fahrten')+' gespeichert');}
+async function restoreRides(file){let d;try{d=JSON.parse(await file.text());}catch(e){toast('Datei nicht lesbar');return;}
+  if(!d||d.app!=='kalea-ride'||!Array.isArray(d.list)){toast('Das ist keine Kalea-Ride-Sicherung');return;}
+  const h=rideHistory(),have=new Set(h.map(e=>e.id||e.date));let n=0;
+  for(const e of d.list){if(have.has(e.id||e.date))continue;h.push(e);n++;}
+  for(const r of d.rides||[])if(r&&r.id&&r.s)await idbSet('ride_'+r.id,r);
+  h.sort((a,b)=>b.date-a.date);try{localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,RIDES_MAX)));}catch(e){}
+  // Bestzeiten zusammenführen: jeweils die bessere behalten, Verläufe mischen
+  const merge=(dst,src,save)=>{for(const k in src||{}){const a=dst[k],b=src[k];if(!a){dst[k]=b;continue;}
+    if(b.pb&&(!a.pb||b.pb.t<a.pb.t))a.pb=b.pb;const seen=new Set(a.hist.map(x=>x.date));for(const x of b.hist||[])if(!seen.has(x.date))a.hist.push(x);a.hist.sort((x,y)=>y.date-x.date);a.hist=a.hist.slice(0,20);}save();};
+  merge(komStore(),d.kom,komSave);merge(lapStore(),d.laps,()=>{try{localStorage.setItem('kalea_laps',JSON.stringify(LAP.store));}catch(e){}});
+  renderRides();$('komTable').innerHTML=komTable();toast(`📥 ${n} ${n===1?'Fahrt':'Fahrten'} übernommen`+(d.list.length-n?` (${d.list.length-n} schon vorhanden)`:''));}
 function prepCanvas(c,hgt){const dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=hgt||c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return [x,w,h];}
 // gestapelte Verlaufs-Diagramme mit gemeinsamer x-Achse (Distanz), jedes mit eigener y-Achse
-function drawSeries(sum){
-  const c=$('svSeries'),A=REC.s,hasHr=sum.avgHr>0,panels=[
+function drawSeries(sum,R){
+  const c=$('svSeries'),A=R.s,ftp=R.ftp||S.ftp,hasHr=sum.avgHr>0,panels=[
     {k:'p',n:'Leistung',u:'W',col:'#eb567b',zone:true},{k:'v',n:'Tempo',u:'km/h',col:'#490cb8',f:v=>v*3.6},
     ...(hasHr?[{k:'hr',n:'Puls',u:'bpm',col:'#e8463c'}]:[]),{k:'c',n:'Trittfrequenz',u:'rpm',col:'#b06fe0'},{k:'h',n:'Höhe',u:'m',col:'#7ad35a',area:true}];
   const ph=78,gap=10,H=panels.length*(ph+gap)+18;c.style.height=H+'px';const [x,w]=prepCanvas(c,H),L0=44,R0=8,pw=w-L0-R0;
@@ -1816,7 +1854,7 @@ function drawSeries(sum){
     x.fillStyle='#6b6577';x.textAlign='right';x.textBaseline='middle';x.fillText(Math.round(hi),L0-5,top+3);x.fillText(Math.round(lo),L0-5,top+ph-3);
     x.textAlign='left';x.textBaseline='top';x.fillStyle='#1e0f3a';x.fillText(pn.n+' ('+pn.u+')',L0+6,top+4);
     if(pn.zone){// Leistung: Balken in Zonenfarben + geglättete Linie
-      const bw=Math.max(1,pw/A.length+0.5);A.forEach((s,i)=>{const z=zoneOf(s.p);if(s.p<=0||z<0)return;x.fillStyle=ZONES[z].c;x.globalAlpha=0.55;x.fillRect(X(s.d),Y(vals[i]),bw,top+ph-Y(vals[i]));});x.globalAlpha=1;
+      const bw=Math.max(1,pw/A.length+0.5);A.forEach((s,i)=>{const z=zoneOf(s.p,ftp);if(s.p<=0||z<0)return;x.fillStyle=ZONES[z].c;x.globalAlpha=0.55;x.fillRect(X(s.d),Y(vals[i]),bw,top+ph-Y(vals[i]));});x.globalAlpha=1;
       const sm=vals.map((_,i)=>{let a=0,n=0;for(let j=Math.max(0,i-14);j<=Math.min(vals.length-1,i+15);j++){a+=vals[j];n++;}return a/n;});
       x.beginPath();sm.forEach((v,i)=>i?x.lineTo(X(A[i].d),Y(v)):x.moveTo(X(A[i].d),Y(v)));x.strokeStyle='#1e0f3a';x.lineWidth=2;x.stroke();
       const ay=Y(sum.avgP);x.setLineDash([5,4]);x.strokeStyle='rgba(30,15,58,.6)';x.lineWidth=1.2;x.beginPath();x.moveTo(L0,ay);x.lineTo(L0+pw,ay);x.stroke();x.setLineDash([]);
@@ -1840,29 +1878,34 @@ function drawZones(sum){const c=$('svZones');const [x,w,h]=prepCanvas(c);const t
     x.fillStyle='#1e0f3a';x.textAlign='right';x.fillText(z.n,L0-8,y+rowH/2);
     x.fillStyle=z.c;x.strokeStyle='#1e0f3a';x.lineWidth=1.5;if(bw>0){x.beginPath();x.roundRect?x.roundRect(L0,y+3,bw,rowH-6,4):x.rect(L0,y+3,bw,rowH-6);x.fill();x.stroke();}
     x.fillStyle='#4a3d5c';x.textAlign='left';x.fillText(Math.round(f*100)+' % · '+fmtTime(sum.zt[k]),L0+bw+6,y+rowH/2);});}
-function drawCurve(sum){const c=$('svCurve');const [x,w,h]=prepCanvas(c);const cv=sum.curve,mx=Math.max(S.ftp*1.2,...cv.map(q=>q.p||0)),L0=8,B=22,bw=(w-L0*2)/cv.length;
+function drawCurve(sum,R){const ftp=R.ftp||S.ftp,c=$('svCurve');const [x,w,h]=prepCanvas(c);const cv=sum.curve,mx=Math.max(ftp*1.2,...cv.map(q=>q.p||0)),L0=8,B=22,bw=(w-L0*2)/cv.length;
   x.font='600 11px Fredoka,system-ui';x.textAlign='center';
-  const fy=h-B-(S.ftp/mx)*(h-B-18);x.setLineDash([5,4]);x.strokeStyle='rgba(30,15,58,.5)';x.beginPath();x.moveTo(0,fy);x.lineTo(w,fy);x.stroke();x.setLineDash([]);x.fillStyle='#6b6577';x.textAlign='left';x.fillText('FTP',2,fy-6);x.textAlign='center';
+  const fy=h-B-(ftp/mx)*(h-B-18);x.setLineDash([5,4]);x.strokeStyle='rgba(30,15,58,.5)';x.beginPath();x.moveTo(0,fy);x.lineTo(w,fy);x.stroke();x.setLineDash([]);x.fillStyle='#6b6577';x.textAlign='left';x.fillText('FTP',2,fy-6);x.textAlign='center';
   cv.forEach((q,k)=>{const cx=L0+bw*k+bw/2;x.fillStyle='#4a3d5c';x.textBaseline='top';x.fillText(q.l,cx,h-B+5);
     if(q.p===null){x.fillStyle='#b8b2a6';x.textBaseline='bottom';x.fillText('–',cx,h-B-2);return;}
-    const bh=(q.p/mx)*(h-B-18),z=zoneOf(q.p);x.fillStyle=z>=0?ZONES[z].c:'#ccc';x.strokeStyle='#1e0f3a';x.lineWidth=1.5;x.beginPath();x.roundRect?x.roundRect(cx-bw*0.34,h-B-bh,bw*0.68,bh,[4,4,0,0]):x.rect(cx-bw*0.34,h-B-bh,bw*0.68,bh);x.fill();x.stroke();
+    const bh=(q.p/mx)*(h-B-18),z=zoneOf(q.p,ftp);x.fillStyle=z>=0?ZONES[z].c:'#ccc';x.strokeStyle='#1e0f3a';x.lineWidth=1.5;x.beginPath();x.roundRect?x.roundRect(cx-bw*0.34,h-B-bh,bw*0.68,bh,[4,4,0,0]):x.rect(cx-bw*0.34,h-B-bh,bw*0.68,bh);x.fill();x.stroke();
     x.fillStyle='#1e0f3a';x.textBaseline='bottom';x.fillText(Math.round(q.p),cx,h-B-bh-2);});}
-function drawTrack(){const c=$('svMap');drawMap(c,{mode:'route',big:true});const A=REC.s;if(A.length<2)return;
+function drawTrack(R){const c=$('svMap'),A=R.s,here=R.world===WORLD&&R.route===ROUTE.id;
+  // Spur einer anderen Route/Welt: nur die Linie auf hellem Grund (die Karte zeigt immer die aktuelle Welt)
+  if(here)drawMap(c,{mode:'route',big:true});else{const [y,W,H]=prepCanvas(c);y.fillStyle='#eef3e2';y.fillRect(0,0,W,H);}
+  if(A.length<2)return;
   // gefahrene Spur nach Tempo eingefärbt darüberlegen
-  const [x,w,h]=[c.getContext('2d'),c.clientWidth,c.clientHeight];let a=1e9,b=-1e9,c2=1e9,d=-1e9;for(let i=0;i<N;i+=8){a=Math.min(a,RX[i]);b=Math.max(b,RX[i]);c2=Math.min(c2,RZ[i]);d=Math.max(d,RZ[i]);}
+  const [x,w,h]=[c.getContext('2d'),c.clientWidth,c.clientHeight];let a=1e9,b=-1e9,c2=1e9,d=-1e9;
+  if(here)for(let i=0;i<N;i+=8){a=Math.min(a,RX[i]);b=Math.max(b,RX[i]);c2=Math.min(c2,RZ[i]);d=Math.max(d,RZ[i]);}
+  else for(const p of A){a=Math.min(a,p.x);b=Math.max(b,p.x);c2=Math.min(c2,p.z);d=Math.max(d,p.z);}
   const cx=(a+b)/2,cz=(c2+d)/2,span=Math.max(b-a,(d-c2)*w/h)*1.12,sc=w/span,P=(px,pz)=>[w/2+(px-cx)*sc,h/2+(pz-cz)*sc],vmax=Math.max(...A.map(s=>s.v))||1;
   x.lineWidth=4;x.lineCap='round';for(let i=1;i<A.length;i++){const p0=P(A[i-1].x,A[i-1].z),p1=P(A[i].x,A[i].z);if(Math.hypot(p1[0]-p0[0],p1[1]-p0[1])>40)continue;
     const t=A[i].v/vmax;x.strokeStyle=`hsl(${200-200*t},85%,48%)`;x.beginPath();x.moveTo(...p0);x.lineTo(...p1);x.stroke();}
   x.font='600 11px Fredoka,system-ui';x.fillStyle='#1e0f3a';x.textAlign='left';x.textBaseline='bottom';x.fillText('Spur nach Tempo: blau langsam → rot schnell',8,h-6);}
 // TCX-Datei (für Strava, Garmin Connect, TrainingPeaks)
-function exportTcx(){const A=REC.s;if(!A.length)return;const t0=REC.start,iso=t=>new Date(t0+t*1000).toISOString(),sum=rideSummary();
+function exportTcx(R){R=R||curRide();const A=R.s;if(!A.length)return;const t0=R.start,iso=t=>new Date(t0+t*1000).toISOString(),sum=rideSummary(R);
   const pts=A.map(s=>`<Trackpoint><Time>${iso(s.t)}</Time><AltitudeMeters>${s.h}</AltitudeMeters><DistanceMeters>${s.d}</DistanceMeters>${s.hr?`<HeartRateBpm><Value>${s.hr}</Value></HeartRateBpm>`:''}<Cadence>${s.c}</Cadence><Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Speed>${s.v}</Speed><Watts>${s.p}</Watts></TPX></Extensions></Trackpoint>`).join('\n');
-  const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Biking"><Id>${iso(0)}</Id><Lap StartTime="${iso(0)}"><TotalTimeSeconds>${sum.time}</TotalTimeSeconds><DistanceMeters>${sum.dist}</DistanceMeters><Calories>${Math.round(sum.kcal)}</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>\n${pts}\n</Track></Lap><Notes>Kalea Ride – ${ROUTE.name} (virtuell)</Notes></Activity></Activities></TrainingCenterDatabase>`;
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([xml],{type:'application/vnd.garmin.tcx+xml'}));a.download=`KaleaRide_${new Date(t0).toISOString().slice(0,10)}_${ROUTE.id}.tcx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Biking"><Id>${iso(0)}</Id><Lap StartTime="${iso(0)}"><TotalTimeSeconds>${sum.time}</TotalTimeSeconds><DistanceMeters>${sum.dist}</DistanceMeters><Calories>${Math.round(sum.kcal)}</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>\n${pts}\n</Track></Lap><Notes>Kalea Ride – ${R.name} (virtuell)</Notes></Activity></Activities></TrainingCenterDatabase>`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([xml],{type:'application/vnd.garmin.tcx+xml'}));a.download=`KaleaRide_${new Date(t0).toISOString().slice(0,10)}_${R.route}.tcx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 
 // FIT-Datei (Garmins Format): Strava erkennt daran eine virtuelle Fahrt (sub_sport = virtual_activity),
 // Garmin Connect übernimmt Leistung, Puls, Trittfrequenz und Höhenmeter
-function fitBytes(){const A=REC.s;if(!A.length)return null;const sum=rideSummary(),T0=Math.round(REC.start/1000)-631065600,out=[],u8=v=>out.push(v&255),
+function fitBytes(R){R=R||curRide();const A=R.s;if(!A.length)return null;const sum=rideSummary(R),T0=Math.round(R.start/1000)-631065600,out=[],u8=v=>out.push(v&255),
     u16=v=>{u8(v);u8(v>>8);},u32=v=>{u16(v&0xffff);u16(Math.floor(v/65536)&0xffff);};
   const defs={},wr={0:u8,2:u8,0x84:u16,0x86:u32,0x8c:u32},inv={0:255,2:255,0x84:0xffff,0x86:0xffffffff,0x8c:0};
   const def=(loc,glob,fields)=>{defs[loc]=fields;u8(0x40|loc);u8(0);u8(0);u16(glob);u8(fields.length);for(const [n,t] of fields){u8(n);u8(t===0||t===2?1:t===0x84?2:4);u8(t);}};
@@ -1885,8 +1928,8 @@ function fitBytes(){const A=REC.s;if(!A.length)return null;const sum=rideSummary
   const crc=fitCrc(data,fitCrc(hdr,0)),all=new Uint8Array(14+data.length+2);all.set(hdr);all.set(data,14);all[all.length-2]=crc&255;all[all.length-1]=crc>>8;return all;}
 function fitCrc(b,crc){const T=[0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400];
   for(const x of b){let t=T[crc&15];crc=(crc>>4)&0x0FFF;crc=crc^t^T[x&15];t=T[crc&15];crc=(crc>>4)&0x0FFF;crc=crc^t^T[(x>>4)&15];}return crc;}
-function exportFit(){const b=fitBytes();if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.ant.fit'}));
-  a.download=`KaleaRide_${new Date(REC.start).toISOString().slice(0,10)}_${ROUTE.id}.fit`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+function exportFit(R){R=R||curRide();const b=fitBytes(R);if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.ant.fit'}));
+  a.download=`KaleaRide_${new Date(R.start).toISOString().slice(0,10)}_${R.route}.fit`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 
 /* ================= Online fahren (MQTT über öffentliche WebSocket-Broker) ================= */
 const NET={client:null,room:null,id:null,host:false,info:null,peers:new Map(),state:'off',hold:false,raceT0:0,fin:null,cd:0,lastPub:0,broker:'',rf:1,rg:0};
@@ -2952,6 +2995,9 @@ function wireUi(){
   $('mapC').onclick=cycleMap;$('mapMode').onclick=cycleMap;
   $('mapDet').addEventListener('toggle',()=>{if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));});
   $('komTable').innerHTML=komTable();$('komDet').addEventListener('toggle',()=>{$('komTable').innerHTML=komTable();});
+  $('ridesDet').ontoggle=()=>{if($('ridesDet').open)renderRides();};
+  $('bBackup').onclick=backupRides;$('bRestore').onclick=()=>$('iRestore').click();$('iRestore').onchange=()=>{const f=$('iRestore').files[0];if(f)restoreRides(f);$('iRestore').value='';};
+  addEventListener('pagehide',autosaveRide);document.addEventListener('visibilitychange',()=>{if(document.hidden)autosaveRide();});setInterval(()=>{if(S.started&&!S.paused)autosaveRide();},120000);
   $('bKomReset').onclick=()=>{const b=$('bKomReset');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen? Nochmal tippen';setTimeout(()=>{delete b.dataset.arm;b.textContent='Bestzeiten dieser Welt löschen';},4000);return;}delete b.dataset.arm;b.textContent='Bestzeiten dieser Welt löschen';const st=komStore();for(const k in st)if(st[k].world===WORLD)delete st[k];komSave();$('komTable').innerHTML=komTable();};
   showTrainerGear();$('iTire').value=S.tire.toFixed(3);$('iTire').onchange=()=>{S.tire=+$('iTire').value;PHYS.circ=S.tire;saveSettings();updateGear();};
   $('iFps').value=String(S.fps);$('iFps').onchange=()=>{S.fps=+$('iFps').value;saveSettings();};
