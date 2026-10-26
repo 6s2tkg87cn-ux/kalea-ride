@@ -90,6 +90,10 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `S.dist` ist die Position auf der Runde.
 - **Ohne Wattanzeige** (`S.hidePow`, Taste P): blendet Leistung/W·kg im HUD aus, Workouts zeigen nur das Ziel.
   **Workouts:** ⏭ bzw. Taste N überspringt den aktuellen Abschnitt (`skipWorkoutSeg`).
+- **Meine Fahrten** (Menü, `renderRides`): Übersicht in `kalea_rides` (max. 500, mit `id` = `REC.start`), alle Messwerte in
+  IndexedDB `ride_<id>` (`saveRideHistory`/`rideLoad`/`rideDelete`). Statistik zeigt jede Fahrt (`showStats(final,R)`, Fahrt-Objekt
+  wie `curRide()`); Export FIT/TCX auch für alte Fahrten. Mitten in der Fahrt alle 2 min und beim Schließen gesichert
+  (`autosaveRide`). „Sicherung speichern/laden“: JSON mit Fahrten, Bestzeiten und Runden (zusammengeführt, bessere Zeit bleibt).
 - **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
   virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
@@ -97,7 +101,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
-  `kalea_rides`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+  `kalea_rides`, `kalea_rev`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
 - **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:

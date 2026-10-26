@@ -70,6 +70,7 @@ details p{color:#4a3d5c;font-size:13px}
 table.kt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.kt th{text-align:left;font-size:12px;color:var(--mut);border-bottom:2px solid var(--ink);padding:3px 4px}
 table.kt td{padding:5px 4px;border-bottom:1px dashed #cfc7bb;vertical-align:top}
+table.kt tr.link{cursor:pointer}table.kt tr.link:hover td{background:#f3e6f7}.rides-wrap{max-height:360px;overflow:auto;margin:4px 0}
 table.kt small{display:block;color:var(--mut);font-size:11px}
 #loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#490cb8,#9d20a3);font-size:20px;font-weight:600;color:#fff;text-align:center;padding:20px}
 #loading::before{content:'🚴';font-size:56px;animation:bob 0.9s ease-in-out infinite alternate}
@@ -440,6 +441,11 @@ body.realshift .vonly{display:none!important}
       <details id="komDet"><summary>⛰️ Bergwertungen &amp; Bestzeiten</summary>
         <div id="komTable"></div>
         <div class="actions"><button id="bKomReset">Bestzeiten dieser Welt löschen</button></div>
+      </details>
+      <details id="ridesDet"><summary>📒 Meine Fahrten</summary>
+        <div id="ridesList"></div>
+        <div class="actions"><button id="bBackup">💾 Sicherung speichern</button><button id="bRestore">📥 Sicherung laden</button><input type="file" id="iRestore" accept=".json,application/json" hidden></div>
+        <p class="hint">Die Fahrten liegen nur in diesem Browser auf diesem Gerät. Mit der Sicherung (eine Datei) nimmst du sie samt Bestzeiten auf ein anderes Gerät mit oder bewahrst sie auf.</p>
       </details>
       <details><summary>🚲 Rad, Gänge &amp; Fahrgefühl</summary>
         <div class="grid">
