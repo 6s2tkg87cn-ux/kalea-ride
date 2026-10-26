@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,p30:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -42,8 +42,8 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -68,6 +68,11 @@ const KALEA_ROUTES=[
   {id:'kueste',name:'Küstenrunde (flach)',desc:'Einmal rund um die Insel, immer nah am Meer – nur sanfte Wellen.',pts:[[7,2066],[-20,2067],[-47,2068],[-75,2068],[-102,2068],[-129,2067],[-156,2066],[-183,2064],[-210,2062],[-237,2059],[-264,2056],[-291,2053],[-318,2049],[-344,2045],[-371,2040],[-398,2035],[-424,2030],[-451,2024],[-477,2018],[-504,2011],[-530,2004],[-556,1997],[-582,1989],[-608,1981],[-634,1972],[-659,1964],[-685,1955],[-710,1945],[-736,1936],[-761,1926],[-786,1916],[-811,1905],[-836,1894],[-861,1883],[-885,1872],[-910,1860],[-934,1849],[-959,1837],[-983,1824],[-1007,1812],[-1031,1799],[-1055,1786],[-1078,1773],[-1102,1759],[-1126,1746],[-1149,1732],[-1172,1718],[-1196,1703],[-1219,1689],[-1242,1674],[-1265,1659],[-1287,1644],[-1310,1628],[-1332,1613],[-1355,1597],[-1377,1580],[-1399,1564],[-1421,1547],[-1443,1530],[-1464,1513],[-1486,1495],[-1507,1478],[-1528,1459],[-1549,1441],[-1570,1422],[-1590,1403],[-1610,1384],[-1630,1365],[-1650,1345],[-1669,1324],[-1688,1304],[-1707,1283],[-1725,1262],[-1743,1241],[-1761,1219],[-1779,1197],[-1796,1174],[-1812,1152],[-1828,1129],[-1844,1105],[-1860,1082],[-1875,1058],[-1889,1034],[-1903,1009],[-1917,984],[-1930,959],[-1942,934],[-1954,909],[-1966,883],[-1977,857],[-1987,831],[-1997,804],[-2006,778],[-2015,751],[-2023,724],[-2031,697],[-2038,670],[-2044,642],[-2050,615],[-2056,587],[-2061,560],[-2065,532],[-2069,504],[-2072,476],[-2074,448],[-2076,420],[-2078,392],[-2079,364],[-2080,337],[-2080,309],[-2079,281],[-2078,253],[-2077,225],[-2075,198],[-2073,170],[-2070,143],[-2067,115],[-2064,88],[-2060,61],[-2056,34],[-2052,7],[-2047,-20],[-2042,-47],[-2037,-73],[-2031,-100],[-2025,-126],[-2019,-152],[-2013,-178],[-2007,-204],[-2000,-230],[-1993,-256],[-1986,-281],[-1979,-307],[-1972,-332],[-1964,-357],[-1957,-382],[-1949,-408],[-1942,-433],[-1934,-457],[-1926,-482],[-1918,-507],[-1910,-532],[-1902,-557],[-1894,-581],[-1885,-606],[-1877,-630],[-1869,-655],[-1860,-679],[-1852,-704],[-1843,-728],[-1834,-753],[-1826,-777],[-1817,-802],[-1808,-826],[-1799,-851],[-1789,-875],[-1780,-900],[-1770,-924],[-1761,-949],[-1751,-973],[-1741,-998],[-1730,-1022],[-1720,-1046],[-1709,-1071],[-1698,-1095],[-1687,-1120],[-1676,-1144],[-1664,-1168],[-1652,-1192],[-1640,-1216],[-1627,-1240],[-1614,-1264],[-1601,-1288],[-1587,-1312],[-1573,-1335],[-1559,-1359],[-1544,-1382],[-1529,-1405],[-1514,-1428],[-1498,-1450],[-1482,-1473],[-1466,-1495],[-1449,-1517],[-1431,-1539],[-1414,-1560],[-1395,-1581],[-1377,-1602],[-1358,-1622],[-1339,-1642],[-1319,-1662],[-1299,-1681],[-1278,-1700],[-1257,-1719],[-1236,-1737],[-1214,-1755],[-1192,-1772],[-1170,-1789],[-1147,-1805],[-1124,-1821],[-1101,-1837],[-1077,-1852],[-1053,-1866],[-1029,-1880],[-1004,-1894],[-980,-1907],[-954,-1920],[-929,-1932],[-904,-1943],[-878,-1955],[-852,-1965],[-826,-1976],[-800,-1985],[-773,-1995],[-747,-2003],[-720,-2012],[-693,-2020],[-666,-2027],[-639,-2034],[-612,-2041],[-585,-2047],[-557,-2053],[-530,-2058],[-502,-2063],[-475,-2067],[-447,-2071],[-420,-2075],[-392,-2079],[-365,-2082],[-337,-2084],[-310,-2087],[-282,-2089],[-254,-2091],[-227,-2092],[-199,-2093],[-172,-2094],[-144,-2094],[-117,-2094],[-89,-2094],[-62,-2094],[-34,-2093],[-7,-2092],[20,-2091],[48,-2090],[75,-2088],[102,-2086],[130,-2084],[157,-2081],[184,-2078],[211,-2075],[238,-2072],[265,-2068],[292,-2065],[319,-2060],[346,-2056],[373,-2051],[400,-2046],[427,-2041],[454,-2035],[480,-2029],[507,-2023],[533,-2016],[560,-2010],[586,-2002],[612,-1995],[638,-1987],[664,-1979],[690,-1970],[716,-1961],[742,-1952],[767,-1942],[793,-1932],[818,-1921],[843,-1910],[868,-1899],[893,-1887],[918,-1876],[943,-1866],[970,-1858],[998,-1852],[1027,-1847],[1055,-1841],[1083,-1833],[1111,-1825],[1138,-1816],[1165,-1806],[1192,-1796],[1219,-1786],[1246,-1774],[1272,-1763],[1299,-1751],[1325,-1738],[1351,-1725],[1376,-1711],[1401,-1696],[1426,-1680],[1449,-1663],[1473,-1647],[1498,-1630],[1522,-1614],[1546,-1598],[1570,-1580],[1593,-1562],[1616,-1543],[1637,-1523],[1658,-1503],[1679,-1482],[1698,-1460],[1717,-1438],[1736,-1415],[1754,-1392],[1773,-1369],[1790,-1346],[1808,-1323],[1826,-1299],[1843,-1275],[1860,-1251],[1876,-1227],[1891,-1202],[1906,-1177],[1920,-1151],[1934,-1125],[1947,-1099],[1961,-1073],[1974,-1047],[1985,-1020],[1996,-993],[2005,-965],[2013,-936],[2020,-908],[2028,-879],[2035,-851],[2043,-823],[2049,-795],[2056,-766],[2063,-738],[2069,-710],[2074,-682],[2077,-653],[2079,-624],[2080,-594],[2080,-565],[2081,-536],[2081,-507],[2081,-478],[2081,-450],[2080,-421],[2080,-393],[2078,-364],[2076,-336],[2074,-308],[2070,-280],[2066,-252],[2065,-224],[2067,-197],[2072,-170],[2078,-143],[2085,-116],[2091,-89],[2096,-62],[2102,-34],[2107,-7],[2111,21],[2115,49],[2119,77],[2122,104],[2125,133],[2127,161],[2129,189],[2131,217],[2131,245],[2132,274],[2131,302],[2130,330],[2129,359],[2127,387],[2124,415],[2121,444],[2117,472],[2113,500],[2108,528],[2102,556],[2096,584],[2089,611],[2082,639],[2074,666],[2065,693],[2056,720],[2046,747],[2035,774],[2024,800],[2013,826],[2001,852],[1988,877],[1975,902],[1961,927],[1946,952],[1932,976],[1916,1000],[1901,1024],[1884,1047],[1868,1070],[1851,1093],[1833,1115],[1815,1137],[1797,1158],[1778,1180],[1759,1200],[1740,1221],[1720,1241],[1701,1261],[1680,1280],[1660,1300],[1639,1318],[1619,1337],[1598,1355],[1576,1373],[1555,1391],[1533,1408],[1512,1425],[1490,1442],[1468,1458],[1446,1474],[1424,1490],[1402,1506],[1379,1521],[1357,1537],[1334,1552],[1312,1566],[1289,1581],[1266,1596],[1244,1610],[1221,1624],[1198,1638],[1175,1651],[1152,1665],[1129,1678],[1106,1692],[1083,1705],[1060,1718],[1037,1730],[1014,1743],[991,1756],[967,1768],[944,1780],[921,1792],[897,1804],[873,1816],[850,1827],[826,1839],[802,1850],[778,1861],[754,1872],[730,1883],[705,1893],[681,1904],[657,1914],[632,1924],[607,1933],[582,1943],[557,1952],[532,1961],[507,1969],[482,1978],[456,1986],[430,1993],[405,2001],[379,2008],[353,2015],[327,2021],[301,2027],[274,2032],[248,2038],[221,2042],[195,2047],[168,2051],[141,2055],[115,2058],[88,2060],[61,2063],[34,2065]],flat:true},
   {id:'vulkan',name:'Vulkan-Bergfahrt',desc:'In weiten Spiralen bis an den Kraterrand (gut 280 m) und in Serpentinen wieder hinunter.',pts:[[688,960],[712,960],[737,959],[761,958],[786,957],[810,955],[835,953],[859,951],[884,948],[908,945],[932,941],[957,937],[981,932],[1005,927],[1029,922],[1053,916],[1076,910],[1100,904],[1124,897],[1147,889],[1170,882],[1194,874],[1217,865],[1240,856],[1262,847],[1285,837],[1307,827],[1330,817],[1352,806],[1374,795],[1395,783],[1417,772],[1438,759],[1459,747],[1480,734],[1501,720],[1521,707],[1541,693],[1561,678],[1581,664],[1600,649],[1620,633],[1639,618],[1657,602],[1676,586],[1694,569],[1712,552],[1729,535],[1746,518],[1763,500],[1780,482],[1797,463],[1813,445],[1828,426],[1844,407],[1859,387],[1874,368],[1888,348],[1902,328],[1916,308],[1929,287],[1942,266],[1955,245],[1967,224],[1979,202],[1991,181],[2002,159],[2013,137],[2024,115],[2034,92],[2044,70],[2053,47],[2062,24],[2071,1],[2079,-22],[2087,-45],[2094,-68],[2101,-92],[2108,-116],[2114,-139],[2120,-163],[2126,-187],[2131,-211],[2135,-235],[2140,-260],[2144,-284],[2147,-308],[2150,-333],[2153,-357],[2155,-381],[2157,-406],[2158,-430],[2159,-455],[2159,-479],[2156,-499],[2134,-500],[2114,-500],[2094,-500],[2074,-500],[2054,-500],[2034,-500],[2014,-500],[1994,-500],[1974,-500],[1953,-500],[1933,-500],[1913,-500],[1899,-495],[1894,-474],[1889,-454],[1884,-434],[1878,-414],[1872,-394],[1865,-374],[1858,-354],[1851,-334],[1843,-315],[1835,-295],[1827,-276],[1818,-257],[1809,-238],[1800,-219],[1790,-201],[1780,-182],[1769,-164],[1759,-146],[1747,-128],[1736,-111],[1724,-94],[1712,-77],[1699,-60],[1687,-43],[1673,-27],[1660,-11],[1646,5],[1632,21],[1618,36],[1603,51],[1588,65],[1572,80],[1557,94],[1541,107],[1525,121],[1508,134],[1492,146],[1475,159],[1457,171],[1440,182],[1422,193],[1404,204],[1386,215],[1367,225],[1349,234],[1330,243],[1311,252],[1292,260],[1272,268],[1253,276],[1233,283],[1213,289],[1193,295],[1173,301],[1152,306],[1132,311],[1111,315],[1091,319],[1070,322],[1049,325],[1029,327],[1008,329],[987,330],[966,331],[945,331],[924,330],[903,329],[882,328],[861,326],[840,324],[820,321],[799,317],[778,313],[758,309],[737,304],[717,299],[697,293],[677,287],[657,280],[637,273],[618,265],[599,257],[580,248],[561,239],[542,230],[524,220],[505,209],[488,198],[470,187],[453,175],[436,163],[419,150],[403,137],[387,123],[372,109],[357,94],[342,79],[328,64],[314,48],[301,32],[288,16],[275,-1],[264,-19],[252,-36],[241,-54],[231,-72],[222,-91],[212,-110],[204,-129],[196,-149],[189,-168],[182,-188],[176,-208],[171,-228],[167,-249],[163,-269],[160,-290],[157,-311],[155,-332],[154,-353],[154,-374],[154,-395],[156,-416],[158,-436],[160,-457],[164,-478],[168,-498],[173,-519],[179,-539],[185,-559],[193,-578],[201,-598],[209,-617],[219,-635],[229,-653],[240,-671],[252,-689],[265,-705],[278,-722],[292,-737],[306,-753],[321,-767],[337,-781],[353,-794],[370,-806],[388,-818],[406,-829],[424,-839],[443,-848],[462,-856],[482,-863],[502,-870],[522,-875],[542,-879],[563,-883],[584,-885],[605,-886],[626,-887],[647,-886],[667,-884],[688,-881],[709,-877],[729,-871],[749,-865],[768,-858],[787,-849],[806,-840],[824,-829],[842,-817],[858,-805],[874,-791],[889,-777],[903,-761],[916,-745],[929,-728],[940,-710],[950,-692],[958,-673],[966,-653],[972,-633],[976,-613],[980,-592],[982,-571],[982,-550],[981,-529],[978,-509],[974,-488],[969,-468],[962,-448],[953,-429],[943,-411],[932,-394],[919,-377],[905,-362],[889,-347],[873,-335],[855,-323],[837,-313],[818,-305],[798,-299],[777,-294],[757,-292],[736,-291],[715,-292],[696,-285],[696,-264],[695,-242],[695,-221],[694,-199],[694,-178],[693,-156],[693,-135],[708,-120],[729,-117],[750,-114],[771,-113],[792,-114],[813,-115],[834,-117],[855,-120],[876,-124],[896,-130],[916,-136],[936,-143],[955,-151],[974,-160],[993,-170],[1011,-181],[1028,-193],[1046,-205],[1062,-218],[1078,-232],[1093,-247],[1108,-262],[1122,-278],[1135,-294],[1147,-311],[1159,-328],[1170,-346],[1181,-364],[1190,-383],[1199,-402],[1207,-422],[1215,-441],[1221,-461],[1227,-482],[1232,-502],[1236,-523],[1240,-543],[1243,-564],[1244,-585],[1246,-606],[1246,-627],[1246,-648],[1245,-669],[1243,-690],[1240,-711],[1237,-732],[1233,-753],[1228,-773],[1223,-794],[1217,-814],[1210,-834],[1203,-854],[1195,-873],[1187,-892],[1177,-911],[1168,-930],[1157,-948],[1146,-966],[1135,-984],[1123,-1001],[1110,-1018],[1097,-1035],[1084,-1051],[1070,-1067],[1056,-1082],[1041,-1097],[1026,-1111],[1010,-1126],[994,-1139],[978,-1152],[961,-1165],[944,-1178],[926,-1189],[909,-1201],[891,-1212],[872,-1222],[854,-1232],[835,-1242],[816,-1251],[797,-1259],[777,-1267],[758,-1275],[738,-1282],[718,-1288],[698,-1295],[678,-1300],[657,-1305],[637,-1310],[616,-1314],[595,-1318],[575,-1321],[554,-1324],[533,-1327],[512,-1329],[491,-1330],[470,-1331],[449,-1331],[428,-1330],[407,-1330],[386,-1328],[365,-1326],[344,-1324],[323,-1321],[302,-1318],[282,-1314],[261,-1309],[241,-1305],[220,-1299],[200,-1293],[180,-1287],[160,-1280],[140,-1273],[121,-1265],[101,-1257],[82,-1249],[63,-1240],[44,-1231],[26,-1221],[7,-1211],[-11,-1200],[-29,-1189],[-47,-1178],[-64,-1166],[-81,-1154],[-98,-1141],[-115,-1129],[-131,-1115],[-147,-1102],[-163,-1088],[-179,-1074],[-194,-1059],[-209,-1045],[-224,-1029],[-238,-1014],[-252,-998],[-266,-982],[-279,-966],[-292,-950],[-305,-933],[-317,-916],[-329,-899],[-341,-881],[-352,-864],[-363,-846],[-374,-828],[-384,-809],[-394,-791],[-404,-772],[-413,-753],[-422,-734],[-431,-715],[-439,-696],[-447,-676],[-454,-657],[-461,-637],[-468,-617],[-475,-597],[-481,-577],[-486,-557],[-492,-536],[-496,-516],[-510,-500],[-530,-500],[-550,-500],[-570,-500],[-591,-500],[-611,-500],[-631,-500],[-651,-500],[-671,-500],[-691,-500],[-711,-500],[-731,-500],[-751,-500],[-759,-479],[-759,-455],[-758,-430],[-757,-406],[-755,-381],[-753,-357],[-750,-333],[-747,-308],[-744,-284],[-740,-260],[-735,-235],[-731,-211],[-726,-187],[-720,-163],[-714,-139],[-708,-116],[-701,-92],[-694,-68],[-687,-45],[-679,-22],[-671,1],[-662,24],[-653,47],[-644,70],[-634,92],[-624,115],[-613,137],[-602,159],[-591,181],[-579,202],[-567,224],[-555,245],[-542,266],[-529,287],[-516,308],[-502,328],[-488,348],[-474,368],[-459,387],[-444,407],[-428,426],[-413,445],[-397,463],[-380,482],[-363,500],[-346,518],[-329,535],[-312,552],[-294,569],[-276,586],[-257,602],[-239,618],[-220,633],[-200,649],[-181,664],[-161,678],[-141,693],[-121,707],[-101,720],[-80,734],[-59,747],[-38,759],[-17,772],[5,783],[26,795],[48,806],[70,817],[93,827],[115,837],[138,847],[160,856],[183,865],[206,874],[230,882],[253,889],[276,897],[300,904],[324,910],[347,916],[371,922],[395,927],[419,932],[443,937],[468,941],[492,945],[516,948],[541,951],[565,953],[590,955],[614,957],[639,958],[663,959]]}];
 let N,L,ds,RX,RZ,RH,RG,RGS,RTX,RTZ,LAPCLIMB=0,KOM_I=0,MAXH=0;
+// Richtung je Route: „umgedreht“ fährt die Runde andersherum (Start/Ziel bleibt gleich); START_AT = Einstieg in m
+let REV=false,START_AT=0;
+function revStore(){try{return JSON.parse(localStorage.getItem('kalea_rev')||'{}');}catch(e){return {};}}
+function revKey(){return WORLD+'_'+(ROUTE&&ROUTE.id);}
+function reverseArrays(...arrs){for(const a of arrs){if(!a)continue;const c=Array.from(a);for(let i=0;i<N;i++)a[i]=c[(N-i)%N];}}
 const CELL=40,HASH=new Map();
 const hkey=(ix,iz)=>ix*100000+iz;
 function smoothCirc(a,w){const n=a.length,o=new Float32Array(n);let s=0;for(let k=-w;k<=w;k++)s+=a[(k+n)%n];
@@ -88,7 +93,7 @@ function kaleaGeom(def){
 function buildRoute(){
   if(IS_ULM){buildRouteUlm();return;}
   ROUTE=KALEA_ROUTES.find(r=>r.id===ROUTE_ID)||KALEA_ROUTES[0];
-  const g=kaleaGeom(ROUTE);N=g.N;L=g.L;ds=g.ds;RX=g.RX;RZ=g.RZ;RH=g.RH;RG=new Float32Array(N);RTX=new Float32Array(N);RTZ=new Float32Array(N);
+  const g=kaleaGeom(ROUTE);N=g.N;L=g.L;ds=g.ds;RX=g.RX;RZ=g.RZ;RH=g.RH;REV=!!revStore()[revKey()];if(REV)reverseArrays(RX,RZ,RH);RG=new Float32Array(N);RTX=new Float32Array(N);RTZ=new Float32Array(N);
   for(let i=0;i<N;i++){const a=(i-1+N)%N,b=(i+1)%N;
     RG[i]=(RH[b]-RH[a])/(2*ds);const tx=RX[b]-RX[a],tz=RZ[b]-RZ[a],l=Math.hypot(tx,tz)||1;RTX[i]=tx/l;RTZ[i]=tz/l;
     const dh=RH[b]-RH[i];if(dh>0)LAPCLIMB+=dh;if(RH[i]>MAXH){MAXH=RH[i];KOM_I=i;}
@@ -109,9 +114,10 @@ function detectClimbs(){
     for(let q=0;q<span-2;q++){const a=(si+1)%n;if((H[a]-H[si])/ds<0.012)si=a;else break;}
     for(let q=0;q<span-2;q++){const a=(ei-1+n)%n;if((H[ei]-H[a])/ds<0.012)ei=a;else break;}
     const len=((ei-si+n)%n)*ds,gain=H[ei]-H[si];if(gain<18)continue;let mx=0;for(let q=0;q<=(ei-si+n)%n;q++)mx=Math.max(mx,RG[(si+q)%n]);
-    const dv=Math.hypot(RX[ei]-VOLC.x,RZ[ei]-VOLC.z);let nm=dv<450?'Kraterrand':dv<950?'Vulkanflanke':'Küstenhügel';
+    let nm;if(IS_ULM){nm=RNAME[(si+ei)>>1]||'';if(!nm||/^(Weg|Feldweg|Straße|Zufahrt|Radweg|Fußweg|Wohnstraße|Verbindungsstraße|Donauradweg|Iller-Radweg|Blautal-Radweg)$/.test(nm))nm=RNAME[ei]||'Anstieg';}
+    else{const dv=Math.hypot(RX[ei]-VOLC.x,RZ[ei]-VOLC.z);nm=dv<450?'Kraterrand':dv<950?'Vulkanflanke':'Küstenhügel';}
     used[nm]=(used[nm]||0)+1;if(used[nm]>1)nm+=' '+['','','II','III','IV'][Math.min(4,used[nm])];
-    out.push({name:nm,start:si*ds,end:si*ds+len,len,gain,avg:Math.round(gain/len*1000)/10,max:Math.round(mx*1000)/10,top:H[ei],key:'kalea_'+ROUTE.id+'_'+out.length});}
+    out.push({name:nm,start:si*ds,end:si*ds+len,len,gain,avg:Math.round(gain/len*1000)/10,max:Math.round(mx*1000)/10,top:H[ei],key:(IS_ULM?'ulm_rev_':'kalea_')+ROUTE.id+(REV?'_r':'')+'_'+out.length});}
   return out.sort((a,b)=>a.start-b.start);}
 // Geglättete Steigung für „Sanftes Rollen“: kurze Wellen (< ca. 400 m) mitteln sich heraus, lange Anstiege bleiben
 function buildSmoothGrade(){const w=Math.round(200/ds);RGS=smoothCirc(smoothCirc(RG,w),w);buildCurves();}
@@ -631,12 +637,13 @@ function buildRouteUlm(){
     let x,z,h;if(d<=cum[n0-1]){const t=(d-cum[j])/(cum[j+1]-cum[j]||1);x=R.x[j]+(R.x[j+1]-R.x[j])*t;z=R.z[j]+(R.z[j+1]-R.z[j])*t;h=R.h[j]+(R.h[j+1]-R.h[j])*t;}
     else{const t=(d-cum[n0-1])/close;x=R.x[n0-1]+(R.x[0]-R.x[n0-1])*t;z=R.z[n0-1]+(R.z[0]-R.z[n0-1])*t;h=R.h[n0-1]+(R.h[0]-R.h[n0-1])*t;}
     RX[i]=x;RZ[i]=z;RH[i]=h-UY0;while(si<segs.length-1&&segs[si+1][0]<=j)si++;RNAME[i]=segs[si][1];}
+  REV=!!revStore()[revKey()];if(REV)reverseArrays(RX,RZ,RH,RNAME);
   RG=new Float32Array(N);RTX=new Float32Array(N);RTZ=new Float32Array(N);LAPCLIMB=0;MAXH=0;
   for(let i=0;i<N;i++){const a=(i-2+N)%N,b=(i+2)%N;RG[i]=(RH[b]-RH[a])/(4*ds);const tx=RX[b]-RX[a],tz=RZ[b]-RZ[a],l=Math.hypot(tx,tz)||1;RTX[i]=tx/l;RTZ[i]=tz/l;
     const dh=RH[(i+1)%N]-RH[i];if(dh>0)LAPCLIMB+=dh;if(RH[i]>MAXH){MAXH=RH[i];KOM_I=i;}
     const key=hkey(Math.floor(RX[i]/CELL),Math.floor(RZ[i]/CELL));if(!HASH.has(key))HASH.set(key,[]);HASH.get(key).push(i);}
   RG=smoothCirc(RG,3);
-  ulmInit();CLIMBS=(ROUTE.climbs||[]).map(c=>({...c,key:'ulm_'+c.name}));
+  ulmInit();CLIMBS=REV?detectClimbs():(ROUTE.climbs||[]).map(c=>({...c,key:'ulm_'+c.name}));
 }
 let RNAME=null;
 /* ---- Gelände ---- */
@@ -1407,7 +1414,16 @@ function stepBots(dt){if(S.botMode==='off')return;
     w*=1+0.05*Math.sin(t*0.07+b.seed)+0.03*Math.sin(t*0.37+b.seed*2);
     const hangs=follow&&b.role==='group'&&gap<b.off-5; // wer in der Gruppe hinten hängt, tritt bergab weiter
     if(!hangs){if(g<-0.035&&b.v>11)w=0;else if(g<-0.02)w*=0.4;} // bergab rollen lassen
-    let P=clamp(w*b.mass,0,b.mass*8);if(b.role==='group'&&(S.elapsed<1||(follow&&ref<0.05)))P=0; // Gruppe wartet, bis du losfährst
+    let P=clamp(w*b.mass,0,b.mass*8);
+    if(b.role==='group'&&follow){
+      // „Fahren mit mir“: Tempo statt Watt nachfahren – jeder fährt dein Tempo und hält seinen Platz in der Gruppe
+      // (b.off m vor/hinter dir; bei einer Attacke kurz 25 m weiter vorne). So fährt die Gruppe nie davon, auch nicht
+      // im Windschatten. Bei einem harten Antritt von dir kommen sie nur mit gut 1,5-facher Leistung hinterher.
+      const want=b.off+5*Math.sin(t*0.04+b.seed)+(b.surge>0?25:0),vT=S.v<0.3?0:Math.max(0,S.v+clamp((want-gap)*0.05,-1.2,0.9)),M=b.mass+PHYS.bike,dr=draftFactor(b.dist,b);
+      P=Math.max(0,(roadForce(vT,g,M,dr)+1.2)*Math.max(vT,1)+M*(vT-b.v)/3*Math.max(vT,1.5));
+      P=Math.min(P,Math.max(ref,1.5)*b.mass*1.6+60);
+      if(P<1&&b.v>vT+0.8)b.v=Math.max(vT,b.v-1.2*dt);} // bergab: aufrichten statt davonrollen
+    if(b.role==='group'&&(S.elapsed<1||(follow&&ref<0.05&&S.v<0.3)))P=0; // Gruppe wartet, bis du losfährst
     b.P+=(P-b.P)*Math.min(1,dt*1.5);b.wkg=b.P/b.mass;
     b.v=advance(b.v,b.P,g,b.mass+PHYS.bike,draftFactor(b.dist,b),dt);
     if(curves)b.v=Math.min(b.v,Math.max(Math.min(curveLimit(b.dist),VCOMF),b.v-CURVE_DEC*1.4*dt));
@@ -1462,7 +1478,7 @@ function stepPhysics(dt){
     // Realistisch: vor engen Kurven bremst man – vor allem bergab (draußen fährt man Abfahrten nie voll laufen)
     if(f.curves){const vc=curveLimit(S.dist),vl=Math.min(vc,VCOMF);if(S.v>vl+0.3){S.v=Math.max(vl,S.v-CURVE_DEC*1.4*dt);S.brakeT=now;
       if(vc<VCOMF&&now-(S.brakeMsg||0)>20000&&S.v>9){S.brakeMsg=now;toast('🛑 Kurve – du bremst auf '+Math.round(vl*3.6)+' km/h');}}}}
-  recStep(dt);const prevD=S.dist;S.dist+=S.v*NET.rf*dt;if(Math.abs(NET.rf-1)>0.03){if(KOM.act)KOM.act.rb=true;if(LAP.act)LAP.act.rb=true;}if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
+  recStep(dt);const prevD=S.dist;S.dist+=S.v*NET.rf*dt;S.odo+=S.v*NET.rf*dt;if(Math.abs(NET.rf-1)>0.03){if(KOM.act)KOM.act.rb=true;if(LAP.act)LAP.act.rb=true;}if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
   const h=roadAt(S.dist).h;if(S.lastH!==null&&h>S.lastH)S.climb+=h-S.lastH;S.lastH=h;
   S.legPhase+=S.cadence/60*Math.PI*2*dt;
   const t=performance.now()/1000;
@@ -1588,6 +1604,9 @@ function targetWatts(){
 function startWorkout(id){const wo=WORKOUTS.find(w=>w.id===id);if(!wo)return;
   Object.assign(W,{active:true,wo,idx:0,t:0,total:0,bias:1,done:false,acc:{},max1:0,win:[],lowT:0});
   $('woBox').classList.remove('hidden');drawWorkout();sendResistance(true);}
+// Abschnitt überspringen (z. B. Einrollen schon erledigt)
+function skipWorkoutSeg(){if(!W.active||W.done)return;W.total+=W.wo.segs[W.idx][0]-W.t;W.t=0;W.idx++;
+  if(W.idx>=W.wo.segs.length){finishWorkout();return;}sendResistance(true);updateWorkoutHud();toast('⏭ Weiter mit: '+W.wo.segs[W.idx][3]);}
 function stopWorkout(){W.active=false;$('woBox').classList.add('hidden');sendResistance(true);}
 function finishWorkout(reason){W.done=true;let msg=reason||'Workout geschafft! 🎉';
   if(W.acc.test20&&W.acc.test20.n>0){const avg=W.acc.test20.sum/W.acc.test20.n;msg=`20-min-Schnitt ${Math.round(avg)} W → neue FTP ≈ ${Math.round(avg*0.95)} W`;S.ftpSuggest=Math.round(avg*0.95);}
@@ -1636,7 +1655,7 @@ function updateWorkoutHud(){
     const tot=woDuration(W.wo),done=W.wo.segs.slice(0,W.idx).reduce((s,a)=>s+a[0],0)+W.t;
     $('woTotal').textContent='noch '+fmtTime(Math.ceil(tot-done));
     $('woNext').textContent=nx?`Danach: ${nx[3]} · ${fmtTime(nx[0])} · ${Math.round(segWatts(nx,0)*(typeof nx[1]==='object'?1:W.bias))} W`:'Gleich geschafft!';
-    const tw=targetWatts(),dv=S.power-tw,pe=$('woPow');pe.textContent=Math.round(S.power)+' / '+tw+' W';
+    const tw=targetWatts(),dv=S.power-tw,pe=$('woPow');pe.textContent=S.hidePow?'Ziel '+tw+' W':Math.round(S.power)+' / '+tw+' W';
     pe.style.color=Math.abs(dv)<tw*0.06?'#36d07a':dv<0?'#ffcc33':'#ff7a1a';}
   drawWorkout();}
 
@@ -1699,11 +1718,11 @@ function confetti(){const c=$('fx'),x=c.getContext('2d'),W=c.width=innerWidth,H=
 const LAP={act:null,store:null};
 function lapStore(){if(!LAP.store){try{LAP.store=JSON.parse(localStorage.getItem('kalea_laps')||'{}');}catch(e){LAP.store={};}}return LAP.store;}
 function stepLap(cur,dt){let a=LAP.act;
-  if(!a||cur<a.d0-5){LAP.act={d0:Math.floor(Math.max(0,cur)/L)*L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0};return;}
+  if(!a||cur<a.d0-5){const d0=Math.floor(Math.max(0,cur)/L)*L;LAP.act=cur-d0<30?{d0,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0}:null;return;} // mitten eingestiegen: Rundenzeit ab der Ziellinie
   a.t+=dt;a.e+=(T.pedaling?S.power:0)*dt;if(S.hr){a.hr+=S.hr*dt;a.hrT+=dt;}if(S.cadence>0){a.cad+=S.cadence*dt;a.cadT+=dt;}a.vmax=Math.max(a.vmax,S.v);
   if(cur>=a.d0+L){finishLap(a);LAP.act={d0:a.d0+L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0};}}
 function finishLap(a){if(a.t<30)return;
-  const key=WORLD+'_'+ROUTE.id,st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name,world:WORLD,len:L,hist:[]});
+  const key=WORLD+'_'+ROUTE.id+(REV?'_r':''),st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name+(REV?' (umgedreht)':''),world:WORLD,len:L,hist:[]});
   const res={t:Math.round(a.t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,cad:a.cadT>10?Math.round(a.cad/a.cadT):0,
     gain:Math.round(S.climb-a.c0),vmax:a.vmax,kj:Math.round(a.e/1000),kg:S.mass,date:Date.now(),sim:S.sim};
   if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb=res;try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
@@ -1725,7 +1744,7 @@ const ZONES=[{n:'Z1 Regeneration',lo:0,hi:0.55,c:'#9aa3ad'},{n:'Z2 Grundlage',lo
   {n:'Z4 Schwelle',lo:0.90,hi:1.05,c:'#f2c230'},{n:'Z5 VO2max',lo:1.05,hi:1.20,c:'#ff7a1a'},{n:'Z6 Anaerob',lo:1.20,hi:1.50,c:'#e8463c'},{n:'Z7 Sprint',lo:1.50,hi:99,c:'#9b5de5'}];
 function zoneOf(p){const f=p/S.ftp;return ZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
 function recStep(dt){if(REC.ended)return;REC.acc+=dt;if(REC.acc<1)return;REC.acc-=1;
-  const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.dist),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
+  const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.odo),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
 function bestAvg(arr,win){if(arr.length<win)return null;let s=0,b=0;for(let i=0;i<arr.length;i++){s+=arr[i];if(i>=win)s-=arr[i-win];if(i>=win-1)b=Math.max(b,s/win);}return b;}
 function rideSummary(){
   const A=REC.s,n=A.length,P=A.map(x=>x.p);if(!n)return null;
@@ -1757,7 +1776,7 @@ function showStats(final){
   const hist=rideHistory().slice(final?1:0,8);
   el.innerHTML=`<div class="sv-card">
     <div class="sv-head"><div><h2>${final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${ROUTE.name} · ${new Date(REC.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}</p></div>
-      <div class="sv-btns">${final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
+      <div class="sv-btns">${final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
     <div class="sv-body">
       <div class="kpis">${kpi((sum.dist/1000).toFixed(2),'km','Distanz','#490cb8')}${kpi(fmtTime(sum.time),'','Fahrzeit','#f8d74e')}${kpi((sum.avgV*3.6).toFixed(1),'km/h','Ø Tempo','#7ad35a')}
         ${kpi(Math.round(sum.gain),'hm','Höhenmeter','#e8463c')}${kpi(Math.round(sum.avgP),'W','Ø Leistung','#eb567b')}${kpi(Math.round(sum.np),'W','Normalized Power','#f48fa8')}
@@ -1778,7 +1797,7 @@ function showStats(final){
   el.classList.remove('hidden');if(!final)S.paused=true;
   $('svClose').onclick=closeStats;if($('svBack'))$('svBack').onclick=()=>{closeStats();};if($('svEnd'))$('svEnd').onclick=endRide;
   if($('svNew'))$('svNew').onclick=newRide;
-  $('svTcx').onclick=exportTcx;
+  $('svTcx').onclick=exportTcx;$('svFit').onclick=exportFit;
   requestAnimationFrame(()=>{drawSeries(sum);drawZones(sum);drawCurve(sum);drawTrack();});}
 function closeStats(){$('statsView').classList.add('hidden');if(REC.ended){openMenu();return;}S.paused=false;}
 function prepCanvas(c,hgt){const dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=hgt||c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return [x,w,h];}
@@ -1841,6 +1860,34 @@ function exportTcx(){const A=REC.s;if(!A.length)return;const t0=REC.start,iso=t=
   const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Biking"><Id>${iso(0)}</Id><Lap StartTime="${iso(0)}"><TotalTimeSeconds>${sum.time}</TotalTimeSeconds><DistanceMeters>${sum.dist}</DistanceMeters><Calories>${Math.round(sum.kcal)}</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>\n${pts}\n</Track></Lap><Notes>Kalea Ride – ${ROUTE.name} (virtuell)</Notes></Activity></Activities></TrainingCenterDatabase>`;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([xml],{type:'application/vnd.garmin.tcx+xml'}));a.download=`KaleaRide_${new Date(t0).toISOString().slice(0,10)}_${ROUTE.id}.tcx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 
+// FIT-Datei (Garmins Format): Strava erkennt daran eine virtuelle Fahrt (sub_sport = virtual_activity),
+// Garmin Connect übernimmt Leistung, Puls, Trittfrequenz und Höhenmeter
+function fitBytes(){const A=REC.s;if(!A.length)return null;const sum=rideSummary(),T0=Math.round(REC.start/1000)-631065600,out=[],u8=v=>out.push(v&255),
+    u16=v=>{u8(v);u8(v>>8);},u32=v=>{u16(v&0xffff);u16(Math.floor(v/65536)&0xffff);};
+  const defs={},wr={0:u8,2:u8,0x84:u16,0x86:u32,0x8c:u32},inv={0:255,2:255,0x84:0xffff,0x86:0xffffffff,0x8c:0};
+  const def=(loc,glob,fields)=>{defs[loc]=fields;u8(0x40|loc);u8(0);u8(0);u16(glob);u8(fields.length);for(const [n,t] of fields){u8(n);u8(t===0||t===2?1:t===0x84?2:4);u8(t);}};
+  const msg=(loc,vals)=>{u8(loc);defs[loc].forEach(([n,t],i)=>{let v=vals[i];if(v===null||v===undefined||Number.isNaN(v))v=inv[t];wr[t](Math.round(v));});};
+  const r=(v,mx)=>v===null?null:Math.max(0,Math.min(mx,v));
+  def(0,0,[[0,0],[1,0x84],[2,0x84],[3,0x8c],[4,0x86]]);msg(0,[4,255,1,(Date.now()%2147483647)||1,T0]);         // file_id: Aktivität
+  def(1,21,[[253,0x86],[0,0],[1,0]]);msg(1,[T0,0,0]);                                                            // Timer Start
+  def(2,20,[[253,0x86],[2,0x84],[3,2],[4,2],[5,0x86],[6,0x84],[7,0x84]]);                                        // record
+  for(const p of A)msg(2,[T0+p.t,r((p.h+500)*5,65534),p.hr?r(p.hr,254):null,r(p.c,254),r(p.d*100,4294967294),r(p.v*1000,65534),r(p.p,65534)]);
+  const T1=T0+A[A.length-1].t,maxP=Math.max(...A.map(p=>p.p)),maxHr=Math.max(...A.map(p=>p.hr||0));
+  msg(1,[T1,0,4]);                                                                                                 // Timer Stopp
+  const lapF=[[253,0x86],[0,0],[1,0],[2,0x86],[7,0x86],[8,0x86],[9,0x86],[11,0x84],[19,0x84],[20,0x84],[21,0x84],[25,0],[39,0]];
+  const tt=sum.time*1000,dist=sum.dist*100,kcal=Math.round(sum.kcal),avgP=Math.round(sum.avgP||0),asc=Math.round(sum.gain||0);
+  def(3,19,lapF);msg(3,[T1,9,1,T0,tt,tt,dist,kcal,avgP,maxP,asc,2,58]);
+  def(4,18,[[253,0x86],[0,0],[1,0],[2,0x86],[5,0],[6,0],[7,0x86],[8,0x86],[9,0x86],[11,0x84],[16,2],[17,2],[20,0x84],[21,0x84],[22,0x84],[25,0x84],[26,0x84]]);
+  msg(4,[T1,8,1,T0,2,58,tt,tt,dist,kcal,sum.avgHr||null,maxHr||null,avgP,maxP,asc,0,1]);                             // session: Radfahren, virtuell
+  def(5,34,[[253,0x86],[0,0x86],[1,0x84],[2,0],[3,0],[4,0]]);msg(5,[T1,tt,1,0,26,1]);                             // activity
+  const data=new Uint8Array(out),hdr=new Uint8Array(14),dv=new DataView(hdr.buffer);
+  hdr[0]=14;hdr[1]=0x20;dv.setUint16(2,2132,true);dv.setUint32(4,data.length,true);hdr.set([46,70,73,84],8);dv.setUint16(12,fitCrc(hdr.subarray(0,12),0),true);
+  const crc=fitCrc(data,fitCrc(hdr,0)),all=new Uint8Array(14+data.length+2);all.set(hdr);all.set(data,14);all[all.length-2]=crc&255;all[all.length-1]=crc>>8;return all;}
+function fitCrc(b,crc){const T=[0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400];
+  for(const x of b){let t=T[crc&15];crc=(crc>>4)&0x0FFF;crc=crc^t^T[x&15];t=T[crc&15];crc=(crc>>4)&0x0FFF;crc=crc^t^T[(x>>4)&15];}return crc;}
+function exportFit(){const b=fitBytes();if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.ant.fit'}));
+  a.download=`KaleaRide_${new Date(REC.start).toISOString().slice(0,10)}_${ROUTE.id}.fit`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+
 /* ================= Online fahren (MQTT über öffentliche WebSocket-Broker) ================= */
 const NET={client:null,room:null,id:null,host:false,info:null,peers:new Map(),state:'off',hold:false,raceT0:0,fin:null,cd:0,lastPub:0,broker:'',rf:1,rg:0};
 const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
@@ -1871,7 +1918,7 @@ async function netJoin(code,create){
     if(topic===P+'/room')onRoomInfo(m);else if(topic===P+'/ctl')onCtl(m);else if(topic.startsWith(P+'/s/'))onPeerState(m);});
   c.on('reconnect',()=>netStatus('Verbindung unterbrochen – verbinde neu …','busy'));c.on('connect',()=>{if(NET.state!=='off')netStatus('Online · Raum '+NET.room,'ok');});
   c.subscribe([P+'/room',P+'/ctl',P+'/s/+'],{qos:0});
-  if(create){NET.info={host:NET.id,world:WORLD,route:ROUTE.id,routeName:ROUTE.name,mode:$('iNetMode').value,laps:+$('iNetLaps').value,rubber:$('iNetRubber').checked,state:'lobby',v:1};publishRoom();}
+  if(create){NET.info={host:NET.id,world:WORLD,route:ROUTE.id,rev:REV?1:0,routeName:ROUTE.name+(REV?' (umgedreht)':''),mode:$('iNetMode').value,laps:+$('iNetLaps').value,rubber:$('iNetRubber').checked,state:'lobby',v:1};publishRoom();}
   NET.state='on';netStatus('Online · Raum '+NET.room+(create?' (du bist Gastgeber)':''),'ok');
   if(!create)setTimeout(()=>{if(!NET.info&&NET.state==='on')netStatus('Raum '+NET.room+' gefunden? Noch kein Gastgeber – warte …','busy');},4000);
   $('netCode').textContent=NET.room;updateNetUi();try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:NET.host,ts:Date.now()}));}catch(e){}
@@ -1880,10 +1927,11 @@ function publishRoom(){if(NET.client&&NET.host&&NET.info)NET.client.publish(netP
 function netLeave(){if(!NET.client)return;try{NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify({id:NET.id,left:true}));if(NET.host)NET.client.publish(netPrefix()+'/room','',{retain:true});NET.client.end(false);}catch(e){}
   NET.client=null;NET.state='off';NET.hold=false;NET.rf=1;NET.rg=0;for(const p of NET.peers.values())if(p.obj)scene.remove(p.obj);NET.peers.clear();NET.info=null;
   applyBotVis();try{localStorage.removeItem('kalea_net_room');}catch(e){}netStatus('Offline','');$('netBanner').classList.add('hidden');updateNetUi();}
-function sameTrack(m){return m.w===WORLD&&m.r===ROUTE.id;}
+function sameTrack(m){return m.w===WORLD&&m.r===ROUTE.id&&(m.rv||0)===(REV?1:0);}
+function sameRoom(I){return I&&I.world===WORLD&&I.route===ROUTE.id&&(I.rev||0)===(REV?1:0);} // gleiche Strecke und Richtung
 function onRoomInfo(m){if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Gastgeber hat den Raum geschlossen.','bad');NET.info=null;NET.hold=false;updateNetUi();}return;}
   NET.info=m;if(m.host===NET.id)NET.host=true;
-  const same=m.world===WORLD&&m.route===ROUTE.id;
+  const same=sameRoom(m);
   if(!same){netStatus(`Raum ${NET.room} fährt „${m.routeName}“ (${m.world==='ulm'?'Ulm':'Kalea'}) – bitte wechseln.`,'busy');}
   else netStatus('Online · Raum '+NET.room+(NET.host?' (du bist Gastgeber)':'')+' · '+(m.mode==='race'?'Rennen über '+m.laps+(m.laps>1?' Runden':' Runde'):'Gruppenfahrt'+(m.rubber?' mit Gummiband 🪢':'')),'ok');
   if(m.mode==='race'&&m.state==='lobby'&&same&&S.started&&!NET.fin){NET.hold=true;holdAtStart();}
@@ -1901,7 +1949,7 @@ function onPeerState(m){if(!m||!m.id||m.id===NET.id)return;
 function holdAtStart(){if(!S.started)return;S.dist=0;S.v=0;S.lastH=null;KOM.act=null;}
 function netStep(dt,now){
   if(NET.state!=='on')return;
-  {const I=NET.info,lobby=I&&I.mode==='race'&&I.state==='lobby'&&!NET.raceT0&&!NET.cd&&I.world===WORLD&&I.route===ROUTE.id&&S.started;
+  {const I=NET.info,lobby=I&&I.mode==='race'&&I.state==='lobby'&&!NET.raceT0&&!NET.cd&&sameRoom(I)&&S.started;
     if(lobby&&!NET.hold){NET.hold=true;holdAtStart();}
     if(lobby&&now-(NET.lobbyMsg||0)>2000){NET.lobbyMsg=now;status(NET.host?'Rennen: Menü öffnen und „Rennen starten“ drücken, sobald alle da sind.':'Warte auf den Start durch den Gastgeber …');}
     if(!lobby&&NET.lobbyMsg){NET.lobbyMsg=0;status('');}}
@@ -1919,13 +1967,13 @@ function netStep(dt,now){
   netRubber(dt);
   // eigenen Zustand senden (2× pro Sekunde)
   if(NET.client&&now-NET.lastPub>480){NET.lastPub=now;
-    const m={id:NET.id,n:netName(),col:netCol(),w:WORLD,r:ROUTE.id,d:Math.round(S.dist*10)/10,v:+(S.v*NET.rf).toFixed(2),p:Math.round(T.pedaling?S.power:0),wkg:+(S.power/S.mass).toFixed(1),c:Math.round(S.cadence),lap:Math.floor(S.dist/L)+1,fin:NET.fin};
+    const m={id:NET.id,n:netName(),col:netCol(),w:WORLD,r:ROUTE.id,rv:REV?1:0,d:Math.round(S.dist*10)/10,v:+(S.v*NET.rf).toFixed(2),p:Math.round(T.pedaling?S.power:0),wkg:+(S.power/S.mass).toFixed(1),c:Math.round(S.cadence),lap:Math.floor(S.dist/L)+1,fin:NET.fin};
     NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify(m),{qos:0});}
   if(now-(NET.uiT||0)>1000){NET.uiT=now;updateNetUi();}}
 // Gummiband (nur Gruppenfahrt, vom Gastgeber eingeschaltet): Wer hinter der Gruppe ist, kommt pro Meter Tempo etwas
 // weiter voran, wer vorne wegfährt, etwas weniger – so bleiben alle zusammen, auch mit ganz verschiedener Leistung.
 // Jeder rechnet das selbst aus (Abstand zur Gruppenmitte), Trainer-Widerstand und Watt bleiben echt.
-function rubberOn(){const I=NET.info;return NET.state==='on'&&I&&I.mode==='group'&&!!I.rubber&&I.world===WORLD&&I.route===ROUTE.id&&!NET.hold&&!NET.cd;}
+function rubberOn(){const I=NET.info;return NET.state==='on'&&I&&I.mode==='group'&&!!I.rubber&&sameRoom(I)&&!NET.hold&&!NET.cd;}
 function netRubber(dt){let tgt=1,g=0;
   if(rubberOn()&&S.v>0.8){let sum=0,n=0;const now=performance.now();
     for(const p of NET.peers.values()){if(!sameTrack(p)||now-p.recv>6000||p.v<0.8)continue;const gp=p.disp-S.dist;if(Math.abs(gp)>1500)continue;sum+=gp;n++;} // Pause oder weit weg: zählt nicht
@@ -1946,7 +1994,7 @@ function showRaceResult(){const r=raceRanking(),b=$('komBanner');b.classList.rem
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now()+6000;confetti();}
 function netDraftCheck(d){for(const p of NET.peers.values()){if(!p.obj)continue;const g=p.disp-d;if(g>0.6&&g<7)return true;}return false;}
 function updateNetUi(){
-  const on=NET.state==='on',info=NET.info,same=info&&info.world===WORLD&&info.route===ROUTE.id;
+  const on=NET.state==='on',info=NET.info,same=sameRoom(info);
   $('netOff').classList.toggle('hidden',on);$('netOn').classList.toggle('hidden',!on);
   if(!on)return;
   $('netSwitch').classList.toggle('hidden',!info||same);
@@ -1972,7 +2020,8 @@ function wireNet(){
   $('netLeave').onclick=netLeave;$('netStart').onclick=netStartRace;
   $('iNetRubber').checked=pr.rubber!==false;
   $('iNetRubber').onchange=()=>{saveNetPrefs();if(NET.host&&NET.info){NET.info.rubber=$('iNetRubber').checked;publishRoom();onRoomInfo(NET.info);}};
-  $('netSwitch').onclick=()=>{try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:false,ts:Date.now()}));}catch(e){}switchTo(NET.info.world,NET.info.route);};
+  $('netSwitch').onclick=()=>{try{localStorage.setItem('kalea_net_room',JSON.stringify({room:NET.room,host:false,ts:Date.now()}));}catch(e){}
+    {const st=revStore(),k=NET.info.world+'_'+NET.info.route;if(NET.info.rev)st[k]=1;else delete st[k];try{localStorage.setItem('kalea_rev',JSON.stringify(st));}catch(e){}}switchTo(NET.info.world,NET.info.route);};
   $('netCopy').onclick=()=>{const t=NET.room;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('netCopy').textContent='Kopiert ✓';},()=>{});};
   updateNetUi();
   // nach einem Routenwechsel automatisch wieder in den Raum
@@ -2263,7 +2312,7 @@ function updateHud(now){
   if(now-hudT<120)return;hudT=now;
   const r=roadAt(S.dist);
   $('hPow').textContent=Math.round(T.pedaling?S.power:0);$('hCad').textContent=Math.round(S.cadence);$('hSpd').textContent=(S.v*3.6).toFixed(1);$('hSpdL').textContent=NET.rf!==1?(NET.rf>1?'🪢 Tempo +':'🪢 Tempo −')+Math.round(Math.abs(NET.rf-1)*100)+' %':'Tempo';
-  $('hHr').textContent=S.hr?S.hr:'–';$('hDist').textContent=(S.dist/1000).toFixed(2);$('hTime').textContent=fmtTime(S.elapsed);$('hElev').textContent=Math.round(S.climb);
+  $('hHr').textContent=S.hr?S.hr:'–';$('hDist').textContent=(S.odo/1000).toFixed(2);$('hTime').textContent=fmtTime(S.elapsed);$('hElev').textContent=Math.round(S.climb);
   const gp=r.grade*100,ge=$('grade'),ef=gradeAt(S.dist)*100,fmt=x=>(x>=0?'':'−')+Math.abs(x).toFixed(1)+'%';
   ge.innerHTML=fmt(gp)+(S.smooth&&Math.abs(ef-gp)>0.4?`<small>gefühlt ${fmt(ef)}</small>`:'');
   ge.style.background=gp>8?'#ff8a80':gp>4?'#ffb35c':gp>1?'#ffe98a':gp<-1?'#a8e3ff':'#fffaf0';
@@ -2271,11 +2320,12 @@ function updateHud(now){
   if(!S.vshift&&!S.sim)updateRealGear(now);
   updateKomHud(now);if(now-ridersT>500){ridersT=now;updateRiders();drawProfile();updateErgUi();updateWorkoutHud();}
 }
+function applyHidePow(){$('hud').classList.toggle('nopow',S.hidePow);ridersT=0;}
 function updateRiders(){
   const rows=BOTS.filter(b=>b.active).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
   if(NET.state==='on')for(const q of NET.peers.values())if(q.obj)rows.push({n:'🌐 '+q.n,gap:q.disp-S.dist,w:q.wkg,net:true});
   rows.sort((a,b)=>b.gap-a.gap);
-  $('riders').innerHTML=(rubberOn()?`<div class="r rb"><span>🪢 Gummiband</span><span class="g">${NET.rf>1.005?'holt auf':NET.rf<0.995?'wartet':'zusammen'}</span></div>`:'')+rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?r.w.toFixed(1)+' W/kg':(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
+  $('riders').innerHTML=(rubberOn()?`<div class="r rb"><span>🪢 Gummiband</span><span class="g">${NET.rf>1.005?'holt auf':NET.rf<0.995?'wartet':'zusammen'}</span></div>`:'')+rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?(S.hidePow?'':r.w.toFixed(1)+' W/kg'):(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
 }
 function drawProfile(){
   const c=$('profile'),dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=c.clientHeight;
@@ -2812,7 +2862,7 @@ function frame(now){
 }
 
 /* ================= UI-Verdrahtung ================= */
-function openMenu(){$('setup').classList.remove('hidden');if(S.started)S.paused=true;requestAnimationFrame(drawRouteCards);}
+function openMenu(){updateJumpUi();$('setup').classList.remove('hidden');if(S.started)S.paused=true;requestAnimationFrame(drawRouteCards);}
 // Vollbild (Fullscreen-API; das iPhone erlaubt Webseiten kein echtes Vollbild)
 function fsActive(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
 function toggleFullscreen(){const d=document.documentElement,req=d.requestFullscreen||d.webkitRequestFullscreen;
@@ -2829,7 +2879,7 @@ function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp
   S.rings=$('iRings').value;S.cassette=$('iCas').value;S.gearMode=$('iGearMode').value;S.repeat=+$('iRepeat').value;S.smooth=+$('iSmooth').value;applyQuality();rebuildGears();saveSettings();sendResistance(true);}
 function startRide(sim){
   readInputs();S.sim=sim;$('simBox').classList.toggle('hidden',!sim);updateGear();
-  if(!S.started){S.started=true;S.riding=true;const r=roadAt(-7);camPos.set(r.x,r.h+3,r.z);camLook.set(r.x,r.h,r.z);}
+  if(!S.started){S.started=true;S.riding=true;if(START_AT&&!(NET.state==='on'&&NET.info&&NET.info.mode==='race')){S.dist=START_AT;placeBotsStart();}const r=roadAt(S.dist-7);camPos.set(r.x,r.h+3,r.z);camLook.set(r.x,r.h,r.z);}
   $('hud').classList.remove('hidden');$('bStart').textContent='Weiterfahren';$('bSim').classList.add('hidden');$('bStats').classList.remove('hidden');$('bEnd').classList.remove('hidden');closeMenu();
   if(!sim&&!T.dev)status('Kein Trainer verbunden – Menü (☰) öffnen oder „Ohne Trainer testen“ wählen.');
   else if(!sim&&!T.cp)status('Trainer liefert nur Daten, Widerstand kann nicht gesteuert werden.');else status('');
@@ -2845,7 +2895,21 @@ function buildRouteMenu(){
   $('routeList').innerHTML=list.map(r=>`<button class="route ${r.id===ROUTE.id?'on':''}" data-id="${r.id}"><b>${r.name}</b><span class="rd">${r.desc}</span>
     <span class="chips"><span class="chip">${(r.len/1000).toFixed(1)} km</span><span class="chip">${Math.round(r.gain)} hm</span>${r.climbs!==null?`<span class="chip">${r.climbs?r.climbs+(r.climbs>1?' Anstiege':' Anstieg'):'flach'}</span>`:''}</span><canvas></canvas></button>`).join('');
   document.querySelectorAll('.route').forEach(b=>{b.onclick=()=>{if(b.dataset.id!==ROUTE.id)switchTo(WORLD,b.dataset.id);};});
-  ROUTE_H=list.map(r=>r.h);requestAnimationFrame(drawRouteCards);}
+  ROUTE_H=list.map(r=>r.id===ROUTE.id?Array.from({length:Math.ceil(N/3)},(_,k)=>RH[k*3]):r.h);requestAnimationFrame(drawRouteCards);
+  // Richtung und Einstieg
+  $('iDir').value=REV?'1':'0';
+  $('iDir').onchange=()=>{const st=revStore();if($('iDir').value==='1')st[revKey()]=1;else delete st[revKey()];try{localStorage.setItem('kalea_rev',JSON.stringify(st));}catch(e){}
+    switchTo(WORLD,ROUTE.id);};
+  const opts=[[0,'Start/Ziel']];for(const c of CLIMBS)opts.push([Math.max(0,c.start-250),`vor ${c.name} – km ${(c.start/1000).toFixed(1)} (${(c.len/1000).toFixed(1)} km, Ø ${(+c.avg).toFixed(1)} %)`]);
+  for(let k=5000;k<L-1000;k+=5000)opts.push([k,`bei km ${k/1000}`]);
+  opts.sort((a,b)=>a[0]-b[0]);
+  $('iStartAt').innerHTML=opts.map(([d,t])=>`<option value="${Math.round(d)}">${t}</option>`).join('');$('iStartAt').value=String(Math.round(START_AT));
+  $('iStartAt').onchange=()=>{START_AT=+$('iStartAt').value;updateJumpUi();};updateJumpUi();}
+// Einstieg: vor dem Losfahren gilt er für den Start, während einer Fahrt springt man mit „Jetzt dorthin“
+function updateJumpUi(){$('bJump').classList.toggle('hidden',!S.started);$('vStartAt').textContent=S.started?'Fahrt läuft – mit „Jetzt dorthin“ springst du an die Stelle':'gilt beim Losfahren';}
+function jumpTo(d){if(NET.state==='on'&&NET.info&&NET.info.mode==='race'){toast('Im Rennen geht das nicht');return;}
+  S.dist=Math.floor(Math.max(0,S.dist)/L)*L+d;S.lastH=null;KOM.act=null;LAP.act=null;placeBotsStart();
+  const r=roadAt(S.dist-7);camPos.set(r.x,r.h+3,r.z);camLook.set(r.x,r.h,r.z);toast('📍 Weiter bei km '+(d/1000).toFixed(1));closeMenu();}
 // Mini-Höhenprofile der Routen (nur zeichenbar, wenn das Menü sichtbar ist)
 let ROUTE_H=[];
 function drawRouteCards(){document.querySelectorAll('.route').forEach((b,k)=>{
@@ -2902,7 +2966,8 @@ function wireUi(){
   $('iErgW').onchange=()=>{S.ergW=clamp(+$('iErgW').value||200,50,1200);saveSettings();updateErgUi();sendResistance(true);};
   $('iErg').onchange=()=>{S.erg=$('iErg').checked;updateErgUi();sendResistance(true);};
   $('bWo').onclick=()=>{W.ergOn=$('iWoErg').checked;startWorkout($('iWo').value);if(!S.started)startRide(!T.dev);else closeMenu();};
-  $('woStop').onclick=stopWorkout;
+  $('woStop').onclick=stopWorkout;$('woSkip').onclick=skipWorkoutSeg;$('bJump').onclick=()=>jumpTo(START_AT);
+  $('iHidePow').checked=S.hidePow;$('iHidePow').onchange=()=>{S.hidePow=$('iHidePow').checked;saveSettings();applyHidePow();};applyHidePow();
   $('ergPlus').onclick=()=>ergNudge(1);$('ergMinus').onclick=()=>ergNudge(-1);
   $('ergToggle').onclick=()=>{if(W.active&&!W.done)W.ergOn=!W.ergOn;else{S.erg=!S.erg;$('iErg').checked=S.erg;}updateErgUi();sendResistance(true);};
   addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;const k=e.key;
@@ -2914,6 +2979,8 @@ function wireUi(){
     else if(k==='m'||k==='M')cycleMap();
     else if(k==='f'||k==='F')toggleFullscreen();
     else if(k==='t'||k==='T')toggleMute();
+    else if(k==='p'||k==='P'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
+    else if(k==='n'||k==='N')skipWorkoutSeg();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}
     else if(k==='Escape'){if(!$('devDlg').classList.contains('hidden')){closeDevices();return;}if(!$('statsView').classList.contains('hidden')){closeStats();return;}if($('setup').classList.contains('hidden'))openMenu();else if(S.started)closeMenu();}});
@@ -3106,7 +3173,7 @@ function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.i
 // alles, was beim Bauen einer Welt angelegt wird, wieder zurücksetzen (Lichter und Kamera bleiben)
 function clearWorld(){
   for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
-  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];
+  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
   RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
@@ -3120,7 +3187,7 @@ async function buildWorld(){
 // Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
 function resetRide(){
   if(W.active)stopWorkout();
-  Object.assign(S,{dist:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
+  Object.assign(S,{dist:0,odo:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
   Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
   placeBotsStart();
