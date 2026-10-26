@@ -117,7 +117,7 @@ table.kt small{display:block;color:var(--mut);font-size:11px}
 #ergBox .ev small{font-size:11px;color:var(--mut);margin-left:3px}#ergBox .ev button{width:42px;font-size:20px;padding:0}
 #ergSub{font-size:11.5px;color:var(--mut);margin-bottom:6px}#ergToggle{width:100%;padding:4px}
 #woBox{position:absolute;top:84px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 540px));min-width:320px;padding:7px 12px;pointer-events:auto}
-#woBox .wt{display:flex;gap:10px;align-items:center}#woBox .wt b{flex:1}#woBox .wt span{color:var(--mut);font-size:12.5px}#woBox .wt button{padding:0 8px}
+#woBox .wt{display:flex;gap:10px;align-items:center}#woBox .wt b{flex:1}#woBox .wt span{color:var(--mut);font-size:12.5px}#woBox .wt button{padding:0 8px}#hud.nopow #powTile{display:none}
 #woBox .wm{display:flex;gap:14px;margin:4px 0}#woBox .wm>div:first-child{flex:1}#woBox label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:600}
 #woSeg{font-size:17px;font-weight:700}#woLeft,#woPow{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}.wl{text-align:right}
 #woChart{width:100%;height:46px;display:block;border-radius:8px;background:#f3efe6;border:2px solid var(--ink)}#woNext{font-size:12.5px;color:var(--mut);margin-top:4px}#woNext button{padding:0 8px;font-size:12px;margin-left:6px}
@@ -332,7 +332,7 @@ body.realshift .vonly{display:none!important}
 <div id="hud" class="hidden">
   <button id="menuBtn" title="Menü (Esc)">☰</button><span id="clickHud" class="hidden"></span><button id="statBtn" title="Statistik (I)">📊</button><button id="fsBtn" title="Vollbild (F)"><svg class="fs-in" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="fs-out" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><button id="sndBtn" title="Ton aus (T)">🔊</button>
   <div class="top">
-    <div class="m big"><span id="hPow">0</span><small>W</small><label>Leistung</label></div>
+    <div class="m big" id="powTile"><span id="hPow">0</span><small>W</small><label>Leistung</label></div>
     <div class="m"><span id="hCad">0</span><small>rpm</small><label>Kadenz</label></div>
     <div class="m"><span id="hSpd">0.0</span><small>km/h</small><label id="hSpdL">Tempo</label></div>
     <div class="m"><span id="hHr">–</span><small>bpm</small><label>Puls</label></div>
@@ -362,7 +362,7 @@ body.realshift .vonly{display:none!important}
   </div>
   </div>
   <div id="mapBox"><canvas id="mapC"></canvas><button id="mapMode" title="Karte umschalten (M)">Umgebung</button></div>
-  <div id="woBox" class="hidden"><div class="wt"><b id="woName"></b><span id="woTotal"></span><button id="woStop" title="Workout beenden">✕</button></div>
+  <div id="woBox" class="hidden"><div class="wt"><b id="woName"></b><span id="woTotal"></span><button id="woSkip" title="Abschnitt überspringen (N)">⏭</button><button id="woStop" title="Workout beenden">✕</button></div>
     <div class="wm"><div><label>Intervall</label><div id="woSeg"></div></div><div class="wl"><label>Rest</label><div id="woLeft">0:00</div></div><div class="wl"><label>Ist / Ziel</label><div id="woPow">–</div></div></div>
     <canvas id="woChart"></canvas><div id="woNext"></div></div>
   <div id="komBanner" class="hidden"></div>
@@ -395,6 +395,10 @@ body.realshift .vonly{display:none!important}
           <button class="world" data-world="kalea"><i>🌋</i><span>Kalea<small>Vulkaninsel mit Palmen, Strand &amp; Krater</small></span></button>
         </div>
         <div id="routeList" class="routes"></div>
+        <div class="grid">
+          <label>Richtung<select id="iDir"><option value="0">Normal</option><option value="1">Umgedreht (andersherum fahren)</option></select><small>Start/Ziel bleibt gleich, baut die Strecke neu</small></label>
+          <label>Einstieg<select id="iStartAt"></select><small id="vStartAt">gilt beim Losfahren</small><button id="bJump" class="hidden">Jetzt dorthin</button></label>
+        </div>
         <div id="osmBox" class="osmbox"><div><b>🏠 Echte Häuser aus OpenStreetMap</b> <span id="vOsmBadge" class="obadge">aus</span><small id="vOsm"></small></div><button id="bOsm">Echte Häuser laden</button><button id="bOsmDel" class="hidden">Löschen</button></div>
         <p class="hint">Ein Wechsel baut die Strecke neu – verbundene Geräte bleiben verbunden. Eine angefangene Fahrt landet in „Frühere Fahrten“.</p>
       </section>
@@ -456,6 +460,7 @@ body.realshift .vonly{display:none!important}
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
+        <label class="chk"><input type="checkbox" id="iHidePow"> Ohne Wattanzeige fahren – Leistung im Bild ausblenden (Taste P); Workouts zeigen nur das Ziel</label>
       </details>
       <details><summary>👥 Mitfahrer &amp; Leben</summary>
         <div class="grid">
@@ -483,7 +488,7 @@ body.realshift .vonly{display:none!important}
     </div>
     <footer class="cfoot">
       <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button><button id="bFs" title="Vollbild (F)">Vollbild</button>
-      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · F Vollbild · T Ton · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
+      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera · M Karte · E ERG · F Vollbild · T Ton · P Watt ein/aus · N nächstes Intervall · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
     </footer>
   </div>
 </div>

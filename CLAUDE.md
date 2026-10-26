@@ -66,8 +66,9 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Tempo-Gefühl im Bild:** Sichtfeld weitet sich (`updateCamera`), Kamera rubbelt leicht, Comic-Speed-Linien ab
   ca. 32 km/h im Konturen-Shader (`speedLines`, nur mit Comic-Konturen). Lautstärken `S.sndBike`,
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
-- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (richtet sich nach `S.p30` = ~30-s-Mittel deiner
-  Leistung, bleibt per Gummiband in deiner Nähe, wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
+- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (im Modus `me` Tempo-Regelung: fährt dein Tempo und
+  hält ihren Platz `b.off` ±5 m in der Gruppe, Leistung daraus berechnet, max. ~1,6 × deine W/kg – Watt-Nachfahren war mit
+  Windschatten immer zu schnell; bei `fixed` nach `S.botWkg`; wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
   dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `solo` (ohne Gruppe, nur langsame und schnelle Fahrer) / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
   `ONC` auf der linken Straßenhälfte. Statische Körperteile jedes Fahrers sind in `makeRider` zu einem Mesh
   zusammengefasst (Zeichenaufrufe sparen).
@@ -80,7 +81,17 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
   Bergwertung/Runde mit Gummiband (`a.rb`) zählt nicht als Bestzeit.
-- **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung.
+- **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung. Wer mitten in der
+  Runde einsteigt, bekommt die Rundenzeit erst ab der Ziellinie.
+- **Richtung & Einstieg** (Menü bei den Routen): `REV` je Route in `kalea_rev` – `reverseArrays` dreht RX/RZ/RH/RNAME
+  (Start bleibt Index 0), Anstiege dann per `detectClimbs` (Ulm: Name nach Straße, eigene KOM-/Runden-Schlüssel mit `_r`);
+  online zählt die Richtung mit (`sameTrack`/`sameRoom`). `START_AT` = Einstieg (vor einem Anstieg oder alle 5 km), gilt beim
+  Losfahren; während der Fahrt springt „Jetzt dorthin“ (`jumpTo`). Gefahrene Strecke ist `S.odo` (HUD, Statistik, Export),
+  `S.dist` ist die Position auf der Runde.
+- **Ohne Wattanzeige** (`S.hidePow`, Taste P): blendet Leistung/W·kg im HUD aus, Workouts zeigen nur das Ziel.
+  **Workouts:** ⏭ bzw. Taste N überspringt den aktuellen Abschnitt (`skipWorkoutSeg`).
+- **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
+  virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
@@ -130,7 +141,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, W/S Testleistung, Esc Menü.
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, N nächstes
+  Workout-Intervall, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
 - Attribution erhalten: Karten-/Gebäudedaten © OpenStreetMap-Mitwirkende (ODbL), Höhen EU-DEM (Copernicus; über
