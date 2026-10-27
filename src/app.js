@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -41,9 +41,9 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
-  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;
+  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;
   if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,learned:Z.learned}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -1747,7 +1747,7 @@ function recStep(dt){if(REC.ended)return;REC.acc+=dt;if(REC.acc<1)return;REC.acc
   const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.odo),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
 function bestAvg(arr,win){if(arr.length<win)return null;let s=0,b=0;for(let i=0;i<arr.length;i++){s+=arr[i];if(i>=win)s-=arr[i-win];if(i>=win-1)b=Math.max(b,s/win);}return b;}
 // Die laufende Fahrt als „Fahrt-Objekt“ – gespeicherte Fahrten haben dieselbe Form (s. saveRide/rideLoad)
-function curRide(){return {id:REC.start,start:REC.start,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
+function curRide(){return {id:REC.start,start:REC.start,sim:!!S.sim,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
 function rideSummary(R){R=R||curRide();
   const A=R.s,n=A.length,P=A.map(x=>x.p),ftp=R.ftp||S.ftp;if(!n)return null;
   const mov=A.filter(x=>x.v>0.5).length,dist=Math.max(0,A[n-1].d-A[0].d+(A[0].d>0?0:0));
@@ -1763,7 +1763,7 @@ function rideSummary(R){R=R||curRide();
 // Fahrten: Übersicht in localStorage (kalea_rides, neueste zuerst), alle Messwerte in IndexedDB (ride_<id>)
 const RIDES_MAX=500;
 function saveRideHistory(sum,R){R=R||curRide();if(!sum)return;try{const h=rideHistory().filter(e=>e.id!==R.id);
-  h.unshift({id:R.id,date:R.start,world:R.world,route:R.name,rid:R.route,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV,hr:Math.round(sum.avgHr||0)});
+  h.unshift({id:R.id,date:R.start,world:R.world,route:R.name,rid:R.route,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV,hr:Math.round(sum.avgHr||0),sim:R.sim?1:0,mmp:mmpOf(R.s.map(x=>x.p))});
   h.sort((a,b)=>b.date-a.date);const drop=h.slice(RIDES_MAX);for(const e of drop)if(e.id)idbDel('ride_'+e.id);
   localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,RIDES_MAX)));}catch(e){}
   idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,laps:R.laps,koms:R.koms,s:R.s.slice()});}
@@ -1771,9 +1771,35 @@ async function rideLoad(id){const r=await idbGet('ride_'+id);return r&&r.s?r:nul
 async function rideDelete(id){try{localStorage.setItem('kalea_rides',JSON.stringify(rideHistory().filter(e=>e.id!==id)));}catch(e){}await idbDel('ride_'+id);}
 // Fenster schließen/App wechseln mitten in der Fahrt: Fahrt trotzdem sichern (wird beim Weiterfahren überschrieben)
 function autosaveRide(){if(!REC.ended&&REC.s.length>=60)saveRideHistory(rideSummary());}
+/* ---- FTP automatisch erkennen ----
+   Wie Garmin und früher Zwift: 95 % der besten 20 min. Dazu wie intervals.icu/heutiges Zwift ein Leistungskurven-Modell:
+   aus den besten Leistungen über 3–20 min (letzte 6 Wochen) Critical Power schätzen (Arbeit = CP·t + W'), FTP ≈ CP –
+   nur, wenn die Kurve nach echten harten Anstrengungen aussieht. Fahrten im Testmodus zählen nicht. */
+const MMP_D=[180,300,480,600,900,1200,1800,2700,3600],FTP_DAYS=42;
+function mmpOf(P){return MMP_D.map(w=>{const b=bestAvg(P,w);return b===null?0:Math.round(b);});}
+function estimateFtp(cur){const now=Date.now(),env=MMP_D.map(()=>0),from=MMP_D.map(()=>0);
+  const use=(m,date)=>m.forEach((v,i)=>{if(v>env[i]){env[i]=v;from[i]=date;}});
+  for(const h of rideHistory())if(h.mmp&&!h.sim&&now-h.date<FTP_DAYS*864e5)use(h.mmp,h.date);
+  if(cur&&!cur.sim&&cur.s.length)use(mmpOf(cur.s.map(x=>x.p)),cur.start);
+  const at=t=>env[MMP_D.indexOf(t)],c=[];
+  if(at(1200))c.push({w:0.95*at(1200),why:`95 % deiner besten 20 min (${at(1200)} W)`,date:from[MMP_D.indexOf(1200)]});
+  if(at(3600))c.push({w:at(3600),why:`deine beste Stunde (${at(3600)} W)`,date:from[MMP_D.indexOf(3600)]});
+  const pts=MMP_D.map((t,i)=>[t,env[i]]).filter(([t,p])=>t<=1200&&p>0);
+  if(pts.length>=4&&at(1200)){const n=pts.length;let sx=0,sy=0,sxx=0,sxy=0;for(const [t,p] of pts){const w=p*t;sx+=t;sy+=w;sxx+=t*t;sxy+=t*w;}
+    const cp=(n*sxy-sx*sy)/(n*sxx-sx*sx),wp=(sy-cp*sx)/n;let ss=0,st=0;const my=sy/n;for(const [t,p] of pts){const w=p*t;ss+=(w-cp*t-wp)**2;st+=(w-my)**2;}
+    // plausibel nur bei echter Ausbelastung: W' 6–30 kJ, 3 min deutlich über CP, Modell passt gut
+    if(wp>6000&&wp<30000&&at(180)>1.2*cp&&1-ss/st>0.995&&cp<1.05*at(1200))c.push({w:cp,why:`deiner Leistungskurve 3–20 min (CP ${Math.round(cp)} W)`,date:from[MMP_D.indexOf(180)]});}
+  if(!c.length)return null;const b=c.sort((a,b)=>b.w-a.w)[0];return {w:Math.round(b.w),why:b.why,date:b.date};}
+// nach einer Fahrt: neue FTP vorschlagen bzw. übernehmen (nur nach oben, wie Garmin/Zwift)
+function checkFtp(R){if(S.ftpAuto==='off')return null;const e=estimateFtp(R);if(!e||e.w<S.ftp+3||e.w<S.ftp*1.01)return null;
+  if(S.ftpAuto==='auto'){const old=S.ftp;S.ftp=e.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();return {...e,old,done:true};}
+  if(S.ftpNo&&e.w<=S.ftpNo+2)return null; // diesen Wert schon abgelehnt
+  return {...e,old:S.ftp};}
+function updateFtpUi(){const e=estimateFtp(),el=$('vFtpEst');if(!el)return;
+  el.innerHTML=e?`Aus deinen Fahrten der letzten 6 Wochen geschätzt: <b>${e.w} W</b> (${e.why})`:'Noch keine Schätzung – dafür braucht es mindestens eine harte Fahrt mit Leistungsmesser (z. B. 20 min zügig).';}
 function rideHistory(){try{return JSON.parse(localStorage.getItem('kalea_rides')||'[]');}catch(e){return [];}}
 function endRide(){if(!REC.s.length){status('Noch keine Daten – erst ein Stück fahren.');return;}
-  REC.ended=true;S.riding=false;S.paused=true;S.v=0;const sum=rideSummary();saveRideHistory(sum);sendResistance(true);
+  REC.ended=true;S.riding=false;S.paused=true;S.v=0;const sum=rideSummary();FTPNEW=checkFtp(curRide());saveRideHistory(sum);sendResistance(true);
   if(typeof netEndRide==='function')netEndRide();
   $('bStart').textContent='Neue Fahrt';$('bStart').onclick=newRide;$('bEnd').classList.add('hidden');showStats(true);}
 function kpi(v,u,l,c){return `<div class="kpi" style="--kc:${c}"><b>${v}<small>${u}</small></b><span>${l}</span></div>`;}
@@ -1787,7 +1813,8 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   el.innerHTML=`<div class="sv-card">
     <div class="sv-head"><div><h2>${arch?'Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE'):final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${R.name} · ${new Date(R.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:arch?'numeric':undefined})}${arch?' · '+new Date(R.start).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':''}</p></div>
       <div class="sv-btns">${arch?'<button id="svList" class="primary">Alle Fahrten</button><button id="svDel">Löschen</button>':final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
-    <div class="sv-body">
+    <div class="sv-body">${!arch&&final&&FTPNEW?`<div class="ftpnew">💪 <b>${FTPNEW.done?'FTP aktualisiert':'Neue FTP erkannt'}: ${FTPNEW.w} W</b> (bisher ${FTPNEW.old} W) – aus ${FTPNEW.why}.
+        ${FTPNEW.done?'':'<button id="ftpYes" class="primary">Übernehmen</button><button id="ftpNo">Nein danke</button>'}</div>`:''}
       <div class="kpis">${kpi((sum.dist/1000).toFixed(2),'km','Distanz','#490cb8')}${kpi(fmtTime(sum.time),'','Fahrzeit','#f8d74e')}${kpi((sum.avgV*3.6).toFixed(1),'km/h','Ø Tempo','#7ad35a')}
         ${kpi(Math.round(sum.gain),'hm','Höhenmeter','#e8463c')}${kpi(Math.round(sum.avgP),'W','Ø Leistung','#eb567b')}${kpi(Math.round(sum.np),'W','Normalized Power','#f48fa8')}
         ${kpi(wkg.toFixed(2),'W/kg','Ø Watt pro kg','#b06fe0')}${kpi(Math.round(sum.tss),'','TSS · IF '+sum.IF.toFixed(2),'#3e8fe0')}${kpi(Math.round(sum.kcal),'kcal','Energie ('+Math.round(sum.kj)+' kJ)','#ff8fb8')}
@@ -1810,9 +1837,11 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   if($('svList'))$('svList').onclick=()=>{closeStats();$('ridesDet').open=true;renderRides();$('ridesDet').scrollIntoView({block:'start'});};
   if($('svDel'))$('svDel').onclick=async()=>{const b=$('svDel');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen?';return;}await rideDelete(R.id);closeStats();renderRides();toast('Fahrt gelöscht');};
   wireHistRows(el);
+  if($('ftpYes'))$('ftpYes').onclick=()=>{S.ftp=FTPNEW.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();$('ftpYes').parentElement.innerHTML=`💪 <b>FTP auf ${S.ftp} W gesetzt.</b> Zonen, Workouts und TSS richten sich ab jetzt danach.`;FTPNEW=null;};
+  if($('ftpNo'))$('ftpNo').onclick=()=>{S.ftpNo=FTPNEW.w;saveSettings();$('ftpNo').parentElement.remove();FTPNEW=null;};
   $('svTcx').onclick=()=>exportTcx(R);$('svFit').onclick=()=>exportFit(R);
   requestAnimationFrame(()=>{drawSeries(sum,R);drawZones(sum);drawCurve(sum,R);drawTrack(R);});}
-let SVR=null; // die gerade angezeigte Fahrt
+let SVR=null,FTPNEW=null; // die gerade angezeigte Fahrt · neu erkannte FTP nach der letzten Fahrt
 function closeStats(){$('statsView').classList.add('hidden');const arch=SVR&&SVR.id!==REC.start;SVR=null;if(REC.ended||arch||!S.started){openMenu();return;}S.paused=false;}
 // Liste der Fahrten (Statistik und Menü „Meine Fahrten“)
 function histRows(list){return '<tr><th>Datum</th><th>Route</th><th>km</th><th>Zeit</th><th>hm</th><th>Ø W</th></tr>'+list.map(h=>`<tr${h.id?` data-ride="${h.id}" class="link"`:''}><td>${new Date(h.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})}</td><td>${h.route}${h.id?'':' <small>(nur Übersicht)</small>'}</td><td>${(h.dist/1000).toFixed(1)}</td><td>${fmtTime(h.time)}</td><td>${Math.round(h.gain||0)}</td><td>${h.avgP}</td></tr>`).join('');}
@@ -2102,7 +2131,7 @@ async function setupTrainer(){
     const cps=await server.getPrimaryService(0x1818),ch=await cps.getCharacteristic(0x2A63);
     await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCPS(e.target.value));T.mode='cps';T.cp=null;
   }
-  T.retries=0;T.lastData=performance.now();
+  T.retries=0;T.lastData=performance.now();rememberDev('trainer',T.dev);
   setDot('Trainer','on',(T.dev.name||'Trainer')+(T.cp?' · steuerbar (FTMS)':' · nur Leistungsdaten'));status('');
 }
 async function onTrainerLost(){T.cp=null;setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
@@ -2151,12 +2180,13 @@ setInterval(()=>sendResistance(false),400);
 // ---- Trittfrequenz-Sensor (optional, Cycling Speed & Cadence) ----
 const CS={dev:null,crank:null};
 async function connectCad(){if(!navigator.bluetooth)return;
-  try{setDot('Cad','busy','Gerät auswählen …');CS.dev=await navigator.bluetooth.requestDevice({filters:[{services:['cycling_speed_and_cadence']}]});
+  try{setDot('Cad','busy','Gerät auswählen …');CS.dev=await navigator.bluetooth.requestDevice({filters:[{services:['cycling_speed_and_cadence']}]});await setupCad();
+  }catch(e){CS.dev=null;setDot('Cad','off','Nicht verbunden');}}
+async function setupCad(){
     const sv=await CS.dev.gatt.connect(),svc=await sv.getPrimaryService('cycling_speed_and_cadence'),ch=await svc.getCharacteristic('csc_measurement');
     await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCSC(e.target.value));
-    CS.dev.addEventListener('gattserverdisconnected',()=>{setDot('Cad','off','Getrennt');CS.dev=null;CS.crank=null;});
-    setDot('Cad','on',CS.dev.name||'Trittfrequenz-Sensor');
-  }catch(e){CS.dev=null;setDot('Cad','off','Nicht verbunden');}}
+    if(!CS.dev._kl){CS.dev._kl=1;CS.dev.addEventListener('gattserverdisconnected',()=>{setDot('Cad','off','Getrennt');CS.dev=null;CS.crank=null;});}
+    setDot('Cad','on',CS.dev.name||'Trittfrequenz-Sensor');rememberDev('cad',CS.dev);}
 function parseCSC(dv){try{const f=dv.getUint8(0);let o=1;if(f&1)o+=6;
   if(f&2){const rev=dv.getUint16(o,true),tm=dv.getUint16(o+2,true),now=performance.now();
     if(CS.crank){const dr=(rev-CS.crank.rev+65536)%65536,dt=((tm-CS.crank.tm+65536)%65536)/1024;
@@ -2168,12 +2198,65 @@ function parseCSC(dv){try{const f=dv.getUint8(0);let o=1;if(f&1)o+=6;
 // ---- Pulsgurt ----
 const HR={dev:null};
 async function connectHr(){if(!navigator.bluetooth)return;
-  try{setDot('Hr','busy','Gerät auswählen …');HR.dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+  try{setDot('Hr','busy','Gerät auswählen …');HR.dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});await setupHr();
+  }catch(e){HR.dev=null;setDot('Hr','off','Nicht verbunden');}}
+async function setupHr(){
     const s=await HR.dev.gatt.connect(),svc=await s.getPrimaryService('heart_rate'),ch=await svc.getCharacteristic('heart_rate_measurement');
     await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value,f=v.getUint8(0);S.hr=f&1?v.getUint16(1,true):v.getUint8(1);});
-    HR.dev.addEventListener('gattserverdisconnected',()=>{setDot('Hr','off','Getrennt');HR.dev=null;S.hr=0;});
-    setDot('Hr','on',HR.dev.name||'Pulsgurt');
-  }catch(e){HR.dev=null;setDot('Hr','off','Nicht verbunden');}}
+    if(!HR.dev._kl){HR.dev._kl=1;HR.dev.addEventListener('gattserverdisconnected',()=>{setDot('Hr','off','Getrennt');HR.dev=null;S.hr=0;});}
+    setDot('Hr','on',HR.dev.name||'Pulsgurt');rememberDev('hr',HR.dev);}
+
+// ---- Geräte merken und beim Start selbst verbinden ----
+// Web Bluetooth zeigt beim ersten Mal immer ein Auswahlfenster. Danach liefert navigator.bluetooth.getDevices() die erlaubten
+// Geräte; sobald eines funkt (watchAdvertisements), verbindet die App ohne Zutun. Chrome braucht dafür ggf. eine Einstellung.
+const AUTO={state:'',busy:new Set()};
+function devStore(){try{return JSON.parse(localStorage.getItem('kalea_devs')||'{}');}catch(e){return {};}}
+function rememberDev(role,dev){if(!dev)return;const st=devStore(),e={id:dev.id,name:dev.name||''};
+  if(role==='click'){st.click=(st.click||[]).filter(x=>x.id!==dev.id&&!(x.name===e.name&&x.id===''));st.click.push(e);st.click=st.click.slice(-2);}else st[role]=e;
+  try{localStorage.setItem('kalea_devs',JSON.stringify(st));}catch(x){}checkAutoDone();}
+function rememberedList(){const st=devStore(),w=[];if(st.trainer)w.push(['trainer',st.trainer]);for(const c of st.click||[])w.push(['click',c]);if(st.cad)w.push(['cad',st.cad]);if(st.hr)w.push(['hr',st.hr]);return w;}
+const ROLE_DOT={trainer:'Trainer',click:'Click',cad:'Cad',hr:'Hr'},ROLE_NAME={trainer:'Trainer',click:'Click-Schalter',cad:'Trittfrequenz-Sensor',hr:'Pulsgurt'};
+function roleConnected(role,dev){if(role==='trainer')return !!(T.dev&&T.lastData&&performance.now()-T.lastData<5000);if(role==='hr')return !!HR.dev;if(role==='cad')return !!CS.dev;
+  return Z.pads.some(p=>p.connected&&(!dev||p.dev.id===dev.id));}
+async function connectRole(role,dev){
+  if(role==='trainer'){if(T.dev&&T.dev!==dev)return;T.dev=dev;if(!dev._kl){dev._kl=1;dev.addEventListener('gattserverdisconnected',onTrainerLost);}await setupTrainer();}
+  else if(role==='hr'){if(HR.dev&&HR.dev!==dev)return;HR.dev=dev;try{await setupHr();}catch(e){HR.dev=null;throw e;}}
+  else if(role==='cad'){if(CS.dev&&CS.dev!==dev)return;CS.dev=dev;try{await setupCad();}catch(e){CS.dev=null;throw e;}}
+  else{let pad=Z.pads.find(p=>p.dev.id===dev.id);if(pad&&pad.connected)return;
+    if(!pad){pad={dev,bits:0,prev:{plus:false,minus:false},version:null,connected:false,buttons:0};Z.pads.push(pad);dev.addEventListener('gattserverdisconnected',()=>onClickLost(pad));}
+    try{await setupClick(pad);}catch(e){Z.pads=Z.pads.filter(p=>p!==pad||p.connected);throw e;}}}
+async function autoConnect(){const want=rememberedList();
+  if(!want.length||!S.autoDev){AUTO.state=want.length?'off':'';updateAutoUi();return;}
+  if(!navigator.bluetooth||!navigator.bluetooth.getDevices){AUTO.state='unsupported';updateAutoUi();return;}
+  let devs=[];try{devs=await navigator.bluetooth.getDevices();}catch(e){}
+  let n=0;for(const [role,e] of want){const dev=devs.find(d=>d.id===e.id);if(!dev)continue;n++;autoOne(role,dev);}
+  AUTO.state=n?'search':'noperm';updateAutoUi();}
+async function autoOne(role,dev){if(AUTO.busy.has(dev.id))return;AUTO.busy.add(dev.id);const k=ROLE_DOT[role];
+  setDot(k,'busy','Suche '+(dev.name||ROLE_NAME[role])+' … (einschalten bzw. kurz treten)');
+  const t0=Date.now();
+  const tryNow=async()=>{if(roleConnected(role,dev))return true;try{await connectRole(role,dev);return true;}catch(e){setDot(k,'busy','Suche '+(dev.name||ROLE_NAME[role])+' …');return false;}};
+  try{
+    if(dev.watchAdvertisements){ // erst verbinden, wenn das Gerät in Reichweite funkt
+      await new Promise(res=>{const ac=new AbortController(),stop=()=>{try{ac.abort();}catch(e){}res();};
+        const to=setTimeout(stop,10*60000);
+        dev.addEventListener('advertisementreceived',async()=>{if(await tryNow()){clearTimeout(to);stop();}},{signal:ac.signal});
+        dev.watchAdvertisements({signal:ac.signal}).catch(async()=>{clearTimeout(to);for(;Date.now()-t0<5*60000;){if(await tryNow())break;await new Promise(r=>setTimeout(r,5000));}res();});});}
+    else for(;Date.now()-t0<5*60000;){if(await tryNow())break;await new Promise(r=>setTimeout(r,5000));}
+  }finally{AUTO.busy.delete(dev.id);if(!roleConnected(role,dev)&&role!=='click')setDot(k,'off','Nicht gefunden – Gerät einschalten und „Verbinden“ tippen');}
+  checkAutoDone();}
+// alle gemerkten Geräte da → Geräte-Fenster beim Start von selbst schließen
+function checkAutoDone(){if(AUTO.state!=='search')return;const want=rememberedList();
+  if(want.every(([r,e])=>roleConnected(r,{id:e.id}))){AUTO.state='done';updateAutoUi();
+    if(!$('devDlg').classList.contains('hidden')){closeDevices();toast('🔗 Automatisch verbunden: '+[...new Set(want.map(([r])=>ROLE_NAME[r]))].join(', '));}}}
+function updateAutoUi(){const el=$('vAutoDev');if(!el)return;const n=rememberedList().length,ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  $('bForgetDev').classList.toggle('hidden',!n);
+  el.innerHTML=!n?'Verbinde deine Geräte einmal von Hand – danach merkt sich die App sie.':
+    AUTO.state==='off'?'Ausgeschaltet.':
+    AUTO.state==='search'?'Suche deine Geräte … einschalten bzw. kurz treten, dann verbinden sie sich von selbst.':
+    AUTO.state==='done'?'✓ Alle gemerkten Geräte verbunden.':
+    AUTO.state==='unsupported'?(ios?'Dieser Browser kann Geräte nicht ohne Auswahlfenster verbinden – bitte wie bisher „Verbinden“ tippen.':
+      'Dein Browser erlaubt das noch nicht. In Chrome/Edge einmalig: Adresse <b>chrome://flags</b> öffnen, „<b>Experimental Web Platform features</b>“ und „<b>Use the new permissions backend for Web Bluetooth</b>“ auf <i>Enabled</i> stellen, Browser neu starten und die Geräte noch einmal von Hand verbinden.'):
+    AUTO.state==='noperm'?(ios?'Der Browser hat die Geräte nicht gespeichert – bitte wie bisher „Verbinden“ tippen.':'Der Browser hat die Erlaubnis nicht behalten. In Chrome/Edge einmalig unter <b>chrome://flags</b> „<b>Use the new permissions backend for Web Bluetooth</b>“ auf <i>Enabled</i> stellen, neu starten und die Geräte noch einmal von Hand verbinden.'):'';}
 
 // ---- Click-Schalter (v1 und v2) ----
 // Click v1: ein Gerät, Dienst 00000001-19ca…, Tasten als Nachricht 0x37.
@@ -2220,7 +2303,7 @@ async function setupClick(pad){
   const rx=await svc.getCharacteristic(ZU.rx);pad.rx=rx;pad.isV2=isV2;pad.version=isV2?'Click v2':'Click v1';
   if(isV2){await zwrite(rx,[...HANDSHAKE,0x02,0x03]);await new Promise(r=>setTimeout(r,250));await zwrite(rx,[0xFF,0x04,0x00]);}
   else await zwrite(rx,HANDSHAKE);
-  pad.connected=true;pad.retries=0;pad.lastMsg=performance.now();clickLog('Verbunden: '+pad.version+' – Handshake gesendet');
+  pad.connected=true;pad.retries=0;pad.lastMsg=performance.now();rememberDev('click',pad.dev);clickLog('Verbunden: '+pad.version+' – Handshake gesendet');
   try{const bs=await server.getPrimaryService('battery_service'),bl=await bs.getCharacteristic('battery_level'),v=await bl.readValue();pad.batt=v.getUint8(0);clickLog('Akku: '+pad.batt+' %');
     try{await bl.startNotifications();bl.addEventListener('characteristicvaluechanged',e=>{pad.batt=e.target.value.getUint8(0);clickStatus();});}catch(e){}}catch(e){}
   clickStatus('drück + zum Testen');
@@ -2974,6 +3057,8 @@ function wireUi(){
   $('iShiftMode').onchange=()=>{S.vshift=$('iShiftMode').value==='click';saveSettings();applyShiftMode();sendResistance(true);};
   $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
   $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
+  $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
+  $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
   $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;
@@ -3009,6 +3094,7 @@ function wireUi(){
   const prev=()=>{const wo=WORKOUTS.find(w=>w.id===$('iWo').value);$('vWo').textContent=wo.desc;drawWorkoutOn($('woPreview'),wo,null,0);};
   $('iWo').onchange=prev;setTimeout(prev,50);
   $('iFtp').onchange=()=>{S.ftp=clamp(+$('iFtp').value||250,80,600);saveSettings();prev();};
+  $('iFtpAuto').value=S.ftpAuto;$('iFtpAuto').onchange=()=>{S.ftpAuto=$('iFtpAuto').value;saveSettings();};$('trainDet').addEventListener('toggle',updateFtpUi);updateFtpUi();
   $('iErgW').onchange=()=>{S.ergW=clamp(+$('iErgW').value||200,50,1200);saveSettings();updateErgUi();sendResistance(true);};
   $('iErg').onchange=()=>{S.erg=$('iErg').checked;updateErgUi();sendResistance(true);};
   $('bWo').onclick=()=>{W.ergOn=$('iWoErg').checked;startWorkout($('iWo').value);if(!S.started)startRide(!T.dev);else closeMenu();};
@@ -3239,7 +3325,7 @@ function resetRide(){
   placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
   $('bStart').textContent='Losfahren';$('bStart').onclick=()=>startRide(false);$('bSim').classList.remove('hidden');$('bStats').classList.add('hidden');$('bEnd').classList.add('hidden');}
-function newRide(){resetRide();openMenu();}
+function newRide(){FTPNEW=null;resetRide();openMenu();}
 async function rebuildWorld(world,route,msg){
   if(REBUILD)return;REBUILD=true;
   try{localStorage.setItem('kalea_world',world);if(route)localStorage.setItem('kalea_route_'+world,route);}catch(e){}
@@ -3278,7 +3364,7 @@ function decorate(){
 }
 async function boot(){
   loadSettings();CHUNK=S.quality==='low'?900:500;initScene();SCENE_BASE=new Set(scene.children);await buildWorld();wireUi();
-  $('loading').classList.add('hidden');openDevices();
+  $('loading').classList.add('hidden');openDevices();autoConnect();
   if(OSM.built)toast('🏠 '+OSM.built.toLocaleString('de-DE')+' echte Häuser aus OpenStreetMap sind aktiv');
   requestAnimationFrame(frame);
 }

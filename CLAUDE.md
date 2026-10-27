@@ -94,6 +94,16 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   IndexedDB `ride_<id>` (`saveRideHistory`/`rideLoad`/`rideDelete`). Statistik zeigt jede Fahrt (`showStats(final,R)`, Fahrt-Objekt
   wie `curRide()`); Export FIT/TCX auch für alte Fahrten. Mitten in der Fahrt alle 2 min und beim Schließen gesichert
   (`autosaveRide`). „Sicherung speichern/laden“: JSON mit Fahrten, Bestzeiten und Runden (zusammengeführt, bessere Zeit bleibt).
+- **FTP automatisch erkennen** (`estimateFtp`/`checkFtp`, Einstellung `S.ftpAuto` ask/auto/off): je Fahrt Bestleistungen
+  3–60 min (`mmp` in `kalea_rides`, Testmodus-Fahrten zählen nicht), Hülle der letzten 6 Wochen → größter Wert aus 95 % der
+  besten 20 min (Garmin/früher Zwift), bester Stunde und CP-Modell 3–20 min (nur bei plausibler Ausbelastung: W' 6–30 kJ,
+  3 min > 1,2·CP, R² > 0,995). Nur nach oben (≥ +1 %, +3 W); Hinweis oben in der Statistik nach „Fahrt beenden“,
+  abgelehnter Wert in `S.ftpNo`.
+- **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr,
+  gemerkt nach erfolgreichem Verbinden): beim Start `autoConnect` → `navigator.bluetooth.getDevices()` (nur bereits erlaubte
+  Geräte, kein Auswahlfenster) → `watchAdvertisements` bzw. alle 5 s `gatt.connect` (`connectRole`, nutzt `setupTrainer`/
+  `setupClick`/`setupHr`/`setupCad`). Sind alle da, schließt das Geräte-Fenster von selbst. Fehlt `getDevices` (Chrome ggf.
+  nur mit chrome://flags „new permissions backend for Web Bluetooth“, iOS/Bluefy je nach Version), zeigt `updateAutoUi` einen Hinweis.
 - **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
   virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
@@ -101,7 +111,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
-  `kalea_rides`, `kalea_rev`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+  `kalea_rides`, `kalea_rev`, `kalea_devs`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
 - **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:

@@ -70,6 +70,8 @@ details p{color:#4a3d5c;font-size:13px}
 table.kt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.kt th{text-align:left;font-size:12px;color:var(--mut);border-bottom:2px solid var(--ink);padding:3px 4px}
 table.kt td{padding:5px 4px;border-bottom:1px dashed #cfc7bb;vertical-align:top}
+.autodev{margin-top:8px}.autodev small{display:block;color:var(--mut);font-size:12.5px;line-height:1.4;margin:2px 0 6px}
+.ftpnew{background:#fff4c4;border:2.5px solid var(--ink);border-radius:12px;padding:10px 12px;margin:0 0 12px;line-height:1.5}.ftpnew button{margin:6px 6px 0 0}
 table.kt tr.link{cursor:pointer}table.kt tr.link:hover td{background:#f3e6f7}.rides-wrap{max-height:360px;overflow:auto;margin:4px 0}
 table.kt small{display:block;color:var(--mut);font-size:11px}
 #loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#490cb8,#9d20a3);font-size:20px;font-weight:600;color:#fff;text-align:center;padding:20px}
@@ -412,11 +414,13 @@ body.realshift .vonly{display:none!important}
         <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Click-Schalter</b> (z. B. Zwift Click v2)<small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dHr"></span><div><b>Pulsgurt</b> (optional)<small id="sHr">Nicht verbunden</small></div><button id="bHr">Verbinden</button></div>
+        <div class="autodev"><label class="chk"><input type="checkbox" id="iAutoDev" checked> Zuletzt benutzte Geräte beim Start automatisch verbinden</label><small id="vAutoDev"></small><button id="bForgetDev" class="hidden">Gemerkte Geräte vergessen</button></div>
         </div>
       </section>
       <details id="trainDet"><summary>🏋️ Training: ERG-Modus &amp; Workouts</summary>
         <div class="grid">
-          <label>Deine FTP (W)<input id="iFtp" type="number" min="80" max="600" value="250"></label>
+          <label>Deine FTP (W)<input id="iFtp" type="number" min="80" max="600" value="250"><small id="vFtpEst"></small></label>
+          <label>FTP automatisch erkennen<select id="iFtpAuto"><option value="ask">Nach der Fahrt nachfragen</option><option value="auto">Automatisch übernehmen</option><option value="off">Aus</option></select><small>nur nach oben – wie Garmin und Zwift</small></label>
           <label>ERG-Zielleistung (W)<input id="iErgW" type="number" min="50" max="1200" step="5" value="200"></label>
         </div>
         <label class="chk"><input type="checkbox" id="iErg"> ERG-Modus beim freien Fahren (Trainer hält die Wattzahl, Gänge egal)</label>
