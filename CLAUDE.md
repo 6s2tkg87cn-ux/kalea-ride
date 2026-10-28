@@ -77,6 +77,13 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Alles InstancedMesh;
   `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser. Figuren stehen auf dem
   sichtbaren Gelände (`standH` = `terrH`), nicht auf Straßenhöhe – sonst schweben sie neben Brücken und Dämmen.
+- **Besuch aus der Luft** (nur Ulm, nur mit `S.life`; `FLY`, `flyPlan` in `resetRide`, `stepFly`): mit 60 % Wahrscheinlichkeit
+  höchstens einmal pro Fahrt und Strecke. Der **Ulmer Spatz** (`spatzModel`, Strohhalm längs im Schnabel) überholt im Tiefflug
+  und biegt seitlich ab (Seite ohne Haus, `camBlocked`). Der **Schneider von Ulm** (`schneiderModel`, Berblinger-Gleiter,
+  Zylinder) segelt vor dir über der Straße, sucht laufend eine Landestelle in der Donau, die vor dir im Blick liegt
+  (`schneiderDive`/`divePt`/`diveFree`: nicht unter Brücken, kein Haus/Hang im Weg), plumpst mit Spritzer (`splashFx`)
+  hinein – ohne passende Stelle segelt er davon. Auf Strecken entlang der Donau wartet er auf so eine Stelle (`diveAhead`).
+  Sprechblasen über `bubbleSprite`, Töne `sndChirp`/`sndSplash`.
 - **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.

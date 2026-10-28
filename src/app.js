@@ -3102,7 +3102,7 @@ function frame(now){
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
   for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
-  stepGhost(S.riding&&!S.paused?dt:0);stepLife(dt,t);
+  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepLife(dt,t);
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);stepRain(dt);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
@@ -3431,6 +3431,115 @@ function stepLife(dt,t){const run=S.started&&!S.paused?dt:0;stepOncoming(run);st
   for(const b of LIFE.rboats)stepRiverBoat(b,dt);
   for(const d of LIFE.dolph)stepDolphin(d,run);}
 
+/* ================= Besuch aus der Luft (Ulm): Ulmer Spatz oder Schneider von Ulm =================
+   Manchmal, höchstens einmal pro Fahrt und Strecke: Der Spatz (Strohhalm längs im Schnabel – so zeigte er beim Münsterbau,
+   wie der Balken durchs Stadttor passt) überholt dich im Tiefflug. Der Schneider von Ulm (Albrecht Berblinger, 1811) gleitet
+   quer über die Straße und landet – wie damals – in der Donau. Nur mit „Leben am Rand“. */
+const FLY={plan:null,act:null,done:false,obj:{},fx:null,bub:null,tryT:0};
+function flyPlan(){if(FLY.act)flyEnd();FLY.done=false;FLY.plan=null;if(Math.random()>0.6)return;
+  FLY.plan=Math.random()<0.5?{kind:'spatz',at:rnd(900,9000)}:{kind:'schneider',at:rnd(600,4000)};}
+flyPlan();
+function spatzModel(){const g=new THREE.Group(),I=(r,d=2)=>new THREE.IcosahedronGeometry(r,d);
+  const body=new THREE.Mesh(merge([[tr(I(0.35),[0,0,0],[0,0,0],[0.85,0.78,1.25]),0x9b6a3c,0.2],[tr(I(0.33),[0,-0.06,0.06],[0,0,0],[0.78,0.65,1.05]),0xd8ccb4],
+    [tr(new THREE.BoxGeometry(0.06,0.03,0.4),[0.09,0.26,-0.05]),0x5a3a1e],[tr(new THREE.BoxGeometry(0.06,0.03,0.4),[-0.09,0.26,-0.05]),0x5a3a1e],
+    [tr(I(0.25),[0,0.2,0.42]),0x8a5a2e],[tr(I(0.2),[0,0.33,0.4],[0,0,0],[1,0.5,1.1]),0x8e8e90],[tr(I(0.1,1),[0.17,0.16,0.5],[0,0,0],[0.5,0.9,1]),0xf3f0ea],
+    [tr(I(0.1,1),[-0.17,0.16,0.5],[0,0,0],[0.5,0.9,1]),0xf3f0ea],[tr(I(0.13,1),[0,0.05,0.58],[0,0,0],[1,1,0.45]),0x262020],
+    [tr(I(0.075,1),[0.12,0.27,0.6]),0xffffff],[tr(I(0.075,1),[-0.12,0.27,0.6]),0xffffff],[tr(I(0.042,1),[0.13,0.275,0.66]),0x1e0f3a],[tr(I(0.042,1),[-0.13,0.275,0.66]),0x1e0f3a],
+    [tr(new THREE.ConeGeometry(0.07,0.2,6),[0,0.17,0.72],[Math.PI/2,0,0]),0xd89a2a],[tr(new THREE.BoxGeometry(0.24,0.05,0.45),[0,0.08,-0.58],[0.3,0,0]),0x6e4a2a],
+    [tr(new THREE.CylinderGeometry(0.022,0.022,2.0,5),[0.03,0.17,1.07],[Math.PI/2,0,0]),0xf2d36b],[tr(I(0.06,1),[0.03,0.17,2.08],[0,0,0],[0.7,0.7,2.2]),0xe2b84a]]),lifeMat(true));
+  g.add(body);const wingGeo=merge([[tr(I(0.3,1),[0.36,0,0],[0,0,0],[1.25,0.12,0.6]),0x7a5030],[tr(new THREE.BoxGeometry(0.4,0.03,0.08),[0.38,0.03,0.05]),0xf0e6d0],
+    [tr(I(0.2,1),[0.62,-0.01,-0.08],[0,0,0],[1.1,0.1,0.5]),0x4e3420]]);
+  for(const sd of [1,-1]){const p=new THREE.Group(),w=new THREE.Mesh(sd>0?wingGeo:tr(wingGeo,[0,0,0],[0,0,0],[-1,1,1]),lifeMat(true));w.material.side=THREE.DoubleSide;
+    p.position.set(0.18*sd,0.12,0.05);p.add(w);g.add(p);g.userData[sd>0?'wl':'wr']=p;}
+  g.scale.setScalar(1.4);return g;}
+function schneiderModel(){const g=new THREE.Group(),I=(r,d=2)=>new THREE.IcosahedronGeometry(r,d),wood=0x6b4a2a,coat=0x2c4a86,skin=0xf0c8a0;
+  // Gleiter: zwei Flügel aus Stoff mit Holzrippen, gezackte Hinterkante (Fledermaus-Form wie das Original)
+  const sh=new THREE.Shape(),E=[[0.25,0.55],[1.2,0.62],[2.3,0.5],[3.4,0.15],[3.0,-0.35],[2.75,-0.15],[2.35,-0.85],[2.0,-0.5],[1.55,-1.15],[1.2,-0.7],[0.75,-1.3],[0.25,-0.9]];
+  sh.moveTo(E[0][0],-E[0][1]);for(const [x,z] of E.slice(1))sh.lineTo(x,-z);
+  const cloth=tr(new THREE.ShapeGeometry(sh),[0,0,0],[-Math.PI/2,0,0]),parts=[];
+  for(const sd of [1,-1]){const S2=(g0)=>tr(g0,[0,0,0],[0,0,0.1*sd],[sd,1,1]);parts.push([S2(cloth),0xf1e6c8]);
+    for(const q of [[3.4,0.15],[2.35,-0.85],[1.55,-1.15],[0.75,-1.3]])parts.push([S2(tube([0.3,0.03,0.4],[q[0],0.03,q[1]],0.025,5)),wood]);
+    for(let i=0;i<3;i++)parts.push([S2(tube([E[i][0],0.03,E[i][1]],[E[i+1][0],0.03,E[i+1][1]],0.035,5)),wood]);
+    parts.push([tube([0.3*sd,0,0.05],[0.28*sd,-0.2,0.32],0.025,5),wood],[tr(I(0.06,1),[0.28*sd,-0.21,0.32]),skin],[tube([0.2*sd,-0.62,0.03],[0.28*sd,-0.22,0.32],0.055,6),coat],
+      [tr(new THREE.BoxGeometry(0.035,0.45,0.01),[0.1*sd,-0.83,0.15]),0xf8d74e],[tr(I(0.022,1),[0.055*sd,-0.41,0.14]),0x1e0f3a]);}
+  parts.push([tube([-0.45,-0.2,0.32],[0.45,-0.2,0.32],0.03,5),wood],[tr(new THREE.BoxGeometry(0.44,0.6,0.28),[0,-0.88,0]),coat],[tr(new THREE.BoxGeometry(0.14,0.22,0.03),[0,-0.7,0.145]),0xf6f2ea],
+    [tr(new THREE.BoxGeometry(0.4,0.42,0.05),[0,-1.3,-0.12],[0.25,0,0]),coat],[tr(I(0.15),[0,-0.44,0.02]),skin],[tr(I(0.15),[0,-0.42,-0.03],[0,0,0],[1.02,0.95,0.95]),0x5a3a22],
+    [tr(I(0.04,1),[0,-0.45,0.16]),0xe8a888],[tr(new THREE.CylinderGeometry(0.12,0.12,0.22,10),[0,-0.19,0]),0x1e1a1e],[tr(new THREE.CylinderGeometry(0.2,0.2,0.025,12),[0,-0.3,0]),0x1e1a1e],
+    [tr(new THREE.CylinderGeometry(0.123,0.123,0.04,10),[0,-0.27,0]),0x9d20a3]);
+  const m=new THREE.Mesh(merge(parts),lifeMat(true));m.material.side=THREE.DoubleSide;g.add(m);
+  const legs=new THREE.Group(),lp=[];for(const sd of [1,-1])lp.push([tube([0.1*sd,0,0],[0.11*sd,-0.42,0.06],0.075,6),0xe9dfc6],[tube([0.11*sd,-0.42,0.06],[0.11*sd,-0.84,-0.02],0.06,6),0xf7f5ef],
+    [tr(new THREE.BoxGeometry(0.11,0.08,0.24),[0.11*sd,-0.88,0.04]),0x222022]);
+  legs.add(new THREE.Mesh(merge(lp),lifeMat(true)));legs.position.set(0,-1.18,0);g.add(legs);g.userData.legs=legs;g.scale.setScalar(1.5);return g;}
+function flyObj(kind){let o=FLY.obj[kind];if(!o){o=FLY.obj[kind]=kind==='spatz'?spatzModel():schneiderModel();toonify(o);o.traverse(c=>{if(c.isMesh)c.castShadow=true;});scene.add(o);}o.visible=true;return o;}
+function flyBubble(text,on){if(FLY.bub){scene.remove(FLY.bub);FLY.bub.material.map.dispose();FLY.bub.material.dispose();FLY.bub=null;}if(on){FLY.bub=bubbleSprite(text);scene.add(FLY.bub);}}
+function sndLive(){return SND.ok&&SND.ctx&&SND.ctx.state==='running';}
+function sndChirp(){if(!sndLive())return;const c=SND.ctx,t0=c.currentTime+0.02,g=c.createGain();g.gain.value=0.16;g.connect(SND.bus.amb);
+  for(let i=0;i<3;i++){const o=c.createOscillator(),e=c.createGain(),st=t0+i*0.14,f=rnd(3300,3900);o.frequency.setValueAtTime(f,st);o.frequency.exponentialRampToValueAtTime(f*1.5,st+0.04);
+    o.frequency.exponentialRampToValueAtTime(f*0.8,st+0.09);e.gain.setValueAtTime(0,st);e.gain.linearRampToValueAtTime(1,st+0.01);e.gain.exponentialRampToValueAtTime(0.001,st+0.1);o.connect(e);e.connect(g);o.start(st);o.stop(st+0.12);}}
+function sndSplash(){if(!sndLive())return;const t0=SND.ctx.currentTime+0.01;sndBurst(t0,1.1,1600,260,0.4,0,SND.bus.amb);sndBurst(t0,0.45,420,110,0.35,0,SND.bus.amb);sndBurst(t0+0.25,0.9,3200,900,0.12,0,SND.bus.amb);}
+// Schneider: segelt vor dir über der Straße her (wie im Windschatten der Kamera), biegt dann zur Donau ab und plumpst hinein –
+// nur, wenn die Landestelle vor dir im Blick liegt, nicht unter einer Brücke und der Weg dorthin frei von Häusern und Hängen ist.
+// Ohne passende Stelle segelt er davon („diesmal klappt's“).
+function divePt(q){const R=riverDist(q.x,q.z);if(!R.s||R.s.ri!==0||R.raw>200)return null;const sg=R.s,tt=clamp(((q.x-sg.a[0])*sg.dx+(q.z-sg.a[1])*sg.dz)/sg.l2,0,1);
+  let px=sg.a[0]+sg.dx*tt,pz=sg.a[1]+sg.dz*tt;const qx=q.x-px,qz=q.z-pz,lq=Math.hypot(qx,qz)||1;px+=qx/lq*R.hw*0.5;pz+=qz/lq*R.hw*0.5; // ufernah, aber im Wasser
+  const RW=riverDist(px,pz);return RW.d>RIVER_HW-5||nearestRoad(px,pz,16)||nearVRoad(px,pz,22)?null:[px,RW.wy,pz];}
+function diveAhead(d0){for(let ah=70;ah<=230;ah+=20){const q=roadAt(d0+ah),p=divePt(q);if(p&&Math.hypot(p[0]-q.x,p[2]-q.z)<100)return true;}return false;}
+function diveAt(Q,P,w){return [Q[0]+(P[0]-Q[0])*w,Q[1]+(P[1]-Q[1])*Math.pow(w,1.6),Q[2]+(P[2]-Q[2])*w];}
+function diveFree(Q,P){for(let k=1;k<=14;k++){const p=diveAt(Q,P,k/15);if(riverDist(p[0],p[2]).d>RIVER_HW&&p[1]-finalHeight(p[0],p[2])<4)return false; // über Land: Füße frei
+    for(const [ox,oz] of [[0,0],[3,0],[-3,0],[0,3],[0,-3]])if(camBlocked(p[0]+ox,p[2]+oz,p[1]-3.4))return false;}return true;}
+function schneiderDive(Q,d0,v){let best=null;
+  for(let ah=10;ah<=200;ah+=10){const P=divePt(roadAt(d0+ah));if(!P)continue;const L2=Math.hypot(P[0]-Q[0],P[2]-Q[2]),T2=L2/16;if(L2<15||L2>110||(best&&L2>=best.L2))continue;
+    const r=roadAt(d0+v*T2),fw=(P[0]-r.x)*r.tx+(P[2]-r.z)*r.tz,lat=Math.abs((P[0]-r.x)*r.tz-(P[2]-r.z)*r.tx);
+    if(fw<10||Math.atan2(lat,fw)>0.6||Math.hypot(fw,lat)>140||!diveFree(Q,P))continue;best={P,T2,L2};}
+  return best;}
+function flyStart(kind){FLY.plan=null;FLY.done=true;const v=Math.max(4,S.v);
+  let side=Math.random()<0.5?-1:1;const free=sd=>{for(let k=0.2;k<=1;k+=0.2){const r=roadAt(S.dist+v*(6+4*k)+30*k),lat=0.8+sd*k*k*45;
+      if(camBlocked(r.x-r.tz*lat,r.z+r.tx*lat,r.h+3.4+k*k*22-1))return false;}return true;};if(!free(side)&&free(-side))side=-side; // nicht in ein Haus abbiegen
+  if(kind==='spatz')FLY.act={kind,t:0,s:S.dist-10,side,o:flyObj('spatz'),told:0};
+  else{FLY.act={kind,t:0,s:S.dist+15,side,ph:1,tr:0,o:flyObj('schneider')};toast('🪶 Schau mal: der Schneider von Ulm – Albrecht Berblinger mit seinem Gleiter von 1811!');flyBubble('I kå fliaga!',true);}}
+function splashFx(x,y,z){const g=new THREE.Group(),mat=()=>new THREE.MeshBasicMaterial({color:0xf2f8ff,transparent:true,opacity:0.85,depthWrite:false}),rings=[];
+  for(let k=0;k<2;k++){const r=new THREE.Mesh(new THREE.RingGeometry(0.7,1.15,28),mat());r.rotation.x=-Math.PI/2;r.position.y=0.06;g.add(r);rings.push(r);}
+  const col=new THREE.Mesh(new THREE.ConeGeometry(1.7,5,12,1,true),mat());col.position.y=2.5;g.add(col);
+  const drops=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.3,0),mat(),22),dv=[];for(let i=0;i<22;i++){const a=rnd(0,6.28),s=rnd(2,5);dv.push([Math.cos(a)*s,rnd(6,11),Math.sin(a)*s,0,0.3,0]);}
+  g.add(drops);g.position.set(x,y,z);scene.add(g);FLY.fx={g,t:0,rings,col,drops,dv};}
+function stepSplash(dt){const f=FLY.fx;if(!f)return;f.t+=dt;const t=f.t;
+  f.rings.forEach((r,k)=>{const u=Math.max(0,t-k*0.35);r.scale.setScalar(1+u*4.5);r.material.opacity=Math.max(0,0.85*(1-u/1.8));});
+  const c=Math.min(1,t/0.25)*Math.max(0,1-(t-0.25)/0.7);f.col.scale.set(1,Math.max(0.01,c),1);f.col.position.y=2.5*c;f.col.material.opacity=0.8*c;
+  const m=_wo;for(let i=0;i<f.dv.length;i++){const d=f.dv[i];d[1]-=9.8*dt;d[3]+=d[0]*dt;d[4]+=d[1]*dt;d[5]+=d[2]*dt;m.position.set(d[3],Math.max(-1,d[4]),d[5]);m.scale.setScalar(d[4]>0?Math.max(0.2,1-t/2):0.001);m.updateMatrix();f.drops.setMatrixAt(i,m.matrix);}
+  f.drops.instanceMatrix.needsUpdate=true;
+  if(t>2.4){scene.remove(f.g);disposeTree(f.g);FLY.fx=null;}}
+function flyEnd(){const a=FLY.act;if(a&&a.o)a.o.visible=false;flyBubble('',false);FLY.act=null;}
+function stepFly(dt){stepSplash(dt);const a=FLY.act;
+  if(!a){const p=FLY.plan;if(!p||FLY.done||!IS_ULM||!S.life||!S.riding||S.paused||S.v<2.5||dt<=0||S.odo<p.at)return;
+    if(p.kind==='schneider'){if(!p.chk){p.chk=1;p.river=false;for(let d=0;d<L&&!p.river;d+=100)p.river=diveAhead(d);}
+      // an Strecken entlang der Donau auf eine Stelle warten, an der sie vor dir liegt
+      FLY.tryT-=dt;if(FLY.tryT>0)return;FLY.tryT=0.6;if(p.river&&S.odo<p.at+12000&&!diveAhead(S.dist))return;}
+    flyStart(p.kind);return;}
+  if(dt<=0)return;a.t+=dt;const o=a.o,t=a.t,prev=o.position.clone();
+  if(a.kind==='spatz'){a.s+=Math.max(7,S.v+6.5)*dt;const k=Math.max(0,(t-6)/4),cyc=t%1.15,flap=cyc<0.7,hb=flap?0.5*cyc/0.7:0.5*(1-(cyc-0.7)/0.45);
+    const lat=0.8-a.side*2.4*Math.pow(Math.max(0,1-t/2.5),2)+0.5*Math.sin(t*0.8)+a.side*k*k*45,h=2.7+hb+k*k*22,r=roadAt(a.s);o.position.set(r.x-r.tz*lat,r.h+h,r.z+r.tx*lat);
+    const dx=o.position.x-prev.x,dy=o.position.y-prev.y,dz=o.position.z-prev.z;if(t>dt)o.rotation.set(-Math.atan2(dy,Math.hypot(dx,dz)+1e-3)*0.6,Math.atan2(dx,dz),-a.side*0.6*Math.sin(Math.min(1,k)*Math.PI),'YXZ');
+    const wa=flap?0.15+0.85*Math.sin(cyc*2*Math.PI*6):0.05,wy=flap?0:1.25;o.userData.wl.rotation.set(0,wy,wa);o.userData.wr.rotation.set(0,-wy,-wa);
+    if(t>1&&a.told===0){a.told=1;toast('🐦 Der Ulmer Spatz! Den Strohhalm trägt er längs – so kam beim Münsterbau der Balken durchs Stadttor.');sndChirp();flyBubble('Tschilp!',true);
+      if(sndLive())sndBurst(SND.ctx.currentTime+0.01,0.5,2600,700,0.12,0,SND.bus.amb);}
+    if(a.told===1&&t>3.6){a.told=2;flyBubble('',false);sndChirp();}
+    if(FLY.bub)FLY.bub.position.set(o.position.x,o.position.y+1.1,o.position.z);
+    if(t>10)flyEnd();return;}
+  // Schneider: 1 = über der Straße hersegeln, 2 = Sturzflug in die Donau, 3 = davonsegeln, 4 = im Wasser
+  const v=Math.max(4,S.v);let w=0;
+  if(a.ph===1){a.s+=Math.max(10,S.v+6)*dt;a.lat=0.8+0.8*Math.sin(t*0.6);a.h=13-2*Math.min(1,t/6)+0.4*Math.sin(t*1.7);const r=roadAt(a.s);o.position.set(r.x-r.tz*a.lat,r.h+a.h,r.z+r.tx*a.lat);
+    if(t>2.5&&a.s-S.dist>40&&(a.tr-=dt)<=0){a.tr=0.3;const B=schneiderDive(o.position.toArray(),S.dist,v);if(B)Object.assign(a,{ph:2,t2:0,Q:o.position.toArray(),P:B.P,T2:B.T2});}
+    if(a.ph===1&&t>12){a.ph=3;a.t3=0;toast('🪶 Diesmal klappt’s: der Schneider von Ulm segelt davon!');}}
+  else if(a.ph===2){a.t2+=dt;w=Math.min(1,a.t2/a.T2);const p=diveAt(a.Q,a.P,w);o.position.set(p[0],p[1],p[2]);
+    if(w>=1){a.ph=4;a.t4=0;splashFx(a.P[0],a.P[1],a.P[2]);sndSplash();flyBubble('',false);toast('💦 Platsch! Wie 1811 landet der Schneider von Ulm in der Donau.');}}
+  else if(a.ph===3){a.t3+=dt;a.s+=Math.max(10,S.v+6)*dt;const k=Math.min(1,a.t3/5),lat=a.lat+a.side*k*k*60,r=roadAt(a.s);o.position.set(r.x-r.tz*lat,r.h+a.h+k*k*25,r.z+r.tx*lat);if(a.t3>5){flyEnd();return;}}
+  else{a.t4+=dt;o.position.set(a.P[0],a.P[1]+0.05-Math.min(1,Math.max(0,a.t4-2)/1.5)*0.9,a.P[2]);o.rotation.x*=Math.max(0,1-dt*3);o.rotation.z*=Math.max(0,1-dt*3);if(a.t4>3.6)flyEnd();return;}
+  const dx=o.position.x-prev.x,dz=o.position.z-prev.z;let hd=a.hd===undefined?o.rotation.y:a.hd;
+  if(t<=dt){const r=roadAt(a.s);hd=Math.atan2(r.tx,r.tz);}else if(Math.hypot(dx,dz)>0.01){let e=Math.atan2(dx,dz)-hd;e=Math.atan2(Math.sin(e),Math.cos(e));hd+=e*Math.min(1,dt*3);}a.hd=hd;
+  o.rotation.set(0.08+w*w*0.45,hd,0.12*Math.sin(t*2.1)+0.06*Math.sin(t*5.3)+w*0.2*Math.sin(t*9),'YXZ');
+  o.userData.legs.rotation.set(0.25*Math.sin(t*2.4)+w*0.5*Math.sin(t*12),0,w*0.3*Math.sin(t*9));
+  if(FLY.bub){FLY.bub.position.set(o.position.x,o.position.y+1.2,o.position.z);if(t>4.5)flyBubble('',false);}}
+
 /* ================= Welt/Route wechseln ohne Neuladen (Bluetooth-Geräte bleiben verbunden) ================= */
 let REBUILD=false,SCENE_BASE=null;
 function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.isInstancedMesh&&c.dispose)c.dispose();
@@ -3440,7 +3549,7 @@ function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.i
 // alles, was beim Bauen einer Welt angelegt wird, wieder zurücksetzen (Lichter und Kamera bleiben)
 function clearWorld(){
   for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
-  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;
+  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;FLY.obj={};FLY.act=null;FLY.fx=null;FLY.bub=null;
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
   RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
@@ -3455,7 +3564,7 @@ async function buildWorld(){
 function resetRide(){
   if(W.active)stopWorkout();
   Object.assign(S,{dist:0,odo:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
-  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;
+  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;flyPlan();
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
   placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
