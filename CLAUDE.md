@@ -72,7 +72,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Tempo-Gefühl im Bild:** Sichtfeld weitet sich (`updateCamera`), Kamera rubbelt leicht, Comic-Speed-Linien ab
   ca. 32 km/h im Konturen-Shader (`speedLines`, nur mit Comic-Konturen). Lautstärken `S.sndBike`,
   `S.sndAmb`, `S.mute`; Ton startet erst nach einer Berührung/Taste.
-- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`): Rollen „Gruppe“ (im Modus `me` Tempo-Regelung: fährt dein Tempo und
+- **Mitfahrer** (`BOTS`, `stepBots`, `S.botMode`; meiden die Kamera-Spur direkt hinter dir, `camFade` blendet Fahrer
+  näher als 4 m an der Kamera aus): Rollen „Gruppe“ (im Modus `me` Tempo-Regelung: fährt dein Tempo und
   hält ihren Platz `b.off` ±5 m in der Gruppe, Leistung daraus berechnet, max. ~1,6 × deine W/kg – Watt-Nachfahren war mit
   Windschatten immer zu schnell; bei `fixed` nach `S.botWkg`; wartet beim Start), „langsam“ (wirst überholt), „schnell“ (überholt
   dich); weit Entfernte werden außer Sicht neu eingesetzt. Modi `me` / `solo` (ohne Gruppe, nur langsame und schnelle Fahrer) / `fixed` (`S.botWkg`) / `off`. Gegenverkehr
@@ -82,7 +83,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   dich (`stepWalkers`, drehen vor Wasser/Häusern um), Menschen auf Plätzen/Strand, Kühe, Pferde, Störche, Enten und
   Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Gegenverkehr: `placeRider(…,-1)` schaut
   selbst rückwärts (nicht nachträglich drehen – sonst kippt die Kurvenlage in die falsche Richtung). Alles InstancedMesh;
-  `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser. Figuren stehen auf dem
+  `freeSpot`/`inOsm`/`nearOsm`/`houseAt` (alle Grundrisse in `CAMOCC`, mit Abstand rundum) verhindern Figuren und Bäume in Häusern, auf der Strecke oder im Wasser. Figuren stehen auf dem
   sichtbaren Gelände (`standH` = `terrH`), nicht auf Straßenhöhe – sonst schweben sie neben Brücken und Dämmen.
 - **Ulmer Überraschungen** (nur Ulm, nur mit `S.life`; `GAG`, `GAGS`, `gagPlan` in `resetRide`, `stepGags`): Häufigkeit `S.gags`
   (selten/manchmal/oft ≈ alle 14/7/3,5 km, `GAG_GAP`), jede Szene höchstens einmal pro Fahrt, immer nur eine gleichzeitig.
@@ -195,8 +196,21 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
-- **Leistung:** iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`, Umschalten in
-  `updateCull` ab `LOD_R`), Vegetationskacheln sind 1,5 × `CHUNK` groß. Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
+- **Bäume** (`TREE_SP` = Arten mit Geometrie `g`, Form `sx`/`sy`, Sommer-/Herbst-/Blütenfarben, Stammfarbe; `TREE_GEOS`):
+  Linde, Ahorn, Kastanie, Buche, Eiche, Platane (runde Krone), Birke, Pappel, Erle (schlank), Trauerweide, Obstbaum (mit
+  Äpfeln), Fichte, Kiefer, Busch, Schilf; Kalea: Palme, Tropenbaum, Blütenbaum. Art nach Standort (`species` in
+  `buildVegetationUlm`: Ufer/Auwald, Gärten, Hochfläche, Forste), dazu Alleen entlang der Strecke, Streuobstwiesen am
+  Ortsrand, Schilf an Ufern. Erst sammeln (`plantAdd`/`plantPick`), dann `plantFlush` → `plantChunks`. Material `folMat`:
+  Attribut `leaf` (0 Holz → Farbe aus `iTrunk`, 1 Laub → `instanceColor`, 2 feste Farbe), Wind (`WIND`, im Bild-Takt),
+  Schnee auf nach oben zeigenden Flächen. **Nah/Fern je Baum auf der Grafikkarte** (`TREE_LOD` 1/2, `uLod` = `LOD_R`):
+  Nah-Kacheln ≈ 0,6 × `LOD_R`, Fern-Kacheln 3 × `CHUNK` und nur wenige Formen (`LOFIT`) → wenige Zeichenaufrufe.
+  `toonMat` übernimmt eigene Shader, wenn `userData.obc` (oder `det`) gesetzt ist.
+- **Jahreszeit** (`S.season` auto/fruehling/sommer/herbst/winter/schnee, `seasonCalc` → `SEAS` in `buildWorld`): nach Datum
+  Herbstfärbung `au` ab Mitte Sept., kahle Bäume `bare` im November/Winter (`bareGeo`, fern graue Zweig-Wolke), Obstblüte
+  im April, frisches Grün im Mai, Äpfel Aug.–Okt.; Winter manchmal mit Schnee (Boden in `buildTerrainUlm`, kein Gras/keine
+  Blumen). Nur Ulm, Kalea bleibt Sommer. Wechsel baut die Welt neu.
+- **Leistung:** iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`), andere
+  Kacheln werden in `updateCull` nach `LOD_R`/`CULL_R` umgeschaltet. Gras nur bis `GRASS_R` (`opts.grass`, nicht in `CULLS`). Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
   in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
   sonst heiß.
 
