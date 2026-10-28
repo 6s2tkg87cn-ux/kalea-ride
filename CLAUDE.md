@@ -1,6 +1,6 @@
 # Kalea Ride – Hinweise für Claude
 
-Indoor-Radfahr-App im Browser. Ein Smart-Trainer (FTMS, z. B. Wahoo KICKR Core) und ein
+Indoor-Radfahr-App im Browser. Ein Smart-Trainer (FTMS, z. B. Wahoo KICKR Core; auch Tacx FE-C, ältere Wahoo) und ein
 Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (Vulkaninsel, erfunden) und
 **Ulm** (echte Straßen, Höhen und Gebäude). Alles läuft clientseitig, kein Server, kein Framework, kein Bundler.
 
@@ -74,16 +74,24 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   zusammengefasst (Zeichenaufrufe sparen).
 - **Leben am Rand** (`LIFE`, `buildLife`, `stepLife`, Schalter `S.life`): Fußgänger/Jogger mit Hunden als Pool rund um
   dich (`stepWalkers`, drehen vor Wasser/Häusern um), Menschen auf Plätzen/Strand, Kühe, Pferde, Störche, Enten und
-  Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Alles InstancedMesh;
+  Schwäne, Ausflugsboote auf der Donau, parkende Autos, Möwen und Delfine auf Kalea. Gegenverkehr: `placeRider(…,-1)` schaut
+  selbst rückwärts (nicht nachträglich drehen – sonst kippt die Kurvenlage in die falsche Richtung). Alles InstancedMesh;
   `freeSpot`/`inOsm`/`nearOsm` verhindern Figuren in Häusern, auf der Strecke oder im Wasser. Figuren stehen auf dem
   sichtbaren Gelände (`standH` = `terrH`), nicht auf Straßenhöhe – sonst schweben sie neben Brücken und Dämmen.
-- **Besuch aus der Luft** (nur Ulm, nur mit `S.life`; `FLY`, `flyPlan` in `resetRide`, `stepFly`): mit 60 % Wahrscheinlichkeit
-  höchstens einmal pro Fahrt und Strecke. Der **Ulmer Spatz** (`spatzModel`, Strohhalm längs im Schnabel) überholt im Tiefflug
-  und biegt seitlich ab (Seite ohne Haus, `camBlocked`). Der **Schneider von Ulm** (`schneiderModel`, Berblinger-Gleiter,
-  Zylinder) segelt vor dir über der Straße, sucht laufend eine Landestelle in der Donau, die vor dir im Blick liegt
-  (`schneiderDive`/`divePt`/`diveFree`: nicht unter Brücken, kein Haus/Hang im Weg), plumpst mit Spritzer (`splashFx`)
-  hinein – ohne passende Stelle segelt er davon. Auf Strecken entlang der Donau wartet er auf so eine Stelle (`diveAhead`).
-  Sprechblasen über `bubbleSprite`, Töne `sndChirp`/`sndSplash`.
+- **Ulmer Überraschungen** (nur Ulm, nur mit `S.life`; `GAG`, `GAGS`, `gagPlan` in `resetRide`, `stepGags`): Häufigkeit `S.gags`
+  (selten/manchmal/oft ≈ alle 14/7/3,5 km, `GAG_GAP`), jede Szene höchstens einmal pro Fahrt, immer nur eine gleichzeitig.
+  Je Versuch wird nur eine Szene gewichtet gezogen und ihr Ort geprüft (`can`); Szenen ohne Ortsbindung (`any`) erst nach
+  1,2 km, damit Donau-/Stadt-Szenen eine Chance haben. Juli/Advent/14. März erhöhen passende Szenen (`gagSeason`), neue
+  zählen doppelt. Album im Menü (`renderGags`, `kalea_gags`) mit Geschichte; „Gleich eine Überraschung“ setzt `GAG.next=0`.
+  Orte: `citySpot` (freier Platz 6–8 m neben der Fahrbahn in Ortszone/bei Häusern, `spotFree`, man fährt geradeaus darauf zu),
+  `riverSpot` (Donau vor dir, nicht an Brücken, freie Sicht von der Straße – `finalHeight`/`camBlocked` entlang der Sichtlinie;
+  `side` = Flussseite der Straße), `donauAt(s,u)`/`donauS` (Lage auf der Donau, s flussabwärts). Szenen: **Spatz** und
+  **Schneider** (`FLY`, `flyStart`: Spatz überholt im Tiefflug; Schneider segelt vor dir und plumpst an einer sichtbaren Stelle
+  in die Donau, `schneiderDive`/`divePt`/`diveFree`, Spritzer `splashFx`), **Einstein** (Hollandrad, Beine per Zwei-Glieder-
+  Kinematik `pedalLegs`), **Ivo Gönner** (Amtskette, Ulmer Fahne), **St. Georgs Chorknaben** (Chor-Ton `choirStart`),
+  **Fisch Heilbronner** (Marktstand), **Nabada**, **Fischerstechen** (Zillen Heck voraus, einer fällt), **Ulmer Schachtel**,
+  **Münsterglocken** (nur Ton, `sndBell`), **Lichterserenade** (nur bei Abendsonne, additive Leuchtpunkte). Figuren aus
+  `figParts`/`seatParts`/`armPivot`, alles wird beim Start gebaut und mit `gagEnd` wieder entfernt (`disposeTree`).
 - **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
@@ -97,9 +105,12 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Steht in der Mitfahrer-Liste mit Abstand.
 - **Bildschirm wach** (`keepAwake`): Wake-Lock-Schnittstelle, sonst stummes Mini-Video in Schleife (`NOSLEEP_MP4`);
   an bei `startRide`, aus bei `endRide`, nach Tab-Wechsel neu.
-- **Tageszeit & Wetter** (`TOD`, `WX`, `applyWeather`, `S.tod` morgen/mittag/abend/auto, `S.wx` sonnig/wolkig/nebel/regen):
-  ändert Sonnenstand und -farbe, Himmel (gemeinsame `SUN_DIR`/`SKYTOP`/`HORIZON`), Licht, Nebeldichte (× in `applyQuality`,
-  auch Wasser-Shader), Wolken; Regen = `RAIN`-Striche rund um die Kamera (`stepRain`). Wird in `buildWorld` neu angewendet.
+- **Tageszeit & Wetter** (`TOD`, `WX`, `applyWeather`, `S.tod` zufall/morgen/mittag/abend/auto, `S.wx` zufall/sonnig/wolkig/
+  nebel/regen): ändert Sonnenstand und -farbe, Himmel (gemeinsame `SUN_DIR`/`SKYTOP`/`HORIZON`), Licht, Nebeldichte
+  (`applyFog`, auch Wasser-Shader), Wolken; Regen = `RAIN`-Striche rund um die Kamera (`stepRain`, Stärke 0…1). Wird in
+  `buildWorld` neu angewendet. **Zufall in Maßen** (Standard, alte Vorgabe mittag/sonnig wird einmalig umgestellt, `sv:3`):
+  `wxRandomize` bei jeder neuen Fahrt (meist schön, Nebel nur morgens), `stepWeather` wechselt alle 12–25 min zu einem
+  Nachbarzustand und blendet 90 s über (`curWx` mischt), Regen dauert 4–9 min.
 - **Richtung & Einstieg** (Menü bei den Routen): `REV` je Route in `kalea_rev` – `reverseArrays` dreht RX/RZ/RH/RNAME
   (Start bleibt Index 0), Anstiege dann per `detectClimbs` (Ulm: Name nach Straße, eigene KOM-/Runden-Schlüssel mit `_r`);
   online zählt die Richtung mit (`sameTrack`/`sameRoom`). `START_AT` = Einstieg (vor einem Anstieg oder alle 5 km), gilt beim
@@ -116,7 +127,16 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   besten 20 min (Garmin/früher Zwift), bester Stunde und CP-Modell 3–20 min (nur bei plausibler Ausbelastung: W' 6–30 kJ,
   3 min > 1,2·CP, R² > 0,995). Nur nach oben (≥ +1 %, +3 W); Hinweis oben in der Statistik nach „Fahrt beenden“,
   abgelehnter Wert in `S.ftpNo`.
-- **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr,
+- **Trainer-Protokolle** (`setupTrainer`, `T.mode`): `ftms` (bevorzugt; Steigung 0x11, ERG 0x05; kann der Trainer keine
+  Steigung – Feature-Bit 13 fehlt oder Antwort 0x02 –, gehen Widerstandsstufen 0x04 im Bereich aus 0x2AD6, `T.noSim`),
+  `fec` (Tacx FE-C über Bluetooth: Dienst 6e40fec1…, schreiben auf …fec3 ohne Antwort, Daten auf …fec2; ANT+-Seiten mit
+  `fecMsg`: 0x37 Gewicht/Rad, 0x32 Luftwiderstand, 0x33 Steigung, 0x31 ERG; Empfang 0x10 Tempo, 0x19 Watt/Kadenz),
+  `wahoo` (ältere Wahoo ohne FTMS: Steuerkanal a026e005… im Cycling-Power-Dienst; 0x20 EE FC freischalten, 0x43 Gewicht/
+  Crr/Cw, 0x46 Steigung `(g+1)·32768`, 0x42 ERG), `cps` (nur Watt, ohne Steuerung; Tempo aus Radumdrehungen, `cpsParse`).
+  Gewicht/Luftwiderstand laufen als `T.pendingCfg` vor der Steigung (`pumpTrainer`). Kalibrieren nur mit FTMS.
+- **Powermeter** (optional, Rolle `pm`, `PM`, `setupPm`, `S.pmUse`): liefert dann Watt und Kadenz (`pmActive`/`pmCad`),
+  der Trainer regelt nur den Widerstand (`trPower`/`trCad` schreiben dann nicht in `S.power`/`S.cadence`).
+- **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr/pm,
   gemerkt nach erfolgreichem Verbinden): beim Start `autoConnect` → `navigator.bluetooth.getDevices()` (nur bereits erlaubte
   Geräte, kein Auswahlfenster) → `watchAdvertisements` bzw. alle 5 s `gatt.connect` (`connectRole`, nutzt `setupTrainer`/
   `setupClick`/`setupHr`/`setupCad`). Sind alle da, schließt das Geräte-Fenster von selbst. Fehlt `getDevices` (Chrome ggf.

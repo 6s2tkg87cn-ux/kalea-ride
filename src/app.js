@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,ghost:true,tod:'mittag',wx:'sonnig',p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',ghost:true,tod:'zufall',wx:'zufall',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -41,9 +41,9 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
-  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod)S.tod=o.tod;if(o.wx)S.wx=o.wx;
+  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
   if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,ghost:S.ghost,tod:S.tod,wx:S.wx,learned:Z.learned}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,ghost:S.ghost,tod:S.tod,wx:S.wx,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -179,34 +179,51 @@ const TOD={morgen:{n:'Morgen',el:0.3,h:[0.92,0.38],sun:0xffd8b0,si:0.9,sky:0x6c9
   abend:{n:'Abendsonne',el:0.14,h:[-0.88,0.47],sun:0xffa865,si:0.95,sky:0x4c64ad,hor:0xf7b88c,hs:0xffd3bd,hg:0x584a40,hi:0.5}};
 const WX={sonnig:{n:'Sonnig',fog:1,mix:0,dim:1,cl:0xffffff,ce:0x8aa6c8},wolkig:{n:'Bewölkt',fog:2,mix:0.5,dim:0.62,cl:0xe3e6ea,ce:0x77808c},
   nebel:{n:'Dunst & Nebel',fog:17,mix:0.93,noCl:true,dim:0.45,cl:0xe8eaec,ce:0x8e969f},regen:{n:'Regen',fog:7,mix:0.72,dim:0.42,cl:0xb9c0c8,ce:0x5a6470,rain:true}};
-function curTod(){if(S.tod!=='auto')return TOD[S.tod]?S.tod:'mittag';const h=new Date().getHours()+new Date().getMinutes()/60;return h<10?'morgen':h<17.5?'mittag':'abend';}
-function applyWeather(){if(!scene||!sky)return;const P=TOD[curTod()],W=WX[S.wx]||WX.sonnig,gray=new THREE.Color(0xaab3bd),grayH=new THREE.Color(0xc9cfd5);
+// Zufall „in Maßen“: meist freundlich, ab und zu Wolken, selten Regen oder Dunst (nur morgens). Während der Fahrt wechselt
+// das Wetter höchstens alle 12–25 min und blendet 90 s lang über; Regen hält nur ein paar Minuten.
+const WXZ={cur:'sonnig',from:'sonnig',f:1,next:0,tod:'mittag',t:0};
+function wxPick(w){let r=Math.random()*Object.values(w).reduce((a,b)=>a+b,0);for(const k in w){r-=w[k];if(r<=0)return k;}return Object.keys(w)[0];}
+function wxRandomize(){WXZ.tod=wxPick({morgen:3,mittag:4.5,abend:2.5});WXZ.cur=WXZ.from=wxPick(WXZ.tod==='morgen'?{sonnig:4.5,wolkig:3,nebel:1.5,regen:1}:{sonnig:5,wolkig:3.5,regen:1.2});
+  WXZ.f=1;WXZ.next=rnd(12,25)*60;applyWeather();}
+function stepWeather(dt){if(S.wx!=='zufall')return;
+  if(WXZ.f<1){WXZ.f=Math.min(1,WXZ.f+dt/90);WXZ.t+=dt;if(WXZ.t>0.3||WXZ.f>=1){WXZ.t=0;applyWeather();}return;}
+  if(!S.riding||S.paused||(WXZ.next-=dt)>0)return;
+  const nx=wxPick({sonnig:{wolkig:1},wolkig:{sonnig:2,regen:0.8,nebel:WXZ.tod==='morgen'?0.4:0},regen:{wolkig:1},nebel:{wolkig:1,sonnig:1}}[WXZ.cur]);
+  WXZ.from=WXZ.cur;WXZ.cur=nx;WXZ.f=0;WXZ.next=(nx==='regen'?rnd(4,9):rnd(12,25))*60;
+  if(nx==='regen')toast('🌧️ Es zieht zu – gleich regnet es.');else if(WXZ.from==='regen')toast('🌤️ Der Regen hört auf.');}
+function curWx(){if(S.wx!=='zufall')return WX[S.wx]||WX.sonnig;const a=WX[WXZ.from],b=WX[WXZ.cur],f=WXZ.f;if(f>=1)return b;
+  const L=(x,y)=>x+(y-x)*f,C=(x,y)=>new THREE.Color(x).lerp(new THREE.Color(y),f).getHex();
+  return {fog:a.fog*Math.pow(b.fog/a.fog,f),mix:L(a.mix,b.mix),dim:L(a.dim,b.dim),cl:C(a.cl,b.cl),ce:C(a.ce,b.ce),noCl:f<0.5?a.noCl:b.noCl,rain:L(a.rain?1:0,b.rain?1:0)};}
+wxRandomize();
+function curTod(){if(S.tod==='zufall')return WXZ.tod;if(S.tod!=='auto')return TOD[S.tod]?S.tod:'mittag';const h=new Date().getHours()+new Date().getMinutes()/60;return h<10?'morgen':h<17.5?'mittag':'abend';}
+function applyWeather(){if(!scene||!sky)return;const P=TOD[curTod()],W=curWx(),gray=new THREE.Color(0xaab3bd),grayH=new THREE.Color(0xc9cfd5);
   SUN_DIR.set(Math.cos(P.el)*P.h[0],Math.sin(P.el),Math.cos(P.el)*P.h[1]).normalize();
   SKYTOP.set(P.sky).lerp(gray,W.mix);HORIZON.set(P.hor).lerp(grayH,W.mix*0.85);
   scene.fog.color.copy(HORIZON);scene.background.copy(HORIZON);
   sun.color.set(P.sun);sun.intensity=P.si*W.dim;hemi.color.set(P.hs).lerp(grayH,W.mix*0.6);hemi.groundColor.set(P.hg);hemi.intensity=P.hi*(1+W.mix*0.35);
   if(water&&water.material.uniforms&&water.material.uniforms.skyCol)water.material.uniforms.skyCol.value.set(0xa7cfec).lerp(HORIZON,0.5);
   for(const c of clouds){c.visible=!W.noCl;const m=c.material;if(m&&m.color){m.color.set(W.cl);if(m.emissive)m.emissive.set(W.ce);}}
-  applyQuality();setRain(!!W.rain);}
+  applyFog();setRain(+W.rain||0);}
 // Regen: kurze Striche in einem Kasten um die Kamera (wandert mit), ~1000–2400 Linien
 const RAIN={obj:null,n:0,p:null};
-function setRain(on){if(!on){if(RAIN.obj)RAIN.obj.visible=false;return;}
+function setRain(on){if(on<0.03){if(RAIN.obj)RAIN.obj.visible=false;return;} // on: Stärke 0…1
   if(!RAIN.obj){const n=S.quality==='low'?1000:S.quality==='medium'?1600:2400,p=new Float32Array(n*3),g=new THREE.BufferGeometry(),v=new Float32Array(n*6);
     for(let i=0;i<n;i++){p[i*3]=rnd(-30,30);p[i*3+1]=rnd(-6,24);p[i*3+2]=rnd(-30,30);}
     g.setAttribute('position',new THREE.BufferAttribute(v,3));RAIN.obj=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xeef3f8,transparent:true,opacity:0.75,depthWrite:false,fog:false}));
     RAIN.obj.frustumCulled=false;RAIN.n=n;RAIN.p=p;scene.add(RAIN.obj);}
-  RAIN.obj.visible=true;}
+  RAIN.obj.visible=true;RAIN.obj.material.opacity=0.75*Math.min(1,on);}
 function stepRain(dt){const R=RAIN.obj;if(!R||!R.visible)return;const p=RAIN.p,v=R.geometry.attributes.position.array,c=camera.position;
   R.position.set(Math.floor(c.x),Math.floor(c.y),Math.floor(c.z));const ox=c.x-R.position.x,oz=c.z-R.position.z;
   for(let i=0;i<RAIN.n;i++){let y=p[i*3+1]-14*dt;if(y<-6)y+=30;p[i*3+1]=y;const x=p[i*3]+0.9*dt;p[i*3]=x>30?x-60:x;
     const k=i*6,X=p[i*3]+ox,Z=p[i*3+2]+oz;v[k]=X;v[k+1]=y;v[k+2]=Z;v[k+3]=X+0.06;v[k+4]=y+1.1;v[k+5]=Z;}
   R.geometry.attributes.position.needsUpdate=true;}
 function basePR(){const q=S.quality,mx=Math.sqrt(3.7e6/Math.max(1,innerWidth*innerHeight));return Math.max(0.5,Math.min(devicePixelRatio,q==='high'?2:q==='medium'?1.25:1,q==='high'?mx:mx*0.8));}
+function applyFog(){if(!scene.fog)return;scene.fog.density=(S.quality==='low'?0.00030:0.00021)*curWx().fog;if(water&&water.material.uniforms&&water.material.uniforms.fogDensity)water.material.uniforms.fogDensity.value=scene.fog.density;}
 function applyQuality(){
   const q=S.quality,hi=q==='high';
   PERF.scale=q==='low'?0.85:1;renderer.setPixelRatio(basePR()*PERF.scale);renderer.setSize(innerWidth,innerHeight);
   {const ms=hi?2048:1024;if(sun.shadow.mapSize.x!==ms){sun.shadow.mapSize.set(ms,ms);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}}
-  sun.castShadow=hi;if(scene.fog)scene.fog.density=(q==='low'?0.00030:0.00021)*((WX[S.wx]||WX.sonnig).fog);if(water&&water.material.uniforms&&water.material.uniforms.fogDensity)water.material.uniforms.fogDensity.value=scene.fog.density;GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;LOD_R=hi?1100:q==='medium'?800:550;
+  sun.castShadow=hi;applyFog();GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;LOD_R=hi?1100:q==='medium'?800:550;
 }
 // Auflösung automatisch anpassen, damit es flüssig bleibt (wichtig auf iPad/Tablet)
 function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=now-PERF.t0;if(el<2000)return;
@@ -1404,7 +1421,7 @@ function animRider(o,phase,wheelAng,st){const u=o.userData,b=u.bones,now=perform
     rBoneTo(b[th2],_rb,hip,kn,RX1);rBoneTo(b[sh2],_rb,kn,ank,RX1);}
   for(const bn of b)bn.matrixWorldNeedsUpdate=true;}
 // Fahrer auf die Straße setzen; in Kurven legt er sich je nach Tempo hinein (dir=−1: Gegenverkehr)
-function placeRider(o,dist,lat,v,dir=1){const r=roadAt(dist),a=roadAt(dist+2),rx=-r.tz,rz=r.tx;
+function placeRider(o,dist,lat,v,dir=1){const r=roadAt(dist),a=roadAt(dist+2*dir),rx=-r.tz,rz=r.tx; // dir −1: Gegenverkehr, schaut rückwärts
   o.position.set(r.x+rx*lat,r.h+0.25,r.z+rz*lat);o.lookAt(a.x+rx*lat,a.h+0.25,a.z+rz*lat);
   if(v){const p=roadAt(dist-3),q=roadAt(dist+3);let da=Math.atan2(q.tx,q.tz)-Math.atan2(p.tx,p.tz);da=Math.atan2(Math.sin(da),Math.cos(da));
     const tgt=-dir*clamp(Math.atan(v*v*(da/6)/9.81),-0.55,0.55),u=o.userData;u.lean+=(tgt-u.lean)*0.12;o.rotateZ(u.lean);}}
@@ -1474,7 +1491,7 @@ function stepOncoming(dt){const on=S.life&&S.started;
     const gOpp=-gradeAt(o.d),vT=o.base*clamp(1-6*gOpp,0.45,1.6);o.v+=(vT-o.v)*Math.min(1,dt*0.5);o.d-=o.v*dt;
     o.phase+=(gOpp<-0.03&&o.v>9?0:1.45)*Math.PI*2*dt;o.wheel+=o.v/0.335*dt;
     if(o.d<S.dist-60||o.d>S.dist+1500)respawnOnc(o);
-    placeRider(o.obj,o.d,o.lat,o.v,-1);o.obj.rotateY(Math.PI);const d2=o.obj.position.distanceToSquared(camera.position);
+    placeRider(o.obj,o.d,o.lat,o.v,-1);const d2=o.obj.position.distanceToSquared(camera.position);
     o.obj.visible=d2<320*320;if(d2<200*200)animRider(o.obj,o.phase,o.wheel,{v:o.v,w:2,g:-gradeAt(o.d)});}}
 
 /* ================= Physik ================= */
@@ -2164,66 +2181,100 @@ function bleWrite(ch,data){bleQ=bleQ.then(()=>ch.writeValueWithResponse?ch.write
 function setDot(k,state,text){$('d'+k).className='dot '+state;$('s'+k).textContent=text;}
 function status(msg){$('status').textContent=msg||'';}
 
-// ---- Trainer (FTMS bevorzugt, sonst Cycling Power) ----
-const T={speed:null,speedAt:0,acc:0,hasCad:false,cadAt:0,pedaling:true,coastT:0,startT:-1e9,startSoft:0,dev:null,cp:null,mode:null,lastData:0,lastSent:null,lastSendT:0,crank:null,retries:0};
+// ---- Trainer ----
+// FTMS (Standard fast aller aktuellen Trainer: Wahoo KICKR/CORE/SNAP, Tacx Neo/Flux/Flow, Elite Suito/Direto/Justo, Saris H3 …),
+// sonst Tacx mit FE-C über Bluetooth (ANT+-Nachrichten im Tacx-Dienst), ältere Wahoo-Trainer (eigener Steuerkanal im
+// Cycling-Power-Dienst) oder nur ein Leistungsmesser (Rolle ohne Steuerung: Tempo wird aus den Watt berechnet).
+const T={speed:null,speedAt:0,acc:0,hasCad:false,cadAt:0,pedaling:true,coastT:0,startT:-1e9,startSoft:0,dev:null,cp:null,mode:null,lastData:0,lastSent:null,lastSendT:0,crank:null,retries:0,circ:2.096};
+const FEC_SVC='6e40fec1-b5a3-f393-e0a9-e50e24dcca9e',FEC_NOTIFY='6e40fec2-b5a3-f393-e0a9-e50e24dcca9e',FEC_WRITE='6e40fec3-b5a3-f393-e0a9-e50e24dcca9e',WAHOO_CP='a026e005-0a7d-4ab3-97fa-f1500f9feb8b';
+const TR_KIND={ftms:'steuerbar (FTMS)',fec:'steuerbar (Tacx FE-C)',wahoo:'steuerbar (Wahoo)',cps:'nur Leistungsdaten – Widerstand nicht steuerbar'};
 async function connectTrainer(){
   if(!navigator.bluetooth)return;
   try{setDot('Trainer','busy','Gerät auswählen …');
-    T.dev=await navigator.bluetooth.requestDevice({filters:[{services:[0x1826]},{services:[0x1818]},{namePrefix:'KICKR'}],optionalServices:[0x1826,0x1818]});
+    T.dev=await navigator.bluetooth.requestDevice({filters:[{services:[0x1826]},{services:[0x1818]},{services:[FEC_SVC]},{namePrefix:'KICKR'},{namePrefix:'Tacx'}],optionalServices:[0x1826,0x1818,FEC_SVC]});
     T.dev.addEventListener('gattserverdisconnected',onTrainerLost);await setupTrainer();
   }catch(e){setDot('Trainer','off','Nicht verbunden'+(e.name==='NotFoundError'?'':' – '+e.message));T.dev=null;}
 }
+// FE-C: ANT+-Datenseite (8 Bytes) als „bestätigte Nachricht“ an Kanal 5: A4 · Länge 9 · 4F · 05 · Seite · Prüfsumme (XOR)
+function fecMsg(page){const m=[0xA4,0x09,0x4F,0x05,...page];m.push(m.reduce((a,b)=>a^b,0));return new Uint8Array(m);}
+function fecUser(){const w=Math.round(S.mass*100),bk=Math.round(PHYS.bike/0.05),d=T.circ/Math.PI,dcm=Math.floor(d*100),off=clamp(Math.round((d*100-dcm)*10),0,10);
+  return [0x37,w&255,w>>8,0xFF,(off&15)|((bk&15)<<4),(bk>>4)&255,dcm,0x00];} // Gewicht, Radgewicht, Raddurchmesser (Umfang ≈ 2096 mm)
+function wahooSim(cw){const w=Math.round((S.mass+PHYS.bike)*100),r=Math.round(0.004*10000),c=Math.round((cw||0)*1000);return new Uint8Array([0x43,w&255,w>>8,r&255,r>>8,c&255,c>>8]);}
+function chWrite(ch,data){return T.mode==='fec'&&ch.properties&&ch.properties.writeWithoutResponse&&ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data));}
 async function setupTrainer(){
   setDot('Trainer','busy','Verbinde …');
-  const server=await T.dev.gatt.connect();let ftms=null;
-  try{ftms=await server.getPrimaryService(0x1826);}catch(e){}
+  const server=await T.dev.gatt.connect(),svc=async u=>{try{return await server.getPrimaryService(u);}catch(e){return null;}};
+  T.cp=null;T.mode=null;T.noSim=false;T.lastCw=null;T.pendingCfg=null;T.wheel=null;
+  const ftms=await svc(0x1826);
   if(ftms){
     const ibd=await ftms.getCharacteristic(0x2AD2);await ibd.startNotifications();
-    ibd.addEventListener('characteristicvaluechanged',e=>parseIBD(e.target.value));
+    ibd.addEventListener('characteristicvaluechanged',e=>parseIBD(e.target.value));T.mode='ftms';
     try{const cp=await ftms.getCharacteristic(0x2AD9);await cp.startNotifications();
       cp.addEventListener('characteristicvaluechanged',e=>onCP(e.target.value));T.cp=cp;
       await bleWrite(cp,new Uint8Array([0x00]));await bleWrite(cp,new Uint8Array([0x07]));T.lastSent=null;
     }catch(e){T.cp=null;console.warn(e);}
-    // Fähigkeiten (z. B. Ausrollen/Kalibrieren) und Statusmeldungen des Trainers
+    // Fähigkeiten (z. B. Ausrollen/Kalibrieren, Steigungssimulation) und Statusmeldungen des Trainers
     try{const fe=await ftms.getCharacteristic(0x2ACC),v=await fe.readValue();T.feat=v.getUint32(0,true);T.tfeat=v.byteLength>=8?v.getUint32(4,true):0;}catch(e){T.tfeat=null;}
+    try{const rr=await ftms.getCharacteristic(0x2AD6),v=await rr.readValue();T.rmin=v.getInt16(0,true);T.rmax=v.getInt16(2,true);}catch(e){T.rmin=0;T.rmax=100;}
+    if(T.tfeat&&!(T.tfeat&(1<<13))&&(T.tfeat&(1<<2)))T.noSim=true; // kann keine Steigung, nur Widerstandsstufen
     try{const st=await ftms.getCharacteristic(0x2ADA);await st.startNotifications();st.addEventListener('characteristicvaluechanged',e=>onFtmsStatus(e.target.value));}catch(e){}
-    T.mode='ftms';
   }else{
-    const cps=await server.getPrimaryService(0x1818),ch=await cps.getCharacteristic(0x2A63);
-    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCPS(e.target.value));T.mode='cps';T.cp=null;
+    const fec=await svc(FEC_SVC),cps=await svc(0x1818);
+    if(cps){try{const ch=await cps.getCharacteristic(0x2A63);await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCPS(e.target.value));T.mode='cps';}catch(e){}}
+    if(fec){try{const wr=await fec.getCharacteristic(FEC_WRITE);T.cp=wr;T.mode='fec';
+        try{const rd=await fec.getCharacteristic(FEC_NOTIFY);await rd.startNotifications();rd.addEventListener('characteristicvaluechanged',e=>parseFEC(e.target.value));}catch(e){}
+        await chWrite(wr,fecMsg(fecUser()));}catch(e){T.cp=null;if(T.mode==='fec')T.mode=cps?'cps':null;console.warn('FE-C',e);}}
+    else if(cps){try{const wc=await cps.getCharacteristic(WAHOO_CP);await wc.startNotifications();T.cp=wc;T.mode='wahoo';
+        try{await chWrite(wc,new Uint8Array([0x20,0xEE,0xFC]));}catch(e){} // Freischalten (ältere Firmware)
+      }catch(e){T.cp=null;}}
+    if(!T.mode){try{server.disconnect();}catch(e){}throw new Error('Kein bekannter Trainer-Dienst gefunden');}
   }
-  T.retries=0;T.lastData=performance.now();rememberDev('trainer',T.dev);
-  setDot('Trainer','on',(T.dev.name||'Trainer')+(T.cp?' · steuerbar (FTMS)':' · nur Leistungsdaten'));status('');$('calibRow').classList.toggle('hidden',!T.cp);
+  T.lastSent=null;T.lastErg=null;T.retries=0;T.lastData=performance.now();rememberDev('trainer',T.dev);
+  setDot('Trainer','on',(T.dev.name||'Trainer')+' · '+(T.cp?TR_KIND[T.mode]:TR_KIND.cps)+(T.noSim?' · nur Widerstandsstufen':''));status('');
+  $('calibRow').classList.toggle('hidden',!(T.cp&&T.mode==='ftms'));sendResistance(true);
 }
 async function onTrainerLost(){T.cp=null;setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
   while(T.dev&&T.retries<5){T.retries++;await new Promise(r=>setTimeout(r,2000));try{await setupTrainer();return;}catch(e){}}
   setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}
+// Raddrehzahl vom Trainer (m/s) mit geglätteter Beschleunigung (für Gang-Messung und Tritt-Erkennung)
+function trSpeed(nv){const nt=performance.now();
+  if(T.speed!==null&&nt-T.speedAt>50&&nt-T.speedAt<2000){const a=(nv-T.speed)/((nt-T.speedAt)/1000);T.acc=T.acc*0.6+a*0.4;}T.speed=nv;T.speedAt=nt;}
+function trPower(w){T.power=w;if(!pmActive())S.power=w;}
+function trCad(c){if(CS.dev||pmCad())return;S.cadence=c;T.hasCad=true;T.cadAt=performance.now();}
 function parseIBD(dv){try{let o=0;const f=dv.getUint16(o,true);o+=2;
-  if(!(f&1)){const nv=dv.getUint16(o,true)/360,nt=performance.now();
-    if(T.speed!==null&&nt-T.speedAt>50&&nt-T.speedAt<2000){const a=(nv-T.speed)/((nt-T.speedAt)/1000);T.acc=T.acc*0.6+a*0.4;}
-    T.speed=nv;T.speedAt=nt;o+=2;} if(f&2)o+=2;
-  if(f&4){if(!CS.dev){S.cadence=dv.getUint16(o,true)/2;T.hasCad=true;T.cadAt=performance.now();}o+=2;}
+  if(!(f&1)){trSpeed(dv.getUint16(o,true)/360);o+=2;} if(f&2)o+=2;
+  if(f&4){trCad(dv.getUint16(o,true)/2);o+=2;}
   if(f&8)o+=2; if(f&16)o+=3; if(f&32)o+=2;
-  if(f&64){S.power=Math.max(0,dv.getInt16(o,true));o+=2;}
+  if(f&64){trPower(Math.max(0,dv.getInt16(o,true)));o+=2;}
   if(f&128)o+=2; if(f&256)o+=5;
   if(f&512){const hr=dv.getUint8(o);o+=1;if(hr>0&&!HR.dev)S.hr=hr;}
   T.lastData=performance.now();}catch(e){}}
-function parseCPS(dv){try{let o=0;const f=dv.getUint16(o,true);o+=2;S.power=Math.max(0,dv.getInt16(o,true));o+=2;
-  if(f&1)o+=1;if(f&4)o+=2;if(f&16)o+=6;
+// Cycling Power (Leistungsmesser oder ältere Wahoo-Trainer): Leistung, Radumdrehungen (→ Tempo), Kurbelumdrehungen (→ Trittfrequenz)
+function cpsParse(dv,st,onPow,onCad,onSpeed){let o=0;const f=dv.getUint16(o,true);o+=2;onPow(Math.max(0,dv.getInt16(o,true)));o+=2;
+  if(f&1)o+=1;if(f&4)o+=2;
+  if(f&16){const rev=dv.getUint32(o,true),tm=dv.getUint16(o+4,true);o+=6;
+    if(onSpeed){if(st.wheel){const dr=rev-st.wheel.rev,dt=((tm-st.wheel.tm+65536)%65536)/2048;if(dr>=0&&dr<50&&dt>0)onSpeed(dr*T.circ/dt);else if(performance.now()-st.wheel.at>2500)onSpeed(0);}
+      if(!st.wheel||rev!==st.wheel.rev)st.wheel={rev,tm,at:performance.now()};}}
   if(f&32){const rev=dv.getUint16(o,true),tm=dv.getUint16(o+2,true);
-    if(T.crank){const dr=(rev-T.crank.rev+65536)%65536,dt=((tm-T.crank.tm+65536)%65536)/1024;
-      if(dt>0)S.cadence=clamp(dr/dt*60,0,200);else if(performance.now()-T.crank.at>2500)S.cadence=0;}
-    if(!T.crank||rev!==T.crank.rev)T.crank={rev,tm,at:performance.now()};}
+    if(st.crank){const dr=(rev-st.crank.rev+65536)%65536,dt=((tm-st.crank.tm+65536)%65536)/1024;
+      if(dt>0)onCad(clamp(dr/dt*60,0,200));else if(performance.now()-st.crank.at>2500)onCad(0);}
+    if(!st.crank||rev!==st.crank.rev)st.crank={rev,tm,at:performance.now()};}}
+function parseCPS(dv){try{cpsParse(dv,T,trPower,trCad,trSpeed);T.lastData=performance.now();}catch(e){}}
+// FE-C-Datenseiten vom Trainer: 0x10 allgemein (Tempo 0,001 m/s), 0x19 Trainer (Trittfrequenz, Leistung 12 Bit)
+function parseFEC(dv){try{const b=new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength),o=b[0]===0xA4?4:0;if(b.length<o+8)return;
+  if(b[o]===0x10){const v=(b[o+4]|b[o+5]<<8)/1000;trSpeed(v);if(b[o+6]&&b[o+6]!==0xFF&&!HR.dev)S.hr=b[o+6];}
+  else if(b[o]===0x19){if(b[o+2]!==0xFF)trCad(b[o+2]);const w=b[o+5]|(b[o+6]&15)<<8;if(w!==0xFFF)trPower(w);}
   T.lastData=performance.now();}catch(e){}}
 function onCP(dv){const b=new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength);
   if(b[0]===0x80&&b[1]===0x13){calibAnswer(b);return;}
+  if(b[0]===0x80&&b[1]===0x11&&b[2]===0x02&&!T.noSim){T.noSim=true;setDot('Trainer','on',(T.dev&&T.dev.name||'Trainer')+' · '+TR_KIND.ftms+' · nur Widerstandsstufen');}
   if(b[0]===0x80&&b[2]!==0x01)console.warn('FTMS Control Point: Befehl 0x'+b[1].toString(16)+' Ergebnis '+b[2]);}
 // ---- Kalibrieren (Ausrollen / Spin-down, FTMS-Befehl 0x13) ----
 // Ablauf laut FTMS: Start → Trainer nennt Zieltempo → hochtreten → „Aufhören zu treten“ → ausrollen → Erfolg/Fehler
 const CAL={state:'',lo:0,hi:0,t:0};
 function calibSupported(){return T.tfeat===null||T.tfeat===undefined?null:!!(T.tfeat&(1<<15));}
 function calibUi(msg,cls){$('vCalib').innerHTML=msg;$('vCalib').className='calib '+(cls||'');}
-async function calibStart(){if(!T.cp){calibUi('Erst den Trainer verbinden.','bad');return;}
+async function calibStart(){if(!T.cp||T.mode!=='ftms'){calibUi('Erst den Trainer verbinden.','bad');return;}
   if(calibSupported()===false)calibUi('Dein Trainer meldet kein Ausrollen über die Standard-Schnittstelle – ich versuche es trotzdem …');
   CAL.state='ask';CAL.t=performance.now();T.calib=true;
   try{await bleWrite(T.cp,new Uint8Array([0x13,0x01]));}catch(e){calibFail('Befehl ging nicht durch: '+e.message);return;}
@@ -2241,26 +2292,35 @@ function calibTick(){if(!CAL.state)return;const v=(T.speed||0)*3.6;
   if(performance.now()-CAL.t>120000){calibFail('Zeit abgelaufen.');return;}
   setTimeout(calibTick,400);}
 function calibFail(msg){CAL.state='';T.calib=false;try{if(T.cp)bleWrite(T.cp,new Uint8Array([0x13,0x02]));}catch(e){}
-  calibUi(msg+'<br><small>Für den KICKR CORE geht es sonst in der Wahoo-App (Gerät → Kalibrieren / „Advanced Spindown“). Nötig ist das nur, wenn die Watt deutlich von deinem Powermeter abweichen.</small>','bad');sendResistance(true);}
+  calibUi(msg+'<br><small>Sonst in der App des Herstellers kalibrieren – beim KICKR CORE in der Wahoo-App (Gerät → Kalibrieren / „Advanced Spindown“). Nötig ist das nur, wenn die Watt deutlich von deinem Powermeter abweichen.</small>','bad');sendResistance(true);}
 function sendResistance(force){
   if(!T.cp||!S.riding||S.paused||T.calib)return;
-  const now=performance.now();
-  if(ergActive()){const tw=targetWatts();
+  const now=performance.now(),M=T.mode;
+  if(ergActive()){const tw=clamp(targetWatts(),0,2000);
     if(!force&&T.lastErg===tw&&now-T.lastSendT<3000)return;
-    const b=new DataView(new ArrayBuffer(3));b.setUint8(0,0x05);b.setInt16(1,clamp(tw,0,2000),true);
-    T.pending=new Uint8Array(b.buffer);T.lastErg=tw;T.lastSent=null;T.lastSendT=now;pumpTrainer();return;}
+    T.pending=M==='fec'?fecMsg([0x31,0xFF,0xFF,0xFF,0xFF,0xFF,(tw*4)&255,(tw*4)>>8]):M==='wahoo'?new Uint8Array([0x42,tw&255,tw>>8]):(()=>{const b=new DataView(new ArrayBuffer(3));b.setUint8(0,0x05);b.setInt16(1,tw,true);return new Uint8Array(b.buffer);})();
+    T.lastErg=tw;T.lastSent=null;T.lastCw=null;T.lastSendT=now;pumpTrainer();return;}
   T.lastErg=null;
   const cmd=trainerGradeCmd();
   if(!force&&T.lastSent!==null&&Math.abs(cmd.grade-T.lastSent)<0.0008&&now-T.lastSendT<5000)return;
-  const buf=new DataView(new ArrayBuffer(7));buf.setUint8(0,0x11);buf.setInt16(1,0,true);
-  buf.setInt16(3,clamp(Math.round(cmd.grade*10000),-32768,32767),true);buf.setUint8(5,Math.round(cmd.crr*10000));buf.setUint8(6,Math.round(cmd.cw*100));
-  T.pending=new Uint8Array(buf.buffer);T.lastSent=cmd.grade;T.lastSendT=now;pumpTrainer();
+  if(M==='fec'||M==='wahoo'){ // Luftwiderstand (nur normale Kassette) und Gewicht getrennt einstellen, dann die Steigung
+    if(T.lastCw===null||Math.abs(cmd.cw-T.lastCw)>0.02){T.lastCw=cmd.cw;T.pendingCfg=M==='fec'?fecMsg([0x32,0xFF,0xFF,0xFF,0xFF,Math.round(cmd.cw*100),0x7F,0x64]):wahooSim(cmd.cw);}
+    if(M==='fec'){const g=clamp(Math.round((cmd.grade*100+200)*100),0,40000);T.pending=fecMsg([0x33,0xFF,0xFF,0xFF,0xFF,g&255,g>>8,clamp(Math.round(cmd.crr/0.00005),0,254)]);}
+    else{const g=clamp(Math.round((cmd.grade+1)*32768),0,65535);T.pending=new Uint8Array([0x46,g&255,g>>8]);}}
+  else if(T.noSim){ // FTMS ohne Steigungssimulation: Steigung grob auf die Widerstandsstufen des Trainers abbilden (−2 % … +12 %)
+    const f=clamp((cmd.grade*100+2)/14,0,1),lv=Math.round(T.rmin+(T.rmax-T.rmin)*f);
+    T.pending=T.rmax>255?new Uint8Array([0x04,lv&255,(lv>>8)&255]):new Uint8Array([0x04,clamp(lv,0,255)]);}
+  else{const buf=new DataView(new ArrayBuffer(7));buf.setUint8(0,0x11);buf.setInt16(1,0,true);
+    buf.setInt16(3,clamp(Math.round(cmd.grade*10000),-32768,32767),true);buf.setUint8(5,Math.round(cmd.crr*10000));buf.setUint8(6,Math.round(cmd.cw*100));
+    T.pending=new Uint8Array(buf.buffer);}
+  T.lastSent=cmd.grade;T.lastSendT=now;pumpTrainer();
 }
 // Nur der jeweils neueste Befehl wird gesendet: schnelle Schaltvorgänge stauen sich nicht in einer Warteschlange.
+// Einstellungen (Gewicht, Luftwiderstand) gehen vorher raus.
 async function pumpTrainer(){
-  if(T.busy||!T.pending||!T.cp)return;T.busy=true;const data=T.pending;T.pending=null;
-  try{await (T.cp.writeValueWithResponse?T.cp.writeValueWithResponse(data):T.cp.writeValue(data));}catch(e){console.warn('FTMS',e.message);}
-  T.busy=false;if(T.pending)pumpTrainer();}
+  if(T.busy||!(T.pending||T.pendingCfg)||!T.cp)return;T.busy=true;let data;if(T.pendingCfg){data=T.pendingCfg;T.pendingCfg=null;}else{data=T.pending;T.pending=null;}
+  try{await chWrite(T.cp,data);}catch(e){console.warn('Trainer',e.message);}
+  T.busy=false;if(T.pending||T.pendingCfg)pumpTrainer();}
 setInterval(()=>sendResistance(false),400);
 
 // ---- Trittfrequenz-Sensor (optional, Cycling Speed & Cadence) ----
@@ -2281,6 +2341,21 @@ function parseCSC(dv){try{const f=dv.getUint8(0);let o=1;if(f&1)o+=6;
     else CS.crank={rev,tm,at:now};
     T.hasCad=true;T.cadAt=now;}}catch(e){}}
 
+// ---- Powermeter (optional): Pedale/Kurbel; dann regelt der Trainer nur den Widerstand ----
+const PM={dev:null,crank:null};
+function pmActive(){return !!(PM.dev&&S.pmUse&&performance.now()-(PM.at||0)<4000);}
+function pmCad(){return pmActive()&&PM.crank&&performance.now()-PM.crank.at<4000;}
+async function connectPm(){if(!navigator.bluetooth)return;
+  try{setDot('Pm','busy','Gerät auswählen …');PM.dev=await navigator.bluetooth.requestDevice({filters:[{services:['cycling_power']}]});await setupPm();
+  }catch(e){PM.dev=null;setDot('Pm','off','Nicht verbunden');}}
+async function setupPm(){
+    if(T.dev&&PM.dev.id===T.dev.id){PM.dev=null;setDot('Pm','off','Das ist der Trainer – bitte den Powermeter wählen');throw new Error('same');}
+    const s=await PM.dev.gatt.connect(),svc=await s.getPrimaryService('cycling_power'),ch=await svc.getCharacteristic('cycling_power_measurement');
+    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{try{PM.at=performance.now();
+      cpsParse(e.target.value,PM,w=>{PM.power=w;if(S.pmUse)S.power=w;},c=>{if(S.pmUse&&!CS.dev){S.cadence=c;T.hasCad=true;T.cadAt=performance.now();}},null);}catch(x){}});
+    if(!PM.dev._kl){PM.dev._kl=1;PM.dev.addEventListener('gattserverdisconnected',()=>{setDot('Pm','off','Getrennt');PM.dev=null;PM.crank=null;$('pmUseRow').classList.add('hidden');});}
+    setDot('Pm','on',PM.dev.name||'Powermeter');rememberDev('pm',PM.dev);$('pmUseRow').classList.remove('hidden');}
+
 // ---- Pulsgurt ----
 const HR={dev:null};
 async function connectHr(){if(!navigator.bluetooth)return;
@@ -2300,14 +2375,15 @@ function devStore(){try{return JSON.parse(localStorage.getItem('kalea_devs')||'{
 function rememberDev(role,dev){if(!dev)return;const st=devStore(),e={id:dev.id,name:dev.name||''};
   if(role==='click'){st.click=(st.click||[]).filter(x=>x.id!==dev.id&&!(x.name===e.name&&x.id===''));st.click.push(e);st.click=st.click.slice(-2);}else st[role]=e;
   try{localStorage.setItem('kalea_devs',JSON.stringify(st));}catch(x){}checkAutoDone();}
-function rememberedList(){const st=devStore(),w=[];if(st.trainer)w.push(['trainer',st.trainer]);for(const c of st.click||[])w.push(['click',c]);if(st.cad)w.push(['cad',st.cad]);if(st.hr)w.push(['hr',st.hr]);return w;}
-const ROLE_DOT={trainer:'Trainer',click:'Click',cad:'Cad',hr:'Hr'},ROLE_NAME={trainer:'Trainer',click:'Click-Schalter',cad:'Trittfrequenz-Sensor',hr:'Pulsgurt'};
-function roleConnected(role,dev){if(role==='trainer')return !!(T.dev&&T.lastData&&performance.now()-T.lastData<5000);if(role==='hr')return !!HR.dev;if(role==='cad')return !!CS.dev;
+function rememberedList(){const st=devStore(),w=[];if(st.trainer)w.push(['trainer',st.trainer]);for(const c of st.click||[])w.push(['click',c]);if(st.cad)w.push(['cad',st.cad]);if(st.hr)w.push(['hr',st.hr]);if(st.pm)w.push(['pm',st.pm]);return w;}
+const ROLE_DOT={trainer:'Trainer',click:'Click',cad:'Cad',hr:'Hr',pm:'Pm'},ROLE_NAME={trainer:'Trainer',click:'Click-Schalter',cad:'Trittfrequenz-Sensor',hr:'Pulsgurt',pm:'Powermeter'};
+function roleConnected(role,dev){if(role==='trainer')return !!(T.dev&&T.lastData&&performance.now()-T.lastData<5000);if(role==='hr')return !!HR.dev;if(role==='cad')return !!CS.dev;if(role==='pm')return !!PM.dev;
   return Z.pads.some(p=>p.connected&&(!dev||p.dev.id===dev.id));}
 async function connectRole(role,dev){
   if(role==='trainer'){if(T.dev&&T.dev!==dev)return;T.dev=dev;if(!dev._kl){dev._kl=1;dev.addEventListener('gattserverdisconnected',onTrainerLost);}await setupTrainer();}
   else if(role==='hr'){if(HR.dev&&HR.dev!==dev)return;HR.dev=dev;try{await setupHr();}catch(e){HR.dev=null;throw e;}}
   else if(role==='cad'){if(CS.dev&&CS.dev!==dev)return;CS.dev=dev;try{await setupCad();}catch(e){CS.dev=null;throw e;}}
+  else if(role==='pm'){if(PM.dev&&PM.dev!==dev)return;PM.dev=dev;try{await setupPm();}catch(e){PM.dev=null;throw e;}}
   else{let pad=Z.pads.find(p=>p.dev.id===dev.id);if(pad&&pad.connected)return;
     if(!pad){pad={dev,bits:0,prev:{plus:false,minus:false},version:null,connected:false,buttons:0};Z.pads.push(pad);dev.addEventListener('gattserverdisconnected',()=>onClickLost(pad));}
     try{await setupClick(pad);}catch(e){Z.pads=Z.pads.filter(p=>p!==pad||p.connected);throw e;}}}
@@ -3102,7 +3178,7 @@ function frame(now){
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
   for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
-  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepLife(dt,t);
+  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepGags(S.riding&&!S.paused?dt:0);stepWeather(dt);stepLife(dt,t);
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);stepRain(dt);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
@@ -3189,13 +3265,16 @@ function wireUi(){
   $('iQual').onchange=()=>{S.quality=$('iQual').value;if(IS_MOBILE)S.qualitySetOnMobile=true;saveSettings();CHUNK=S.quality==='low'?900:500;rebuildWorld(WORLD,ROUTE.id,'Grafik wird angepasst …');};
   $('iShiftMode').onchange=()=>{S.vshift=$('iShiftMode').value==='click';saveSettings();applyShiftMode();sendResistance(true);};
   $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
-  $('bTrainer').onclick=connectTrainer;$('bCalib').onclick=calibStart;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
+  $('bTrainer').onclick=connectTrainer;$('bCalib').onclick=calibStart;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;$('bPm').onclick=connectPm;
+  $('iGags').value=S.gags;$('iGags').onchange=()=>{S.gags=$('iGags').value;saveSettings();if(S.started)GAG.next=Math.min(GAG.next,gagNext(0.5));};renderGags();
+  $('bGagNow').onclick=()=>{if(!S.started){toast('Erst losfahren – dann kommt gleich eine Überraschung.');return;}if(!IS_ULM){toast('Überraschungen gibt es nur in Ulm.');return;}GAG.next=0;GAG.tryT=0;closeMenu();toast('🎲 Gleich passiert etwas …');};
+  $('iPmUse').checked=S.pmUse;$('iPmUse').onchange=()=>{S.pmUse=$('iPmUse').checked;saveSettings();};
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
   $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
   $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;$('iGhost').checked=S.ghost;$('iTod').value=S.tod;$('iWx').value=S.wx;
-  $('iTod').onchange=()=>{S.tod=$('iTod').value;saveSettings();applyWeather();};$('iWx').onchange=()=>{S.wx=$('iWx').value;saveSettings();applyWeather();};$('iGhost').onchange=()=>{S.ghost=$('iGhost').checked;saveSettings();};
+  $('iTod').onchange=()=>{S.tod=$('iTod').value;saveSettings();if(S.tod==='zufall')wxRandomize();else applyWeather();};$('iWx').onchange=()=>{S.wx=$('iWx').value;saveSettings();if(S.wx==='zufall')wxRandomize();else applyWeather();};$('iGhost').onchange=()=>{S.ghost=$('iGhost').checked;saveSettings();};
   $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'||was==='solo')placeBotsStart();};
   $('iBotWkg').onchange=()=>{S.botWkg=clamp(+$('iBotWkg').value||2.5,1,6);$('iBotWkg').value=S.botWkg;saveSettings();};
   $('iLife').onchange=()=>{S.life=$('iLife').checked;saveSettings();applyLifeVis();};
@@ -3432,13 +3511,10 @@ function stepLife(dt,t){const run=S.started&&!S.paused?dt:0;stepOncoming(run);st
   for(const d of LIFE.dolph)stepDolphin(d,run);}
 
 /* ================= Besuch aus der Luft (Ulm): Ulmer Spatz oder Schneider von Ulm =================
-   Manchmal, höchstens einmal pro Fahrt und Strecke: Der Spatz (Strohhalm längs im Schnabel – so zeigte er beim Münsterbau,
+   Zwei der Ulmer Überraschungen (Planung siehe GAG): Der Spatz (Strohhalm längs im Schnabel – so zeigte er beim Münsterbau,
    wie der Balken durchs Stadttor passt) überholt dich im Tiefflug. Der Schneider von Ulm (Albrecht Berblinger, 1811) gleitet
    quer über die Straße und landet – wie damals – in der Donau. Nur mit „Leben am Rand“. */
-const FLY={plan:null,act:null,done:false,obj:{},fx:null,bub:null,tryT:0};
-function flyPlan(){if(FLY.act)flyEnd();FLY.done=false;FLY.plan=null;if(Math.random()>0.6)return;
-  FLY.plan=Math.random()<0.5?{kind:'spatz',at:rnd(900,9000)}:{kind:'schneider',at:rnd(600,4000)};}
-flyPlan();
+const FLY={act:null,obj:{},fx:null,bub:null}; // wann sie kommen, entscheidet GAG (Ulmer Überraschungen)
 function spatzModel(){const g=new THREE.Group(),I=(r,d=2)=>new THREE.IcosahedronGeometry(r,d);
   const body=new THREE.Mesh(merge([[tr(I(0.35),[0,0,0],[0,0,0],[0.85,0.78,1.25]),0x9b6a3c,0.2],[tr(I(0.33),[0,-0.06,0.06],[0,0,0],[0.78,0.65,1.05]),0xd8ccb4],
     [tr(new THREE.BoxGeometry(0.06,0.03,0.4),[0.09,0.26,-0.05]),0x5a3a1e],[tr(new THREE.BoxGeometry(0.06,0.03,0.4),[-0.09,0.26,-0.05]),0x5a3a1e],
@@ -3492,7 +3568,7 @@ function schneiderDive(Q,d0,v){let best=null;
     const r=roadAt(d0+v*T2),fw=(P[0]-r.x)*r.tx+(P[2]-r.z)*r.tz,lat=Math.abs((P[0]-r.x)*r.tz-(P[2]-r.z)*r.tx);
     if(fw<10||Math.atan2(lat,fw)>0.6||Math.hypot(fw,lat)>140||!diveFree(Q,P))continue;best={P,T2,L2};}
   return best;}
-function flyStart(kind){FLY.plan=null;FLY.done=true;const v=Math.max(4,S.v);
+function flyStart(kind){const v=Math.max(4,S.v);
   let side=Math.random()<0.5?-1:1;const free=sd=>{for(let k=0.2;k<=1;k+=0.2){const r=roadAt(S.dist+v*(6+4*k)+30*k),lat=0.8+sd*k*k*45;
       if(camBlocked(r.x-r.tz*lat,r.z+r.tx*lat,r.h+3.4+k*k*22-1))return false;}return true;};if(!free(side)&&free(-side))side=-side; // nicht in ein Haus abbiegen
   if(kind==='spatz')FLY.act={kind,t:0,s:S.dist-10,side,o:flyObj('spatz'),told:0};
@@ -3509,12 +3585,7 @@ function stepSplash(dt){const f=FLY.fx;if(!f)return;f.t+=dt;const t=f.t;
   f.drops.instanceMatrix.needsUpdate=true;
   if(t>2.4){scene.remove(f.g);disposeTree(f.g);FLY.fx=null;}}
 function flyEnd(){const a=FLY.act;if(a&&a.o)a.o.visible=false;flyBubble('',false);FLY.act=null;}
-function stepFly(dt){stepSplash(dt);const a=FLY.act;
-  if(!a){const p=FLY.plan;if(!p||FLY.done||!IS_ULM||!S.life||!S.riding||S.paused||S.v<2.5||dt<=0||S.odo<p.at)return;
-    if(p.kind==='schneider'){if(!p.chk){p.chk=1;p.river=false;for(let d=0;d<L&&!p.river;d+=100)p.river=diveAhead(d);}
-      // an Strecken entlang der Donau auf eine Stelle warten, an der sie vor dir liegt
-      FLY.tryT-=dt;if(FLY.tryT>0)return;FLY.tryT=0.6;if(p.river&&S.odo<p.at+12000&&!diveAhead(S.dist))return;}
-    flyStart(p.kind);return;}
+function stepFly(dt){stepSplash(dt);const a=FLY.act;if(!a)return;
   if(dt<=0)return;a.t+=dt;const o=a.o,t=a.t,prev=o.position.clone();
   if(a.kind==='spatz'){a.s+=Math.max(7,S.v+6.5)*dt;const k=Math.max(0,(t-6)/4),cyc=t%1.15,flap=cyc<0.7,hb=flap?0.5*cyc/0.7:0.5*(1-(cyc-0.7)/0.45);
     const lat=0.8-a.side*2.4*Math.pow(Math.max(0,1-t/2.5),2)+0.5*Math.sin(t*0.8)+a.side*k*k*45,h=2.7+hb+k*k*22,r=roadAt(a.s);o.position.set(r.x-r.tz*lat,r.h+h,r.z+r.tx*lat);
@@ -3540,6 +3611,264 @@ function stepFly(dt){stepSplash(dt);const a=FLY.act;
   o.userData.legs.rotation.set(0.25*Math.sin(t*2.4)+w*0.5*Math.sin(t*12),0,w*0.3*Math.sin(t*9));
   if(FLY.bub){FLY.bub.position.set(o.position.x,o.position.y+1.2,o.position.z);if(t>4.5)flyBubble('',false);}}
 
+/* ================= Ulmer Überraschungen =================
+   Kleine Szenen unterwegs (nur Ulm, nur mit „Belebte Umgebung“): jede höchstens einmal pro Fahrt; wie oft, stellt S.gags ein
+   (selten ≈ alle 14 km, manchmal ≈ 7 km, oft ≈ 3,5 km). Szenen an der Donau suchen sich eine Stelle, die vor dir im Blick liegt,
+   Szenen in der Stadt einen freien Platz am Straßenrand. Was man schon gesehen hat, steht mit Geschichte im Album (kalea_gags). */
+const GAG={next:0,seen:new Set(),act:null,tryT:0,bub:null,rp:null};
+const GAG_GAP={selten:14000,manchmal:7000,oft:3500};
+const GAGS=[
+  {id:'spatz',ico:'🐦',name:'Der Ulmer Spatz',hint:'überall in Ulm',w:1,any:1,can:()=>({}),start:()=>flyStart('spatz'),
+   info:'Beim Münsterbau bekamen die Ulmer einen langen Balken nicht durchs Stadttor – bis ein Spatz zeigte, wie man einen Strohhalm längs trägt. Seitdem sitzt ein Spatz auf dem Münsterdach.'},
+  {id:'schneider',ico:'🪶',name:'Der Schneider von Ulm',hint:'an der Donau',w:1,can:d=>diveAhead(d)?{}:null,start:()=>flyStart('schneider'),
+   info:'Der Schneidermeister Albrecht Ludwig Berblinger baute einen Gleiter und wollte 1811 vor dem König über die Donau fliegen – er landete im Wasser. Heute gilt er als Flugpionier.'},
+  {id:'einstein',ico:'🚲',name:'Albert Einstein',hint:'überall in Ulm',w:1,any:1,can:()=>({}),start:gagEinstein,
+   info:'Albert Einstein wurde am 14. März 1879 in Ulm geboren. Ihm wird der Satz zugeschrieben: „Das Leben ist wie Fahrradfahren. Um die Balance zu halten, musst du in Bewegung bleiben.“'},
+  {id:'goenner',ico:'🏛️',name:'Ivo Gönner',hint:'in der Stadt',w:0.8,can:d=>citySpot(d,6.2,1.2),start:gagGoenner,
+   info:'Ivo Gönner war von 1992 bis 2016 Oberbürgermeister von Ulm.'},
+  {id:'chor',ico:'🎶',name:'St. Georgs Chorknaben',hint:'in der Stadt',w:0.8,can:d=>citySpot(d,7.5,2.4),start:gagChor,
+   info:'Die St. Georgs Chorknaben sind ein Ulmer Knabenchor (gegründet 1968) mit rund 90 Sängern.'},
+  {id:'fisch',ico:'🐟',name:'Fisch Heilbronner',hint:'in der Stadt',w:0.8,can:d=>citySpot(d,7.8,1.9),start:gagFisch,
+   info:'Das Fischhaus Heilbronner in der Ulmer Rebengasse: Fischladen und Fischgaststätte, bekannt für seine Fischbrötchen.'},
+  {id:'nabada',ico:'🛟',name:'Nabada',hint:'an der Donau',w:1,can:d=>riverSpot(d,14),start:gagNabada,
+   info:'Am Schwörmontag im Juli treiben Tausende auf Booten, Flößen und Luftmatratzen die Donau hinunter – das Nabada (schwäbisch für „hinunterbaden“).'},
+  {id:'fischer',ico:'🛶',name:'Fischerstechen',hint:'an einer breiten Stelle der Donau',w:0.9,can:d=>riverSpot(d,22),start:gagFischer,
+   info:'Beim Fischerstechen (etwa alle vier Jahre im Juli) stehen verkleidete Stecher auf dem Heck ihrer Zillen und versuchen, sich mit 2,80 m langen Speeren gegenseitig ins Wasser zu stoßen.'},
+  {id:'schachtel',ico:'⛵',name:'Ulmer Schachtel',hint:'an der Donau',w:0.7,can:d=>riverSpot(d,14),start:gagSchachtel,
+   info:'Mit Ulmer Schachteln fuhren früher Waren und Auswanderer die Donau hinab bis Wien und Budapest; am Ziel wurden die Boote meist verkauft.'},
+  {id:'muenster',ico:'🔔',name:'Die Münsterglocken',hint:'nahe beim Münster',w:0.6,can:d=>{const r=roadAt(d),m=ULM.places.muenster;return Math.hypot(r.x-m[0],r.z-m[1])<1500?{}:null;},start:gagMuenster,
+   info:'Das Ulmer Münster hat mit 161,53 m den höchsten Kirchturm der Welt.'},
+  {id:'lichter',ico:'🕯️',name:'Lichterserenade',hint:'an der Donau, wenn die Abendsonne scheint',w:1.2,can:d=>curTod()==='abend'?riverSpot(d,12):null,start:gagLichter,
+   info:'Bei der Lichterserenade in der Schwörwoche im Juli schwimmen Tausende Kerzen auf der Donau.'}];
+function gagNext(f){return S.odo+Math.max(800,(GAG_GAP[S.gags]||7000)*f*rnd(0.6,1.4));}
+function gagPlan(){if(FLY.act)flyEnd();if(GAG.act)gagEnd();GAG.seen=new Set();GAG.next=gagNext(0.6);}
+function gagAlbum(){try{return JSON.parse(localStorage.getItem('kalea_gags')||'{}');}catch(e){return {};}}
+function gagSeen(id){const a=gagAlbum();a[id]=(a[id]||0)+1;try{localStorage.setItem('kalea_gags',JSON.stringify(a));}catch(e){}renderGags();}
+// im Juli (Schwörwoche), um Einsteins Geburtstag und im Advent kommen die passenden Szenen öfter
+function gagSeason(id){const d=new Date(),m=d.getMonth()+1,day=d.getDate();
+  if(m===7&&['nabada','fischer','lichter','schachtel'].includes(id))return 4;if(id==='einstein'&&m===3&&Math.abs(day-14)<=3)return 5;if(id==='chor'&&m===12)return 3;return 1;}
+function renderGags(){const el=$('gagList');if(!el)return;const al=gagAlbum();let n=0;
+  el.innerHTML=GAGS.map(g=>{const c=al[g.id]||0;if(c)n++;return c?`<li><b>${g.ico} ${g.name}</b> <span class="cnt">${c}× gesehen</span><small>${g.info}</small></li>`:
+    `<li class="no"><b>❓ Noch nicht entdeckt</b><small>Tipp: ${g.hint}</small></li>`;}).join('');
+  $('gagCount').textContent=n+' von '+GAGS.length+' entdeckt';}
+function gagEnd(){const a=GAG.act;if(!a)return;GAG.act=null;gagBubble('');if(a.stop)a.stop();for(const o of a.objs||[]){scene.remove(o);disposeTree(o);}}
+function gagBubble(text,p,dy){if(GAG.bub&&GAG.bub.userData.t!==text){scene.remove(GAG.bub);GAG.bub.material.map.dispose();GAG.bub.material.dispose();GAG.bub=null;}
+  if(!text)return;if(!GAG.bub){GAG.bub=bubbleSprite(text);GAG.bub.userData.t=text;scene.add(GAG.bub);}if(p)GAG.bub.position.set(p.x,p.y+(dy||0),p.z);}
+function stepGags(dt){
+  if(GAG.act){if(dt>0&&GAG.act.step(dt)===false)gagEnd();return;}
+  if(FLY.act||!IS_ULM||!S.life||S.gags==='aus'||!S.riding||S.paused||S.v<2.5||dt<=0||S.odo<GAG.next)return;
+  if((GAG.tryT-=dt)>0)return;GAG.tryT=0.35; // je Versuch nur eine (gewichtet gezogene) Szene prüfen – verteilt die Rechenzeit
+  const al=gagAlbum(),cand=GAGS.filter(g=>!GAG.seen.has(g.id)).map(g=>[g,g.w*gagSeason(g.id)*(al[g.id]?1:2)]);
+  if(!cand.length||S.odo>GAG.next+2500){GAG.next=gagNext(cand.length?0.4:99);return;} // hier passt gerade nichts: später wieder
+  let r=Math.random()*cand.reduce((a,c)=>a+c[1],0),g=cand[0][0];for(const c of cand){r-=c[1];if(r<=0){g=c[0];break;}}
+  if(g.any&&S.odo<GAG.next+1200&&Math.random()<0.85)return; // erst ein Stück lang Szenen bevorzugen, die einen passenden Ort brauchen
+  const ctx=g.can(S.dist);if(!ctx)return;GAG.seen.add(g.id);GAG.next=gagNext(1);gagSeen(g.id);try{g.start(ctx);}catch(e){console.warn('Überraschung',g.id,e);gagEnd();}}
+// ---- Orte ----
+// freier Platz am Straßenrand 150–260 m vor dir, in der Stadt (Ortszone oder echte Häuser in der Nähe), lat m neben der Mitte
+function housesNear(x,z,r){const k=Math.ceil(r/CAMC);for(let i=-k;i<=k;i++)for(let j=-k;j<=k;j++)if(CAMOCC.has((Math.floor(x/CAMC)+i)*100000+Math.floor(z/CAMC)+j))return true;return false;}
+function spotFree(x,z){return !nearestRoad(x,z,4.6)&&!camBlocked(x,z,standH(x,z)+0.4)&&riverDist(x,z).d>RIVER_HW+5&&!nearVRoad(x,z,3)&&footFree(x,z,1);}
+function citySpot(d0,lat,pad){for(let ah=150;ah<=260;ah+=12)for(const sd of [1,-1]){const r=roadAt(d0+ah),x=r.x-r.tz*lat*sd,z=r.z+r.tx*lat*sd;
+    if(!(ulmZone(x,z).d>0.3||housesNear(x,z,30)))continue;let ok=slopeY(x,z)>0.93;
+    for(const [ox,oz] of [[0,0],[pad,0],[-pad,0],[0,pad],[0,-pad]])if(ok&&!spotFree(x+ox,z+oz))ok=false;
+    // man soll auf die Szene zufahren: von 20–70 m davor liegt sie höchstens ~30° neben der Fahrtrichtung
+    for(const bk of [70,45,20]){const q=roadAt(d0+ah-bk),fw=(x-q.x)*q.tx+(z-q.z)*q.tz,lt=Math.abs((x-q.x)*q.tz-(z-q.z)*q.tx);if(ok&&(fw<5||Math.atan2(lt,fw)>0.55))ok=false;}
+    if(ok)return {d:d0+ah,x,z,y:standH(x,z)};}
+  return null;}
+// Stelle auf der Donau vor dir (im Blick, 70–240 m), mindestens hw m halbe Breite – nur wo die Straße neben dem Fluss
+// verläuft (nicht auf oder unter einer Brücke); side = Flussseite, auf der die Straße liegt (dort spielt die Szene)
+function riverSpot(d0,hw){const r0=roadAt(d0);
+  for(let ah=90;ah<=300;ah+=15){const q=roadAt(d0+ah),R=riverDist(q.x,q.z);if(!R.s||R.s.ri!==0||R.raw>120||R.d<RIVER_HW+8||Math.min(RIVW[0].p[R.s.i],RIVW[0].m[R.s.i])<hw)continue;
+    const sg=R.s,tt=clamp(((q.x-sg.a[0])*sg.dx+(q.z-sg.a[1])*sg.dz)/sg.l2,0,1),px=sg.a[0]+sg.dx*tt,pz=sg.a[1]+sg.dz*tt;if(nearestRoad(px,pz,35)||nearVRoad(px,pz,30))continue;
+    const fw=(px-r0.x)*r0.tx+(pz-r0.z)*r0.tz,lat=Math.abs((px-r0.x)*r0.tz-(pz-r0.z)*r0.tx);if(fw<70||fw>240||Math.atan2(lat,fw)>0.5)continue;
+    // freie Sicht von der Straße (Augenhöhe) aufs Wasser in Ufernähe: kein Haus, kein Damm dazwischen
+    const side=Math.sign((q.x-px)*-sg.tz+(q.z-pz)*sg.tx)||1,w=donauAt(donauS(px,pz),side*0.4);let vis=true;
+    for(const bk of [40,0]){const e=roadAt(d0+ah-bk),ey=e.h+2.2;for(let k=1;k<12&&vis;k++){const f=k/12,x=e.x+(w.x-e.x)*f,z=e.z+(w.z-e.z)*f,y=ey+(w.y+0.6-ey)*f;
+      if(riverDist(x,z).d>RIVER_HW&&finalHeight(x,z)>y-0.3||camBlocked(x,z,y))vis=false;}}
+    if(!vis)continue;
+    return {d:d0+ah,x:px,z:pz,s:donauS(px,pz),side};}
+  return null;}
+function donauPath(){if(GAG.rp)return GAG.rp;const r=ULM.river,cum=[0];for(let i=1;i<r.length;i++)cum.push(cum[i-1]+Math.hypot(r[i][0]-r[i-1][0],r[i][1]-r[i-1][1]));return GAG.rp={r,cum,W:RIVW[0]};}
+function donauS(x,z){const P=donauPath(),r=P.r;let best=1e9,bs=0;
+  for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1,t=clamp(((x-a[0])*dx+(z-a[1])*dz)/l2,0,1),d=Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t);
+    if(d<best){best=d;bs=P.cum[i]+t*Math.sqrt(l2);}}return bs;}
+// Punkt auf der Donau: s = Strecke flussabwärts, u = −1…1 quer (Anteil der halben Breite)
+function donauAt(s,u){const P=donauPath(),r=P.r,c=P.cum,W=P.W;s=clamp(s,0,c[c.length-1]-0.01);let lo=0,hi=c.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(c[m]<=s)lo=m;else hi=m;}
+  const a=r[lo],b=r[hi],f=(s-c[lo])/Math.max(0.01,c[hi]-c[lo]),tx=b[0]-a[0],tz=b[1]-a[1],l=Math.hypot(tx,tz)||1,Ws=u>0?W.p:W.m,hw=Ws[lo]+(Ws[hi]-Ws[lo])*f;
+  return {x:a[0]+tx*f-tz/l*u*hw,z:a[1]+tz*f+tx/l*u*hw,y:W.y[lo]+(W.y[hi]-W.y[lo])*f,tx:tx/l,tz:tz/l,hw};}
+function gagPassed(d,m){return d-S.dist<-(m||45);} // Szene liegt so weit hinter dir
+function camDist(x,z){return Math.hypot(x-camera.position.x,z-camera.position.z);}
+// ---- Bausteine für Figuren ----
+function gMesh(parts,ds){const m=new THREE.Mesh(merge(parts),lifeMat(true));if(ds)m.material.side=THREE.DoubleSide;m.castShadow=true;return m;}
+function gCat(list){let n=0;for(const g of list)n+=g.attributes.position.count;const P=new Float32Array(n*3),N=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;
+  for(const g of list){P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);C.set(g.attributes.color.array,o*3);o+=g.attributes.position.count;}
+  const r=new THREE.BufferGeometry();r.setAttribute('position',new THREE.BufferAttribute(P,3));r.setAttribute('normal',new THREE.BufferAttribute(N,3));r.setAttribute('color',new THREE.BufferAttribute(C,3));r.computeBoundingSphere();return r;}
+// stehende Figur (Blick +z, Füße bei y = 0, ca. 1,75 m); o.wave: rechter Arm fehlt (eigener, beweglicher Arm), o.hat: 'zyl' | 'cap'
+function figParts(c,o={}){const I=(r,d=1)=>new THREE.IcosahedronGeometry(r,d),P=[],coat=c.coat,pants=c.pants||coat,skin=c.skin||0xf0c8a0,hair=c.hair||0x4a3020,shoe=c.shoe||0x2a2224;
+  for(const s of [1,-1]){P.push([tube([s*0.09,0.92,0],[s*0.1,0.1,0.01],o.robe?0.11:0.07,6),pants],[tr(new THREE.BoxGeometry(0.11,0.08,0.24),[s*0.1,0.04,0.05]),shoe]);
+    if(!(o.wave&&s<0))P.push([tube([s*0.23,1.47,0],[s*0.27,0.98,0.03],0.055,6),coat],[tr(I(0.05),[s*0.27,0.93,0.04]),skin]);}
+  P.push([tr(new THREE.BoxGeometry(0.44,0.62,0.26),[0,1.22,0]),coat],[tube([0,1.52,0],[0,1.6,0.01],0.05,6),skin],[tr(new THREE.SphereGeometry(0.12,10,8),[0,1.69,0.01],[0,0,0],[0.92,1.06,1]),skin],
+    [tr(new THREE.SphereGeometry(0.125,10,8),[0,1.73,-0.025],[0,0,0],[0.95,0.8,0.95]),hair],[tr(I(0.018),[0.045,1.7,0.12]),0x1e0f3a],[tr(I(0.018),[-0.045,1.7,0.12]),0x1e0f3a]);
+  if(o.hat==='zyl')P.push([tr(new THREE.CylinderGeometry(0.11,0.11,0.2,10),[0,1.9,0]),0x1e1a1e],[tr(new THREE.CylinderGeometry(0.18,0.18,0.02,12),[0,1.8,0]),0x1e1a1e]);
+  if(o.hat==='cap')P.push([tr(new THREE.CylinderGeometry(0.125,0.13,0.08,10),[0,1.8,0]),c.cap||0xffffff],[tr(new THREE.BoxGeometry(0.2,0.02,0.1),[0,1.77,0.13]),c.cap||0xffffff]);
+  if(o.extra)P.push(...o.extra);return P;}
+// sitzende Figur (Oberkörper ab Hüfte bei y = 0) – für Boote und Schwimmringe
+function seatParts(c,y0=0,arms){const P=[[tr(new THREE.BoxGeometry(0.4,0.55,0.24),[0,y0+0.28,0]),c.coat],[tr(new THREE.SphereGeometry(0.12,10,8),[0,y0+0.72,0.01]),c.skin||0xf0c8a0],
+  [tr(new THREE.SphereGeometry(0.125,10,8),[0,y0+0.76,-0.025],[0,0,0],[0.95,0.8,0.95]),c.hair||0x4a3020]];
+  for(const s of [1,-1])P.push(arms==='up'?[tube([s*0.21,y0+0.5,0],[s*0.32,y0+0.95,0.05],0.05,5),c.skin||0xf0c8a0]:[tube([s*0.21,y0+0.5,0],[s*0.3,y0+0.2,0.25],0.05,5),c.skin||0xf0c8a0]);return P;}
+function armPivot(coat,skin,x,y,len=0.5){const g=new THREE.Group();g.add(gMesh([[tube([0,0,0],[0,-len,0],0.055,6),coat],[tr(new THREE.IcosahedronGeometry(0.05,1),[0,-len-0.04,0]),skin||0xf0c8a0]]));g.position.set(x,y,0);return g;}
+function faceTo(o,x,z){o.rotation.y=Math.atan2(x-o.position.x,z-o.position.z);}
+const HAIRS=[0x4a3020,0x2a1c14,0xc9a05a,0x7a4a24,0x1a1414,0xd8b070]; // Hautfarben und Oberteile: SKINS/SHIRTS wie bei den Fußgängern
+// ---- Töne ----
+function sndCheer(vol){if(!sndLive()||vol<0.01)return;const t0=SND.ctx.currentTime+0.02;for(let i=0;i<5;i++)sndBurst(t0+i*0.12+Math.random()*0.2,rnd(0.8,1.4),rnd(900,1500),rnd(500,800),vol*rnd(0.5,1),rnd(-0.6,0.6),SND.bus.amb);}
+function sndHorn(vol){if(!sndLive()||vol<0.01)return;const c=SND.ctx,t0=c.currentTime+0.02,g=c.createGain();g.gain.value=vol;g.connect(SND.bus.amb);
+  for(const [f,d,l] of [[233,0,0.22],[311,0.28,0.22],[349,0.56,0.5]]){const o=c.createOscillator(),e=c.createGain(),fl=c.createBiquadFilter();o.type='square';o.frequency.value=f;fl.type='lowpass';fl.frequency.value=1400;
+    e.gain.setValueAtTime(0,t0+d);e.gain.linearRampToValueAtTime(0.5,t0+d+0.03);e.gain.setValueAtTime(0.5,t0+d+l-0.05);e.gain.linearRampToValueAtTime(0,t0+d+l);o.connect(fl);fl.connect(e);e.connect(g);o.start(t0+d);o.stop(t0+d+l+0.05);}}
+function sndBell(f,t0,vol){const c=SND.ctx,g=c.createGain();g.gain.value=vol;g.connect(SND.bus.amb);
+  for(const [r,a,d] of [[0.5,0.35,7],[1,0.6,5],[1.19,0.45,4],[1.5,0.25,3],[2,0.5,3],[2.5,0.18,2],[3,0.2,1.8],[4.2,0.08,1.2]]){const o=c.createOscillator(),e=c.createGain();o.frequency.value=f*r;
+    e.gain.setValueAtTime(0,t0);e.gain.linearRampToValueAtTime(a,t0+0.005);e.gain.exponentialRampToValueAtTime(0.0005,t0+d);o.connect(e);e.connect(g);o.start(t0);o.stop(t0+d+0.05);}}
+// Knabenchor: drei Stimmen „aah“ (Sägezahn durch zwei Formantfilter, leichtes Vibrato), langsame Akkordfolge
+function choirStart(){if(!sndLive())return null;const c=SND.ctx,out=c.createGain();out.gain.value=0;out.connect(SND.bus.amb);
+  const f1=c.createBiquadFilter(),f2=c.createBiquadFilter(),mix=c.createGain();f1.type=f2.type='bandpass';f1.frequency.value=800;f1.Q.value=4;f2.frequency.value=1150;f2.Q.value=5;mix.gain.value=0.5;
+  f1.connect(mix);f2.connect(mix);mix.connect(out);const lfo=c.createOscillator(),lg=c.createGain();lfo.frequency.value=5.2;lg.gain.value=4;lfo.connect(lg);lfo.start();
+  const CH=[[392,494,587],[392,523,659],[440,587,740],[392,494,784]],V=[0,1,2].map(i=>{const o=c.createOscillator();o.type='sawtooth';o.frequency.value=CH[0][i];lg.connect(o.frequency);o.connect(f1);o.connect(f2);o.start();return o;});
+  return {out,V,lfo,CH,k:0,t:0};}
+function choirStep(C,dt,vol){if(!C)return;C.out.gain.setTargetAtTime(vol,SND.ctx.currentTime,0.3);C.t+=dt;if(C.t>1.7){C.t=0;C.k=(C.k+1)%C.CH.length;const now=SND.ctx.currentTime;C.V.forEach((o,i)=>o.frequency.setTargetAtTime(C.CH[C.k][i],now,0.05));}}
+function choirStop(C){if(!C)return;C.out.gain.setTargetAtTime(0,SND.ctx.currentTime,0.2);setTimeout(()=>{for(const o of C.V)try{o.stop();}catch(e){}try{C.lfo.stop();}catch(e){}C.out.disconnect();},1500);}
+function noteSprite(ch){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.font='bold 50px serif';x.textAlign='center';x.textBaseline='middle';
+  x.lineWidth=6;x.strokeStyle='#fffaf0';x.strokeText(ch,32,34);x.fillStyle='#1e0f3a';x.fillText(ch,32,34);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));s.scale.set(0.5,0.5,1);return s;}
+// ---- Albert Einstein: fährt mit wilden weißen Haaren auf einem alten Hollandrad ein Stück neben dir ----
+function einsteinModel(){const g=new THREE.Group(),I=(r,d=1)=>new THREE.IcosahedronGeometry(r,d),blk=0x1f1f22,suit=0x6e6a64,skin=0xf0c8a0,white=0xf2f2ee;
+  const P=[[tube([0,0.33,-0.52],[0,0.3,0],0.02,5),blk],[tube([0,0.3,0],[0,0.9,-0.18],0.022,5),blk],[tube([0,0.9,-0.18],[0,0.33,-0.52],0.018,5),blk],[tube([0,0.3,0],[0,0.92,0.42],0.024,5),blk],
+    [tube([0,0.92,0.42],[0,0.33,0.55],0.02,5),blk],[tube([0,0.92,0.42],[0,1.02,0.4],0.02,5),blk],[tube([-0.27,1.02,0.3],[0.27,1.02,0.3],0.015,5),blk],[tube([-0.27,1.02,0.3],[0,1.02,0.4],0.015,5),blk],
+    [tube([0.27,1.02,0.3],[0,1.02,0.4],0.015,5),blk],[tr(new THREE.BoxGeometry(0.14,0.05,0.26),[0,0.95,-0.2]),0x6a4428],[tr(new THREE.CylinderGeometry(0.08,0.08,0.03,10),[0,0.3,0],[0,0,Math.PI/2]),0x888888],
+    [tr(new THREE.BoxGeometry(0.4,0.58,0.24),[0,1.29,-0.1],[0.18,0,0]),suit],[tr(new THREE.BoxGeometry(0.1,0.22,0.02),[0,1.42,0.03],[0.18,0,0]),white],
+    [tr(new THREE.SphereGeometry(0.12,10,8),[0,1.72,-0.02],[0,0,0],[0.92,1.06,1]),skin],[tr(new THREE.BoxGeometry(0.13,0.035,0.035),[0,1.665,0.1]),0xd8d8d2],[tr(I(0.03),[0,1.7,0.11]),skin],
+    [tr(I(0.018),[0.045,1.735,0.1]),0x1e0f3a],[tr(I(0.018),[-0.045,1.735,0.1]),0x1e0f3a]];
+  for(const [x,y,z,r] of [[-0.11,1.77,-0.07,0.08],[0.11,1.77,-0.07,0.08],[0,1.83,-0.06,0.09],[-0.08,1.81,0.02,0.06],[0.08,1.81,0.02,0.06],[0,1.76,-0.13,0.09],[-0.14,1.71,-0.03,0.06],[0.14,1.71,-0.03,0.06],[-0.06,1.86,-0.1,0.06],[0.07,1.85,-0.12,0.06]])
+    P.push([tr(I(r,0),[x,y,z]),white]);
+  for(const s of [1,-1])P.push([tube([s*0.2,1.5,-0.04],[s*0.26,1.04,0.3],0.05,6),suit],[tr(I(0.05),[s*0.26,1.03,0.3]),skin]);
+  g.add(gMesh(P));const wheel=()=>{const w=gMesh([[tr(new THREE.TorusGeometry(0.33,0.025,6,22),[0,0,0],[0,Math.PI/2,0]),0x1a1a1a],[tr(new THREE.BoxGeometry(0.01,0.64,0.02)),0xbfbfbf],[tr(new THREE.BoxGeometry(0.01,0.02,0.64)),0xbfbfbf]]);return w;};
+  const wf=wheel(),wr=wheel();wf.position.set(0,0.33,0.55);wr.position.set(0,0.33,-0.52);g.add(wf,wr);g.userData.wheels=[wf,wr];
+  const legs=[];for(const s of [1,-1]){const hip=new THREE.Group(),knee=new THREE.Group();hip.position.set(s*0.1,0.98,-0.16);knee.position.set(0,-0.45,0);
+    hip.add(gMesh([[tube([0,0,0],[0,-0.45,0],0.07,6),0x5c5852]]));knee.add(gMesh([[tube([0,0,0],[0,-0.44,0],0.06,6),0x5c5852],[tr(new THREE.BoxGeometry(0.1,0.07,0.22),[0,-0.47,0.05]),0x1a1414]]));
+    hip.add(knee);g.add(hip);legs.push({hip,knee,s});}
+  g.userData.legs=legs;return g;}
+// Beine treten: zweigliedrige Kinematik von der Hüfte zum Pedal (Kurbel 17 cm um das Tretlager)
+function pedalLegs(o,ph){for(const L of o.userData.legs){const a=ph+(L.s>0?0:Math.PI),fy=0.3+0.17*Math.cos(a)+0.06,fz=0.17*Math.sin(a),hy=0.98,hz=-0.16,L1=0.45,L2=0.47;
+  const dy=fy-hy,dz=fz-hz,d=clamp(Math.hypot(dy,dz),0.2,L1+L2-0.01),al=Math.atan2(dz,-dy),be=Math.acos(clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1)),t1=al+be;
+  const ky=hy-L1*Math.cos(t1),kz=hz+L1*Math.sin(t1),t2=Math.atan2(fz-kz,-(fy-ky));L.hip.rotation.x=-t1;L.knee.rotation.x=-(t2-t1);}}
+function gagEinstein(){const o=einsteinModel();toonify(o);o.userData.lean=0;scene.add(o);let s=S.dist-22,v=Math.max(4,S.v)+5,ph=0,told=0;
+  GAG.act={objs:[o],t:0,step(dt){const a=this;a.t+=dt;const gap=s-S.dist;
+    if(a.t<20)v+=(clamp(S.v+(2.5-gap)*0.6,0,S.v+6)-v)*Math.min(1,dt*2);else v+=(Math.max(S.v,4)+3.5-v)*Math.min(1,dt*0.8);
+    s+=v*dt;ph+=v/5*Math.PI*2*dt;placeRider(o,s,-0.7,v);pedalLegs(o,ph);for(const w of o.userData.wheels)w.rotation.x+=v/0.33*dt;
+    if(!told&&gap>-4){told=1;gagBubble('Grüß Gott! Albert Einstein.');toast('🚲 Albert Einstein (geboren 1879 in Ulm) fährt ein Stück mit: „Das Leben ist wie Fahrradfahren. Um die Balance zu halten, musst du in Bewegung bleiben.“');}
+    if(told===1&&a.t>13){told=2;gagBubble('Alles ist relativ – auch dein Tempo!');}if(told===2&&a.t>19){told=3;gagBubble('');}
+    if(GAG.bub)gagBubble(GAG.bub.userData.t,o.position,2.1);
+    return !(gap>160||a.t>60);}};}
+// ---- Ivo Gönner: steht mit Amtskette und schwarz-weißer Ulmer Fahne am Straßenrand und winkt ----
+function gagGoenner(sp){const g=new THREE.Group(),suit=0x27304a,gold=0xd4af37;
+  g.add(gMesh(figParts({coat:suit,hair:0xb8b8b8},{wave:true,extra:[[tr(new THREE.BoxGeometry(0.13,0.24,0.02),[0,1.4,0.13]),0xeef4fb],[tr(new THREE.BoxGeometry(0.045,0.22,0.02),[0,1.37,0.142]),0xb02030],
+    [tr(new THREE.TorusGeometry(0.17,0.016,4,18),[0,1.47,0.03],[1.25,0,0]),gold],[tr(new THREE.CylinderGeometry(0.05,0.05,0.015,12),[0,1.3,0.145],[Math.PI/2,0,0]),gold],
+    [tr(new THREE.BoxGeometry(0.075,0.035,0.01),[0.045,1.705,0.125]),0x1e1a1e],[tr(new THREE.BoxGeometry(0.075,0.035,0.01),[-0.045,1.705,0.125]),0x1e1a1e],
+    [tube([0.27,0.93,0.06],[0.27,2.45,0.06],0.02,5),0x8a6a42]]})));
+  const flag=gMesh([[tr(new THREE.BoxGeometry(0.75,0.24,0.012),[0.38,0.12,0]),0x141414],[tr(new THREE.BoxGeometry(0.75,0.24,0.012),[0.38,-0.12,0]),0xf6f6f2]],true);flag.position.set(0.27,2.22,0.06);g.add(flag);
+  const arm=armPivot(suit,0xf0c8a0,-0.23,1.47);g.add(arm);toonify(g);g.scale.setScalar(1.2);g.position.set(sp.x,sp.y,sp.z);const rb=roadAt(sp.d-30);faceTo(g,rb.x,rb.z);scene.add(g);let told=0;
+  GAG.act={objs:[g],t:0,step(dt){this.t+=dt;const t=this.t,cd=camDist(sp.x,sp.z);arm.rotation.z=-2.6+0.32*Math.sin(t*7);flag.rotation.y=0.25*Math.sin(t*2.3);
+    if(!told&&cd<95){told=1;toast('🏛️ Ivo Gönner, Ulmer Oberbürgermeister von 1992 bis 2016, winkt dir zu.');}
+    if(cd<75)gagBubble(t%8<4?'Grüß Gott in Ulm!':'Hopp, hopp – weiter so!',g.position,3.1);else gagBubble('');
+    return !(gagPassed(sp.d)||t>150);}};}
+// ---- St. Georgs Chorknaben: zwei Reihen Sänger in Rot und Weiß, davor der Chorleiter; Noten steigen auf ----
+function gagChor(sp){const g=new THREE.Group(),boys=[];
+  for(const [row,n,z,y] of [[0,5,0,0],[1,4,-0.6,0.28]])for(let i=0;i<n;i++){const x=(i-(n-1)/2)*0.62,sc=rnd(0.66,0.76);
+    boys.push(tr(merge(figParts({coat:0xb3202a,skin:pick(SKINS),hair:pick(HAIRS)},{robe:true,extra:[[tr(new THREE.BoxGeometry(0.47,0.42,0.28),[0,1.3,0]),0xf6f4ee],[tr(new THREE.BoxGeometry(0.3,0.06,0.3),[0,1.53,0]),0xf6f4ee]]})),[x,y,z],[0,0,0],[sc,sc,sc]));}
+  const choir=new THREE.Mesh(gCat(boys),lifeMat(true));choir.castShadow=true;g.add(choir,gMesh([[tr(new THREE.BoxGeometry(3.2,0.28,0.8),[0,0.14,-0.6]),0x8a6a42]]));
+  const cond=new THREE.Group();cond.add(gMesh(figParts({coat:0x1e1a1e,hair:0x6a6a6a},{wave:true})));const ca=armPivot(0x1e1a1e,0xf0c8a0,-0.23,1.47);
+  cond.add(ca);cond.position.set(0,0,1.3);cond.rotation.y=Math.PI;g.add(cond);toonify(g);g.scale.setScalar(1.2);g.position.set(sp.x,sp.y,sp.z);const rb=roadAt(sp.d);faceTo(g,rb.x,rb.z);scene.add(g);
+  const notes=[];for(let i=0;i<5;i++){const n=noteSprite(i%2?'♫':'♪');n.visible=false;g.add(n);notes.push({n,t:-i*0.7});}
+  let C=null,told=0;
+  GAG.act={objs:[g],t:0,stop(){choirStop(C);},step(dt){this.t+=dt;const t=this.t,cd=camDist(sp.x,sp.z);choir.position.y=0.02*Math.abs(Math.sin(t*3.2));ca.rotation.z=-2.2+0.5*Math.sin(t*4.4);ca.rotation.x=0.4*Math.cos(t*4.4);
+    for(const q of notes){q.t+=dt;if(q.t>3.5)q.t=0;q.n.visible=q.t>0;if(q.t>0){q.n.position.set(Math.sin(q.t*2+q.n.id)*1.2,1.7+q.t*0.7,-0.3);q.n.material.opacity=Math.min(1,(3.5-q.t)/1.5);}}
+    if(!C&&cd<160)C=choirStart();choirStep(C,dt,0.11/(1+cd/30));
+    if(!told&&cd<110){told=1;toast('🎶 Die St. Georgs Chorknaben singen für dich!');}
+    if(cd<70)gagBubble('♪ Halleluja ♪',g.position,3.2);else gagBubble('');
+    return !(gagPassed(sp.d)||t>150);}};}
+// ---- Fisch Heilbronner: Marktstand mit Fisch auf Eis, blau-weißer Markise und einem Verkäufer, der einen Fisch schwenkt ----
+function fishParts(x,y,z,ry,s,col){return [[tr(new THREE.SphereGeometry(0.12,8,6),[x,y,z],[0,ry,0],[0.55*s,0.5*s,1.6*s]),col],[tr(new THREE.ConeGeometry(0.08*s,0.14*s,4),[x-Math.sin(ry)*0.24*s,y,z-Math.cos(ry)*0.24*s],[Math.PI/2,ry,0],[1,1,0.4]),col]];}
+function signTex(text){const c=document.createElement('canvas');c.width=512;c.height=110;const x=c.getContext('2d');x.fillStyle='#2a5ab8';x.fillRect(0,0,512,110);x.strokeStyle='#fffaf0';x.lineWidth=8;x.strokeRect(6,6,500,98);
+  x.fillStyle='#fffaf0';x.font='600 52px Fredoka,system-ui,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(text,256,58);const t=new THREE.CanvasTexture(c);return t;}
+function gagFisch(sp){const g=new THREE.Group(),P=[[tr(new THREE.BoxGeometry(2.0,0.85,0.8),[0,0.425,0]),0xf4f4f0],[tr(new THREE.BoxGeometry(1.9,0.06,0.7),[0,0.88,0]),0xe8f4fb]];
+  for(let i=0;i<6;i++)P.push(...fishParts(-0.75+i*0.3,0.95,0.05*(i%2),i%2?0.3:-0.3,1,i%3?0xb8c4cc:0xf09070));
+  for(const [x,z] of [[-1,0.45],[1,0.45],[-1,-0.45],[1,-0.45]])P.push([tube([x,0,z],[x,2.15,z],0.03,5),0xd8d8d8]);
+  for(let i=0;i<6;i++)P.push([tr(new THREE.BoxGeometry(0.37,0.04,1.25),[-0.925+i*0.37,2.18,0.05],[-0.18,0,0]),i%2?0xf6f6f2:0x2a5ab8]);
+  g.add(gMesh(P));const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.8,0.39),new THREE.MeshBasicMaterial({map:signTex('Fisch Heilbronner')}));sign.position.set(0,0.5,0.41);g.add(sign);
+  const man=new THREE.Group();man.add(gMesh(figParts({coat:0x2e7dd7,pants:0x2a3350,hair:0x5a3a22,cap:0xffffff},{wave:true,hat:'cap',extra:[[tr(new THREE.BoxGeometry(0.42,0.78,0.02),[0,1.02,0.14]),0xffffff]]})));
+  const arm=armPivot(0x2e7dd7,0xf0c8a0,-0.23,1.47),big=gMesh(fishParts(0,0,0,0,2.2,0xb8c4cc));big.rotation.x=Math.PI/2;big.position.set(0,-0.62,0);arm.add(big);man.add(arm);man.position.set(0.3,0,-0.75);g.add(man);
+  toonify(g);g.scale.setScalar(1.15);g.position.set(sp.x,sp.y,sp.z);const rb=roadAt(sp.d);faceTo(g,rb.x,rb.z);scene.add(g);let told=0;
+  GAG.act={objs:[g],t:0,step(dt){this.t+=dt;const t=this.t,cd=camDist(sp.x,sp.z);arm.rotation.z=-2.5+0.35*Math.sin(t*5);big.rotation.z=0.4*Math.sin(t*11);
+    if(!told&&cd<100){told=1;toast('🐟 Fisch Heilbronner ruft: „Frische Fischbrötle!“');}
+    if(cd<75)gagBubble(t%7<4?'Frische Fischbrötle!':'Heut ganz frisch aus dr Donau!',g.position,3.2);else gagBubble('');
+    return !(gagPassed(sp.d)||t>150);}};}
+// ---- Donau-Szenen: Dinge treiben auf dem Wasser (Lage über s flussabwärts und u quer) ----
+function floatAt(f,dt){f.s+=f.v*dt;const p=donauAt(f.s,f.u);f.m.position.set(p.x,p.y+0.04+Math.sin(performance.now()/700+f.b)*0.05,p.z);f.m.rotation.y=Math.atan2(p.tx,p.tz)+(f.spin||0);return p;}
+function nabadaFloat(){const k=Math.random(),P=[],c=()=>({coat:pick(SHIRTS),skin:pick(SKINS),hair:pick(HAIRS)});
+  if(k<0.45){P.push([tr(new THREE.TorusGeometry(0.55,0.2,8,16),[0,0.1,0],[Math.PI/2,0,0]),pick([0xff5f8f,0xf8d74e,0x3e8fe0,0xff8f3a,0x2bb673])],...seatParts(c(),0,Math.random()<0.5?'up':0));}
+  else if(k<0.7){P.push([tr(new THREE.BoxGeometry(0.75,0.16,1.9),[0,0.08,0]),pick([0x3e8fe0,0xff5f8f,0xf8d74e,0x9d20a3])],[tr(new THREE.BoxGeometry(0.4,0.22,0.6),[0,0.27,-0.1]),pick(SHIRTS)],[tr(new THREE.SphereGeometry(0.12,10,8),[0,0.3,0.42]),pick(SKINS)]);}
+  else if(k<0.9){P.push([tr(new THREE.BoxGeometry(2.2,0.32,3.0),[0,0.16,0]),0xb08a5a],[tube([0.8,0.3,-1.1],[0.8,2.6,-1.1],0.03,5),0x8a6a42],[tr(new THREE.BoxGeometry(0.02,0.5,0.8),[0.8,2.3,-0.7]),pick([0xeb567b,0xf8d74e,0x141414])]);
+    for(const [x,z] of [[-0.5,0.6],[0.4,0.7],[-0.4,-0.6]])P.push(...seatParts(c(),0.32,Math.random()<0.5?'up':0).map(([g,h])=>[tr(g,[x,0,z]),h]));}
+  else P.push([tr(new THREE.SphereGeometry(0.8,12,10),[0,0.45,0],[0,0,0],[1,0.75,1.25]),0xf8d74e],[tr(new THREE.SphereGeometry(0.45,10,8),[0,1.25,0.75]),0xf8d74e],[tr(new THREE.ConeGeometry(0.18,0.4,6),[0,1.15,1.25],[Math.PI/2,0,0]),0xff8f3a],
+    [tr(new THREE.IcosahedronGeometry(0.06,1),[0.18,1.38,1.1]),0x1e0f3a],[tr(new THREE.IcosahedronGeometry(0.06,1),[-0.18,1.38,1.1]),0x1e0f3a],...seatParts(c(),0.9,'up').map(([g,h])=>[tr(g,[0,0,-0.35]),h]));
+  return gMesh(P);}
+function gagNabada(sp){const n=S.quality==='low'?9:14,fl=[],objs=[];
+  for(let i=0;i<n;i++){const m=nabadaFloat();toonify(m);scene.add(m);objs.push(m);m.scale.setScalar(1.6);fl.push({m,s:sp.s-90+i*130/n+rnd(-4,4),u:sp.side*rnd(0.08,0.7),v:rnd(0.8,1.3),b:rnd(0,6),spin:rnd(-0.6,0.6)});}
+  toast('🛟 Nabada! Wie am Schwörmontag treiben die Ulmer auf allem, was schwimmt, die Donau hinunter.');sndHorn(0.06);let cheer=2;
+  GAG.act={objs,t:0,step(dt){this.t+=dt;let near=1e9,np=null;for(const f of fl){const p=floatAt(f,dt);const d=camDist(p.x,p.z);if(d<near){near=d;np=f.m.position;}}
+    if((cheer-=dt)<0){cheer=rnd(3,6);sndCheer(0.12/(1+near/40));if(Math.random()<0.3)sndHorn(0.05/(1+near/60));}
+    if(near<130)gagBubble('Nabada!',np,2.2);else gagBubble('');
+    return !(gagPassed(sp.d,140)||this.t>100);}};}
+// ---- Fischerstechen: zwei Zillen rudern aufeinander zu, die Stecher stoßen – einer fällt ins Wasser ----
+function zilleModel(team){const g=new THREE.Group(),P=[[tr(new THREE.BoxGeometry(1.3,0.45,8),[0,0.2,0]),0x5a3a22],[tr(new THREE.ConeGeometry(0.65,1.6,4),[0,0.2,4.7],[Math.PI/2,Math.PI/4,0],[1,1,0.35]),0x5a3a22],
+  [tr(new THREE.BoxGeometry(1.32,0.08,8.02),[0,0.4,0]),team.a],[tr(new THREE.BoxGeometry(1.0,0.9,1.0),[0,0.85,-3.3]),0x7a5a3a]];
+  for(let i=0;i<4;i++)P.push(...seatParts({coat:team.a,skin:pick(SKINS),hair:pick(HAIRS)},0.35).map(([gg,h])=>[tr(gg,[0,0,2.2-i*1.25],[0,Math.PI,0]),h]));
+  g.add(gMesh(P));const oars=gMesh([0,1,2,3].flatMap(i=>[[tube([-1.6,0.35,2.2-i*1.25],[1.6,0.35,2.2-i*1.25],0.03,4),0xc8a878]]));g.add(oars);
+  const st=new THREE.Group();st.add(gMesh(figParts({coat:team.a,pants:team.b,hair:pick(HAIRS)},{extra:[[tube([0.2,1.1,0.3],[0.2,1.3,3.1],0.035,5),0xc8a878],[tr(new THREE.SphereGeometry(0.16,8,6),[0.2,1.32,3.15]),team.b]]})));
+  st.position.set(0,1.3,-3.3);st.rotation.y=Math.PI;g.add(st);g.userData={oars,st};return g;} // Stecher auf dem Heck, Blick nach hinten
+function gagFischer(sp){const vb=2.2,Tm=clamp((sp.d-S.dist-80)/Math.max(4,S.v),5,18),A={a:0x2a5ab8,b:0xffffff},B={a:0xc0392b,b:0xf8d74e};
+  const ba=zilleModel(A),bb=zilleModel(B);toonify(ba);toonify(bb);ba.scale.setScalar(1.4);bb.scale.setScalar(1.4);scene.add(ba,bb);
+  const u0=sp.side*0.3,fa={m:ba,s:sp.s-vb*Tm,u:u0-0.045,v:vb,b:0,spin:Math.PI},fb={m:bb,s:sp.s+vb*Tm,u:u0+0.045,v:-vb,b:1,spin:0};let fell=0; // Heck voraus
+  toast('🛶 Fischerstechen! Zwei Stecher stehen mit langen Speeren auf ihren Zillen …');
+  GAG.act={objs:[ba,bb],t:0,step(dt){this.t+=dt;const t=this.t;floatAt(fa,dt);floatAt(fb,dt);for(const b of [ba,bb])b.userData.oars.rotation.x=0.35*Math.sin(t*2.6);
+    const st=bb.userData.st;
+    if(t>=Tm&&!fell){fell=1;this.tf=t;sndCheer(0.14);}
+    if(fell===1){const u=Math.min(1,(t-this.tf)/0.9);st.rotation.z=u*1.4;st.position.set(u*1.4,1.3+Math.sin(u*Math.PI)*0.5-u*1.6,-3.3);
+      if(u>=1){fell=2;bb.updateMatrixWorld(true);const w=st.getWorldPosition(new THREE.Vector3());splashFx(w.x,donauAt(fb.s,fb.u).y,w.z);sndSplash();st.visible=false;
+        const swim=gMesh([[tr(new THREE.SphereGeometry(0.13,10,8),[0,0.1,0]),0xf0c8a0],[tr(new THREE.SphereGeometry(0.135,10,8),[0,0.14,-0.02],[0,0,0],[1,0.7,1]),0x4a3020]]);toonify(swim);scene.add(swim);this.objs.push(swim);
+        this.sw={m:swim,s:fb.s,u:fb.u+0.08,v:0.6,b:2};toast('💦 Platsch! Der Stecher im roten Boot liegt in der Donau – die Blauen gewinnen.');}}
+    if(this.sw)floatAt(this.sw,dt);
+    const cd=camDist(sp.x,sp.z);if(cd<150&&!fell)gagBubble('Auf geht’s!',ba.position,3.6);else if(fell===2&&cd<150&&t-this.tf<4)gagBubble('Hoppla!',this.sw.m.position,1.2);else gagBubble('');
+    return !(gagPassed(sp.d,120)||t>Tm+40);}};}
+// ---- Ulmer Schachtel: altes Holzboot mit Hütte, Steuerruder und Auswanderern treibt flussabwärts ----
+function gagSchachtel(sp){const g=new THREE.Group(),P=[[tr(new THREE.BoxGeometry(3.2,0.7,13),[0,0.3,0]),0xb08a5a],[tr(new THREE.BoxGeometry(3.24,0.1,13.04),[0,0.66,0]),0x7a5a3a],
+  [tr(new THREE.BoxGeometry(2.6,1.6,4),[0,1.45,-1.5]),0x8a6a42],[tr(new THREE.ConeGeometry(2.1,1.0,4),[0,2.75,-1.5],[0,Math.PI/4,0],[1,1,1.45]),0x9a4a2a],
+  [tube([0,0.9,-6.3],[0,1.4,-10],0.07,5),0x6a4a2a],[tube([0,0.7,5],[0,4.2,5],0.05,5),0x6a4a2a],[tr(new THREE.BoxGeometry(0.02,0.35,0.9),[0,3.98,5.45]),0x141414],[tr(new THREE.BoxGeometry(0.02,0.35,0.9),[0,3.63,5.45]),0xf6f6f2]];
+  for(const [x,z] of [[-0.8,2.2],[0.7,1.6],[-0.5,3.6],[0.9,3.4],[0,-5.2]]){const ry=rnd(-1,1);P.push(...figParts({coat:pick([0x5a3a22,0x2a3350,0x7a2a2a,0x3a5a3a]),pants:0x3a3330,hair:pick(HAIRS),skin:pick(SKINS)},{extra:[[tr(new THREE.BoxGeometry(0.3,0.25,0.25),[0.25,0.95,0.1]),0xc8b490]]}).map(([gg,h])=>[tr(gg,[x,0.7,z],[0,ry,0]),h]));}
+  g.add(gMesh(P));toonify(g);g.scale.setScalar(1.4);scene.add(g);const f={m:g,s:sp.s-50,u:sp.side*0.35,v:1.4,b:0};
+  toast('⛵ Eine Ulmer Schachtel treibt vorbei – mit solchen Booten fuhren früher Waren und Auswanderer die Donau hinab bis Wien und Budapest.');
+  GAG.act={objs:[g],t:0,step(dt){this.t+=dt;floatAt(f,dt);const cd=camDist(g.position.x,g.position.z);if(cd<120)gagBubble('Auf nach Wien!',g.position,5);else gagBubble('');return !(gagPassed(sp.d,140)||this.t>100);}};}
+// ---- Münsterglocken: nur zu hören ----
+function gagMuenster(){toast('🔔 Das Ulmer Münster läutet – mit 161,53 m hat es den höchsten Kirchturm der Welt.');
+  if(sndLive()){const t0=SND.ctx.currentTime+0.05,F=[196,220,262];for(let i=0;i<16;i++)sndBell(F[i%3]*(i%5===4?0.75:1),t0+i*0.75+Math.random()*0.05,0.12);}
+  GAG.act={objs:[],t:0,step(dt){this.t+=dt;return this.t<16;}};}
+// ---- Lichterserenade (nur bei Abendsonne): Hunderte Kerzen treiben auf der Donau, mit warmem Leuchtschein ----
+function glowTex(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,250,220,1)');g.addColorStop(0.25,'rgba(255,210,110,0.9)');g.addColorStop(1,'rgba(255,170,60,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);}
+function gagLichter(sp){const n=S.quality==='low'?160:280,P=new Float32Array(n*3),geo=new THREE.BufferGeometry(),L=[];geo.setAttribute('position',new THREE.BufferAttribute(P,3));
+  const m=new THREE.Points(geo,new THREE.PointsMaterial({size:2.4,map:glowTex(),color:0xffd27a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
+  for(let i=0;i<n;i++)L.push({s:sp.s-150+rnd(0,300),u:sp.side*rnd(-0.2,0.85),v:rnd(0.3,0.6),f:rnd(0,6)});m.frustumCulled=false;scene.add(m);
+  toast('🕯️ Lichterserenade: Hunderte Kerzen schwimmen auf der Donau.');
+  GAG.act={objs:[m],t:0,step(dt){this.t+=dt;const tt=this.t;for(let i=0;i<n;i++){const c=L[i];c.s+=c.v*dt;const p=donauAt(c.s,c.u);P[i*3]=p.x;P[i*3+1]=p.y+0.25+0.05*Math.sin(tt*6+c.f);P[i*3+2]=p.z;}
+    geo.attributes.position.needsUpdate=true;m.material.size=2.3+0.25*Math.sin(tt*5);return !(gagPassed(sp.d,160)||tt>120);}};}
+
+gagPlan();
 /* ================= Welt/Route wechseln ohne Neuladen (Bluetooth-Geräte bleiben verbunden) ================= */
 let REBUILD=false,SCENE_BASE=null;
 function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.isInstancedMesh&&c.dispose)c.dispose();
@@ -3549,7 +3878,7 @@ function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.i
 // alles, was beim Bauen einer Welt angelegt wird, wieder zurücksetzen (Lichter und Kamera bleiben)
 function clearWorld(){
   for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
-  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;FLY.obj={};FLY.act=null;FLY.fx=null;FLY.bub=null;
+  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;FLY.obj={};FLY.act=null;FLY.fx=null;FLY.bub=null;if(GAG.act&&GAG.act.stop)GAG.act.stop();GAG.act=null;GAG.bub=null;GAG.rp=null;
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
   RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
@@ -3564,7 +3893,7 @@ async function buildWorld(){
 function resetRide(){
   if(W.active)stopWorkout();
   Object.assign(S,{dist:0,odo:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
-  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;flyPlan();
+  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;gagPlan();wxRandomize(); // neue Fahrt: neues Zufallswetter
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
   placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
