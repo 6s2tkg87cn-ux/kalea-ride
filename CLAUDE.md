@@ -56,6 +56,12 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Anfahren aus dem Stand weiches Nachziehen bis Rad und Avatar gleich schnell sind (`T.startSoft`).
 - **Normale Kassette** (`S.vshift=false`, Auswahl „Schalten“ bei den Geräten): echte Steigung an den Trainer, keine
   virtuellen Gänge; der aufgelegte Gang wird nur angezeigt (`updateRealGear`).
+- **Willkommen / Fahrer einrichten** (`#welDlg`, `openWelcome`, `welFinish`): erscheint beim Start, solange `S.prof` fehlt
+  (auch bei alten Einstellungen, dann mit deren Werten), danach das Geräte-Fenster; im Menü „👤 Fahrer einrichten“. Drei
+  Schritte: Name (= Online-Name `iNetName`), Fahrer/Fahrerin (`S.sex`, Fahrerin mit Zopf: `makeRider(…,{pony})`, online als
+  `g` mitgeschickt), Trikotfarbe (= `S.netCol`, auch online); Gewicht und FTP – „weiß ich nicht“ schätzt vorsichtig
+  (`ftpGuess` 2,4/2,1 W/kg) und stellt `S.ftpAuto='auto'`; Schalten virtuell oder Kassette (`S.vshift`). Spieler-Figur immer
+  über `makePlayer` (Farbe/Figur aus dem Profil, auch nach Weltwechsel).
 - **Geräte-Fenster** beim Start (`openDevices`/`closeDevices` verschieben `#devSec` zwischen Fenster und Menü).
 - **Welt-/Routenwechsel ohne Neuladen** (`rebuildWorld` → `clearWorld` + `buildWorld`), damit Bluetooth verbunden
   bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
@@ -217,6 +223,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Cloud-Umgebung ist das CDN oft gesperrt → entweder `dist/kalea-ride-offline.html` testen oder
   `page.route('https://cdnjs.cloudflare.com/**', …)` auf `node_modules/three/build/three.min.js` umleiten.
   Physik lässt sich ohne Grafik prüfen: `S.sim=true; S.simPower=180;` und `stepPhysics(0.25)` in einer Schleife.
+  Ohne `prof:1` in `kalea` erscheint beim Start zuerst der Willkommens-Assistent statt des Geräte-Fensters.
 - Vor dem Abgeben: `python3 tools/build.py` muss ohne Fehler durchlaufen.
 
 ## Veröffentlichen
