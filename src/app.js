@@ -512,7 +512,7 @@ function buildRoad(){
   const post=merge([[tr(new THREE.BoxGeometry(0.12,1.0,0.12),[0,0.5,0]),0xf4f4f0],[tr(new THREE.BoxGeometry(0.13,0.2,0.13),[0,0.85,0]),0x222222],[tr(new THREE.BoxGeometry(0.135,0.07,0.135),[0,0.85,0]),0xff6a1a]]);
   const step=Math.round(50/ds),cnt=Math.floor(N/step)*2,pm=new THREE.InstancedMesh(post,new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6}),cnt);
   const dm=new THREE.Object3D();let n2c=0;
-  for(let i=0;i<N&&n2c<cnt;i+=step)for(const s of [-1,1]){const [x,z]=lateralPoint(i,s*6.0);if(IS_ULM&&riverDist(x,z).d<RIVER_HW+14)continue;dm.position.set(x,groundH(x,z),z);dm.rotation.set(0,Math.atan2(RTX[i],RTZ[i]),0);dm.updateMatrix();pm.setMatrixAt(n2c++,dm.matrix);}
+  for(let i=0;i<N&&n2c<cnt;i+=step)for(const s of [-1,1]){const [x,z]=lateralPoint(i,s*6.0);if(IS_ULM&&(riverDist(x,z).d<RIVER_HW+14||ulmZone(RX[i],RZ[i]).d>0.3))continue;dm.position.set(x,groundH(x,z),z);dm.rotation.set(0,Math.atan2(RTX[i],RTZ[i]),0);dm.updateMatrix();pm.setMatrixAt(n2c++,dm.matrix);}
   pm.count=n2c;pm.castShadow=true;pm.frustumCulled=false;scene.add(pm);
 }
 
@@ -1149,6 +1149,192 @@ function streetLamps(){const parts=[[tr(new THREE.CylinderGeometry(0.07,0.1,5.6,
   for(let i=0;i<N;i+=Math.round(32/ds)){const zn=ulmZone(RX[i],RZ[i]);if(zn.d<0.3)continue;const side=(Math.floor(i/Math.round(32/ds))%2)?1:-1,[x,z]=lateralPoint(i,side*6.4);
     if(riverDist(x,z).d<RIVER_HW+12||nearestRoad(x,z,5.4))continue;items.push({x,z,y:groundH(x,z)-0.1,sx:1,sy:1,sz:1,ry:Math.atan2(RTX[i],RTZ[i])+(side>0?Math.PI:0),c:0xffffff});}
   chunkedInstances(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6}),items);}
+/* ---- Straßenrand: Schilder, Haltestellen, Bänke, Zäune, Gehwege, Markierungen ---- */
+// Alles Kleine am Rand teilt EIN Material (Vertex-Farben + Schilder-Atlas mit Alpha-Test) und wird je Kachel zu einem Mesh
+// zusammengefasst – viele Dinge, wenige Zeichenaufrufe. Atlas: 1024 × 1024, Bereiche in Pixeln (x, y, Breite, Höhe).
+const SA={white:[2,2,10,10]};['v50','v30','vorfahrt','achtung','kurve','zebra','rad'].forEach((k,i)=>SA[k]=[16+130*i,16,128,128]);
+['bus','zone30','bike','disc','tri','dia'].forEach((k,i)=>SA[k]=[16+130*i,150,128,128]);
+Object.assign(SA,{litfass:[16,284,512,128],plakat:[540,284,128,128],latten:[16,418,512,64],gitter:[540,418,256,64]});
+const SIL={v50:'disc',v30:'disc',rad:'disc',bus:'disc',vorfahrt:'dia',achtung:'tri',kurve:'tri'};
+function signAtlas(names){const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');x.clearRect(0,0,1024,1024);
+  x.fillStyle='#fff';x.fillRect(0,0,16,16);
+  const at=(k,fn)=>{const [X,Y,W,H]=SA[k];x.save();x.translate(X,Y);fn(W,H);x.restore();};
+  const font=(px,w=800)=>{x.font=`${w} ${px}px "Fredoka",system-ui,sans-serif`;x.textAlign='center';x.textBaseline='middle';};
+  const disc=(cx,cy,r,col)=>{x.fillStyle=col;x.beginPath();x.arc(cx,cy,r,0,7);x.fill();};
+  const tri=(fill,stroke)=>{x.beginPath();x.moveTo(64,8);x.lineTo(122,116);x.lineTo(6,116);x.closePath();x.fillStyle=stroke;x.fill();x.beginPath();x.moveTo(64,30);x.lineTo(104,104);x.lineTo(24,104);x.closePath();x.fillStyle=fill;x.fill();};
+  const bike=(cx,cy,s,col,lw)=>{x.strokeStyle=col;x.lineWidth=lw;x.lineCap='round';x.beginPath();x.arc(cx-22*s,cy+10*s,15*s,0,7);x.moveTo(cx+22*s+15*s,cy+10*s);x.arc(cx+22*s,cy+10*s,15*s,0,7);
+    x.moveTo(cx-22*s,cy+10*s);x.lineTo(cx-4*s,cy-12*s);x.lineTo(cx+16*s,cy-12*s);x.lineTo(cx+22*s,cy+10*s);x.moveTo(cx-22*s,cy+10*s);x.lineTo(cx+2*s,cy+10*s);x.lineTo(cx+16*s,cy-12*s);
+    x.moveTo(cx-4*s,cy-12*s);x.lineTo(cx-8*s,cy-20*s);x.moveTo(cx+16*s,cy-12*s);x.lineTo(cx+14*s,cy-22*s);x.lineTo(cx+22*s,cy-22*s);x.stroke();};
+  for(const [k,n] of [['v50','50'],['v30','30']])at(k,()=>{disc(64,64,62,'#d42020');disc(64,64,48,'#fff');x.fillStyle='#111';font(52);x.fillText(n,64,68);});
+  at('vorfahrt',()=>{x.save();x.translate(64,64);x.rotate(Math.PI/4);x.fillStyle='#fff';x.fillRect(-44,-44,88,88);x.strokeStyle='#333';x.lineWidth=2;x.strokeRect(-44,-44,88,88);x.fillStyle='#f5c400';x.fillRect(-30,-30,60,60);x.restore();});
+  at('achtung',()=>{tri('#fff','#d42020');x.fillStyle='#111';font(56,900);x.fillText('!',64,80);});
+  at('kurve',()=>{tri('#fff','#d42020');x.strokeStyle='#111';x.lineWidth=9;x.lineCap='round';x.beginPath();x.moveTo(52,96);x.lineTo(52,72);x.quadraticCurveTo(52,56,70,52);x.stroke();
+    x.fillStyle='#111';x.beginPath();x.moveTo(84,52);x.lineTo(66,40);x.lineTo(66,64);x.closePath();x.fill();});
+  at('zebra',()=>{x.fillStyle='#1d5fb4';x.fillRect(4,4,120,120);x.fillStyle='#fff';x.beginPath();x.moveTo(64,14);x.lineTo(114,110);x.lineTo(14,110);x.closePath();x.fill();
+    x.fillStyle='#111';for(let i=0;i<4;i++)x.fillRect(30+i*18,96,10,8);disc(68,46,6,'#111');x.strokeStyle='#111';x.lineWidth=6;x.lineCap='round';x.beginPath();x.moveTo(66,54);x.lineTo(62,74);x.lineTo(54,90);x.moveTo(62,74);x.lineTo(72,90);x.moveTo(64,60);x.lineTo(76,68);x.stroke();});
+  at('rad',()=>{disc(64,64,60,'#fff');disc(64,64,56,'#1d5fb4');bike(64,62,1,'#fff',6);});
+  at('bus',()=>{disc(64,64,60,'#2a8a3a');disc(64,64,48,'#f5c400');x.fillStyle='#2a8a3a';font(62,900);x.fillText('H',64,68);});
+  at('zone30',()=>{x.fillStyle='#fff';x.fillRect(6,6,116,116);x.strokeStyle='#111';x.lineWidth=4;x.strokeRect(10,10,108,108);x.fillStyle='#111';font(22);x.fillText('ZONE',64,28);
+    disc(64,78,38,'#d42020');disc(64,78,29,'#fff');x.fillStyle='#111';font(32);x.fillText('30',64,81);});
+  at('bike',()=>bike(64,70,1.55,'#fff',9));
+  at('disc',()=>disc(64,64,62,'#c9ccd0'));at('tri',()=>tri('#c9ccd0','#c9ccd0'));
+  at('dia',()=>{x.save();x.translate(64,64);x.rotate(Math.PI/4);x.fillStyle='#c9ccd0';x.fillRect(-44,-44,88,88);x.restore();});
+  // Litfaßsäule: Plakate rund herum
+  at('litfass',(W,H)=>{x.fillStyle='#e9e2d0';x.fillRect(0,0,W,H);const P=[['#d94a3a','KONZERT','Münsterplatz'],['#2e6fb3','Schwörmontag','Ulm feiert'],['#f2b632','FLOHMARKT','Sa. 8–14 Uhr'],['#3a9a5b','Nabada','auf der Donau'],['#7a4fd6','THEATER','Ulm']];
+    for(let i=0;i<P.length;i++){const X=i*W/P.length+4,w=W/P.length-8;x.fillStyle=P[i][0];x.fillRect(X,6,w,H-12);x.fillStyle='#fff';font(w>90?17:15);x.fillText(P[i][1],X+w/2,H*0.4);font(11,600);x.fillText(P[i][2],X+w/2,H*0.62);}});
+  at('plakat',(W,H)=>{const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#eb567b');g.addColorStop(1,'#490cb8');x.fillStyle=g;x.fillRect(0,0,W,H);x.fillStyle='#f8d74e';font(19);x.fillText('Radeln',W/2,H*0.36);x.fillText('in Ulm!',W/2,H*0.56);x.fillStyle='#fff';font(11,600);x.fillText('Kalea Ride',W/2,H*0.82);});
+  // Zäune: Lattenzaun und Metallgitter (Lücken durchsichtig)
+  at('latten',(W,H)=>{x.fillStyle='#fff';for(let i=4;i<W;i+=16){x.beginPath();x.moveTo(i,H);x.lineTo(i,10);x.lineTo(i+5,2);x.lineTo(i+10,10);x.lineTo(i+10,H);x.closePath();x.fill();}x.fillRect(0,18,W,6);x.fillRect(0,46,W,6);});
+  at('gitter',(W,H)=>{x.fillStyle='#fff';x.fillRect(0,4,W,5);x.fillRect(0,H-8,W,5);for(let i=2;i<W;i+=10)x.fillRect(i,4,3,H-8);});
+  // Ortsschilder (gelb) mit echten Namen, je Ort Ortseingang und -ende (rot durchgestrichen)
+  names.slice(0,10).forEach((nm,j)=>{for(const end of [0,1]){const k=j*2+end,X=4+(k%4)*256,Y=488+Math.floor(k/4)*106,W=248,H=100;SA['ort'+k]=[X,Y,W,H];
+    x.save();x.translate(X,Y);x.fillStyle='#f3c300';x.fillRect(0,0,W,H);x.strokeStyle='#111';x.lineWidth=4;x.strokeRect(6,6,W-12,H-12);x.fillStyle='#111';let fs=40;font(fs);while(x.measureText(nm.n).width>W-30&&fs>16){fs-=2;font(fs);}
+    x.fillText(nm.n,W/2,H*0.44);font(13,600);x.fillText(nm.sub,W/2,H*0.78);if(end){x.strokeStyle='#d42020';x.lineWidth=11;x.beginPath();x.moveTo(14,H-14);x.lineTo(W-14,14);x.stroke();}x.restore();}});
+  const t=new THREE.CanvasTexture(c);t.anisotropy=anisotropy();return t;}
+// Gehweg-Pflaster (grau, 30-cm-Platten)
+function pavingTex(){return canvasTex(256,256,(x,w,h)=>{x.fillStyle='#b9b5ad';x.fillRect(0,0,w,h);
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const v=168+Math.random()*30|0;x.fillStyle=`rgb(${v},${v-2},${v-6})`;x.fillRect(c*32+1,r*32+1,30,30);}
+  x.fillStyle='rgba(60,60,60,.25)';for(let i=0;i<=8;i++){x.fillRect(i*32-1,0,2,h);x.fillRect(0,i*32-1,w,2);}
+  for(let k=0;k<1500;k++){x.fillStyle=Math.random()<0.5?'rgba(0,0,0,.08)':'rgba(255,255,255,.08)';x.fillRect(Math.random()*w,Math.random()*h,2,2);}},true);}
+const RS={ch:new Map(),occ:new Set(),log:[]}; // log: was wo steht (für Tests)
+// Vorlage: Teile [Geometrie, Farbe, Atlas-Bereich (oder nichts = weiß), Spiegeln] → eine Geometrie mit Position/Normal/Farbe/UV
+function rsTpl(parts){const P=[],Nn=[],C=[],U=[],c=new THREE.Color();
+  for(const [g0,col,reg,flip] of parts){const g=g0.index?g0.toNonIndexed():g0;if(!g.attributes.normal)g.computeVertexNormals();c.set(col);const p=g.attributes.position,n=g.attributes.normal,uv=g.attributes.uv,r=SA[reg||'white'];
+    for(let i=0;i<p.count;i++){P.push(p.getX(i),p.getY(i),p.getZ(i));Nn.push(n.getX(i),n.getY(i),n.getZ(i));C.push(c.r,c.g,c.b);
+      let u=reg&&uv?uv.getX(i):0.5,v=reg&&uv?uv.getY(i):0.5;if(flip)u=1-u;U.push((r[0]+u*r[2])/1024,1-(r[1]+(1-v)*r[3])/1024);}}
+  return {P,Nn,C,U};}
+// Vorlage an Stelle (x,y,z), gedreht um ry, in die Kachel schreiben
+function rsPut(T,x,y,z,ry,s=1){const ix=Math.floor(x/CHUNK),iz=Math.floor(z/CHUNK),k=ix+'|'+iz;let b=RS.ch.get(k);if(!b)RS.ch.set(k,b={cx:(ix+0.5)*CHUNK,cz:(iz+0.5)*CHUNK,P:[],N:[],C:[],U:[]});
+  const cs=Math.cos(ry),sn=Math.sin(ry),{P,Nn,C,U}=T;
+  for(let i=0;i<P.length;i+=3){const px=P[i]*s,pz=P[i+2]*s;b.P.push(x+px*cs+pz*sn-b.cx,y+P[i+1]*s,z-px*sn+pz*cs-b.cz);b.N.push(Nn[i]*cs+Nn[i+2]*sn,Nn[i+1],-Nn[i]*sn+Nn[i+2]*cs);}
+  for(const v of C)b.C.push(v);for(const v of U)b.U.push(v);}
+function rsFlush(mat){for(const b of RS.ch.values()){if(!b.P.length)continue;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(b.P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(b.N,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(b.C,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(b.U,2));g.computeBoundingSphere();
+    const m=new THREE.Mesh(g,mat);m.position.set(b.cx,0,b.cz);m.castShadow=S.quality==='high';m.receiveShadow=true;m.userData.lod='hi';m.userData.cx=b.cx;m.userData.cz=b.cz;scene.add(m);CULLS.push(m);}
+  RS.ch.clear();}
+// Platz frei? (2-m-Raster für Randobjekte, Häuser, Nebenstraßen, Fluss, andere Streckenteile)
+function rsFree(x,z,i,r=1.2){const k=Math.floor(x/2)+'|'+Math.floor(z/2);if(RS.occ.has(k)||houseAt(x,z,r))return false;if(IS_ULM?riverDist(x,z).d<RIVER_HW+6||nearVRoad(x,z,4.5):rawHeight(x,z)<0.5)return false;
+  if(!footFree(x,z,1))return false;const nr=nearestRoad(x,z,5.6);if(nr){const di=Math.abs(nr.i-i),dc=Math.min(di,N-di);if(dc*ds>30||nr.d<5)return false;}return true;}
+function rsMark(x,z,r=1){for(let a=-r;a<=r;a+=2)for(let b=-r;b<=r;b+=2)RS.occ.add(Math.floor((x+a)/2)+'|'+Math.floor((z+b)/2));}
+function buildRoadside(){
+  const hi=S.quality==='high',low=S.quality==='low',rng=mulberry32(4711),R=(a,b)=>a+rng()*(b-a);RS.occ.clear();RS.ch.clear();RS.log=[];
+  const zoneAt=i=>IS_ULM?ulmZone(RX[i],RZ[i]):{t:null,d:0,n:null},head=i=>Math.atan2(RTX[i],RTZ[i]),face=i=>Math.atan2(-RTX[i],-RTZ[i]);
+  const isPath=i=>IS_ULM&&RNAME&&/weg$|Weg$|radweg|Radweg|Pfad|Ufer|Steg/.test(RNAME[i]||'');
+  // Ortsnamen entlang der Strecke (Dörfer aus den Zonen, sonst Ulm bzw. Neu-Ulm)
+  const NU=IS_ULM?ulmLL(10.006,48.392):null,dS=(x,z,ri)=>{let best=1e9,sd=0;for(const s of RIV){if(s.ri!==ri)continue;const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;sd=s.tx*(z-s.a[1])-s.tz*(x-s.a[0]);}}return Math.sign(sd);};
+  const nuS=IS_ULM?[dS(NU[0],NU[1],0),dS(NU[0],NU[1],1)]:null,townName=(i,zn)=>zn.n?{n:zn.n,sub:'Alb-Donau-Kreis'}:dS(RX[i],RZ[i],0)===nuS[0]&&dS(RX[i],RZ[i],1)===nuS[1]?{n:'Neu-Ulm',sub:'Landkreis Neu-Ulm'}:{n:'Ulm',sub:'Universitätsstadt'};
+  // Ortsgrenzen: drinnen/draußen mit Hysterese, kurze Lücken (Parks, Felder zwischen Stadtteilen) und kurze Stücke zählen nicht
+  const towns=[];if(IS_ULM){const st=Math.max(1,Math.round(8/ds)),M=Math.ceil(N/st),ins=new Uint8Array(M);let inside=zoneAt(0).d>0.25;
+    for(let k=0;k<M;k++){const zn=zoneAt(k*st);if(!inside&&zn.d>0.3)inside=true;else if(inside&&zn.d<0.1)inside=false;ins[k]=inside?1:0;}
+    const runs=()=>{const r=[];for(let k=0;k<M;){let j=k;while(j<M&&ins[j]===ins[k])j++;r.push([ins[k],k,j]);k=j;}return r;};
+    const key=(a,b)=>{let best=a,bd=-1;for(let k=a;k<b;k+=Math.max(1,(b-a)/12|0)){const d=zoneAt(k*st).d;if(d>bd){bd=d;best=k;}}return zoneAt(best*st).n||'Ulm';};
+    {const R0=runs();for(let q=1;q<R0.length-1;q++){const [v,a,b]=R0[q];if(v)continue;const k1=key(R0[q-1][1],R0[q-1][2]),k2=key(R0[q+1][1],R0[q+1][2]);
+      if(k1===k2&&(b-a)*st*ds<(k1==='Ulm'?1600:700))ins.fill(1,a,b);}} // zwischen Stadtteilen bzw. im selben Dorf kein Ortsschild
+    for(const [v,a,b] of runs())if(v&&a>0&&(b-a)*st*ds<300)ins.fill(0,a,b);
+    let cur=null;const deep=(k0,dir)=>{let best=k0,bd=0;for(let q=1;q<25;q++){const k=k0+dir*q;if(k<0||k>=M)break;const d=zoneAt(k*st).d;if(d>bd){bd=d;best=k;}}return best*st;};
+    for(let k=1;k<M;k++){if(ins[k]&&!ins[k-1]){const j=deep(k,1);cur=townName(j,zoneAt(j));towns.push({i:k*st,end:0,nm:cur});}
+      else if(!ins[k]&&ins[k-1]){const j=deep(k,-1);towns.push({i:k*st,end:1,nm:cur||townName(j,zoneAt(j))});cur=null;}}}
+  const names=[];for(const t of towns){let k=names.findIndex(n=>n.n===t.nm.n);if(k<0&&names.length<10){names.push(t.nm);k=names.length-1;}t.slot=k<0?-1:k*2+t.end;}
+  const tex=signAtlas(names),mat=new THREE.MeshStandardMaterial({map:tex,vertexColors:true,roughness:0.7,alphaTest:0.5,side:THREE.DoubleSide});
+  // Vorlagen
+  const post=(h,r=0.04)=>[tr(new THREE.CylinderGeometry(r,r,h,6),[0,h/2,0]),0x9aa0a6];
+  const plate=(reg,w,h,y,flip)=>{const g=new THREE.PlaneGeometry(w,h);const p=[[tr(g,[0,y,0.05]),0xffffff,reg,flip]];if(SIL[reg]||reg==='zebra'||reg==='zone30'||reg.startsWith('ort'))p.push([tr(g,[0,y,0.03],[0,Math.PI,0]),0x8a9096,SIL[reg]||'white']);return p;};
+  const SIGN={};const sign=(reg,flip)=>SIGN[reg+(flip?'f':'')]||(SIGN[reg+(flip?'f':'')]=rsTpl([post(2.6),...plate(reg,reg==='achtung'||reg==='kurve'?0.9:0.62,reg==='achtung'||reg==='kurve'?0.9:0.62,2.3,flip)]));
+  const putSign=(i,reg,off=5.5,flip)=>{const [x,z]=lateralPoint(i,off);if(!rsFree(x,z,i,0.4))return false;rsPut(sign(reg,flip),x,groundH(x,z)-0.05,z,face(i));rsMark(x,z,0);return true;};
+  // 1) Ortsschilder
+  for(const t of towns){if(t.slot<0)continue;const reg='ort'+t.slot,T=rsTpl([[tr(new THREE.CylinderGeometry(0.04,0.04,2.4,6),[-0.6,1.2,0]),0x9aa0a6],[tr(new THREE.CylinderGeometry(0.04,0.04,2.4,6),[0.6,1.2,0]),0x9aa0a6],...plate(reg,1.5,0.6,1.95)]);
+    for(let k=0;k<6;k++){const i=(t.i+k*2)%N,[x,z]=lateralPoint(i,5.6);if(rsFree(x,z,i,0.6)){rsPut(T,x,groundH(x,z)-0.05,z,face(i));rsMark(x,z,1);RS.log.push(['ort',i,t.nm.n]);break;}}
+    if(!t.end&&rng()<0.5)putSign((t.i+Math.round(40/ds))%N,'vorfahrt');}
+  // 2) Warnschilder vor engen Kurven (Land), Radweg-Schilder am Anfang von Radwegen, Vorfahrt/Zone 30 in Orten
+  {let lastK=-1e9,lastR=-1e9,lastV=-1e9;const L=Math.round(40/ds);
+    for(let i=L;i<N-L;i+=2){const a=head(i),b=head(i+L);let da=b-a;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;const zn=zoneAt(i);
+      if(Math.abs(da)>0.75&&zn.d<0.25&&i*ds-lastK>350){const j=(i-Math.round(70/ds)+N)%N;if(putSign(j,'kurve',5.5,da>0))lastK=i*ds;} /* da > 0 = Linkskurve → Schild gespiegelt */
+      if(isPath(i)&&!isPath(i-2)&&i*ds-lastR>300){if(putSign(i,'rad',5.2))lastR=i*ds;}
+      if(zn.d>0.35&&i*ds-lastV>R(500,900)){if(putSign(i,zn.t==='sub'&&rng()<0.6?'zone30':rng()<0.5?'vorfahrt':'v50',5.5))lastV=i*ds;}}}
+  // 3) Bushaltestellen in Orten (Wartehäuschen mit Bank und Plakat, H-Schild)
+  {const shel=rsTpl([...[[-1.5,-0.6],[1.5,-0.6],[-1.5,0.6],[1.5,0.6]].map(([a,b])=>[tr(new THREE.BoxGeometry(0.08,2.3,0.08),[a,1.15,b]),0x4a5058]),[tr(new THREE.BoxGeometry(3.4,0.1,1.5),[0,2.34,0]),0x5a6068],
+      [tr(new THREE.BoxGeometry(3.0,1.9,0.04),[0,1.15,-0.62]),0xa9c4d2],[tr(new THREE.PlaneGeometry(1.1,1.4),[1.53,1.25,0],[0,Math.PI/2,0]),0xffffff,'plakat'],[tr(new THREE.PlaneGeometry(1.1,1.4),[1.51,1.25,0],[0,-Math.PI/2,0]),0xb0b4b8],
+      [tr(new THREE.BoxGeometry(2.0,0.06,0.4),[0,0.46,-0.36]),0x8a6a48],[tr(new THREE.BoxGeometry(0.06,0.46,0.3),[-0.9,0.23,-0.36]),0x4a5058],[tr(new THREE.BoxGeometry(0.06,0.46,0.3),[0.9,0.23,-0.36]),0x4a5058]]);
+    let next=R(300,700);for(let i=0;i<N;i+=2){if(i*ds<next)continue;const zn=zoneAt(i);if(zn.d<0.35)continue;const [x,z]=lateralPoint(i,7.6);
+      if(!rsFree(x,z,i,1.9)||!rsFree(...lateralPoint(i+Math.round(2/ds),7.6),i,1.6)||!rsFree(...lateralPoint(i-Math.round(2/ds),7.6),i,1.6)){next=i*ds+40;continue;}
+      rsPut(shel,x,groundH(x,z)-0.05,z,Math.atan2(RTZ[i],-RTX[i]));rsMark(x,z,3);camOccAdd(rectPoly(x,z,head(i),1.6,3.4),groundH(x,z)+2.4);putSign((i+Math.round(4/ds))%N,'bus',5.3);RS.log.push(['bus',i]);next=i*ds+R(600,1000);}}
+  // 4) Bänke mit Abfalleimer (Parks, Ufer, Radwege, Orte), Fahrradständer und Litfaßsäulen in der Stadt
+  const bench=rsTpl([[tr(new THREE.BoxGeometry(1.8,0.06,0.42),[0,0.45,0]),0x9a6a40],[tr(new THREE.BoxGeometry(1.8,0.32,0.05),[0,0.72,-0.22],[-0.15,0,0]),0x9a6a40],
+    ...[-0.75,0.75].map(a=>[tr(new THREE.BoxGeometry(0.07,0.45,0.42),[a,0.22,0]),0x3a3f46])]);
+  const bin=rsTpl([[tr(new THREE.CylinderGeometry(0.22,0.2,0.75,10),[0,0.55,0]),0x3d6e4a],[tr(new THREE.CylinderGeometry(0.04,0.04,0.95,6),[0,0.47,-0.24]),0x5a6068]]);
+  const bikeT=(col)=>{const p=[];for(const z of [-0.5,0.5]){const t=new THREE.TorusGeometry(0.33,0.025,5,16);t.rotateY(Math.PI/2);p.push([tr(t,[0,0.36,z]),0x1b1c1f]);}
+    p.push([tube([0,0.36,-0.5],[0,0.55,0.05],0.025,5),col],[tube([0,0.55,0.05],[0,0.86,-0.1],0.025,5),col],[tube([0,0.36,-0.5],[0,0.9,-0.2],0.025,5),col],[tube([0,0.86,0.35],[0,0.36,0.5],0.025,5),col],[tube([0,0.88,-0.15],[0,0.86,0.35],0.025,5),col],
+      [tr(new THREE.BoxGeometry(0.1,0.04,0.24),[0,0.92,-0.22]),0x1b1c1f],[tr(new THREE.BoxGeometry(0.5,0.03,0.03),[0,0.98,0.38]),0x2a2a2a]);return p;};
+  const bikes=[0xd94a3a,0x2e6fb3,0x3a9a5b,0xf2b632,0x222222,0xeeeeee,0x7a4fd6].map(c=>rsTpl(bikeT(c)));
+  const rack=rsTpl([0,1,2,3].map(k=>[tr(new THREE.TorusGeometry(0.35,0.025,5,10,Math.PI),[0,0,k*0.75-1.1]),0x9aa0a6]));
+  const litf=rsTpl([[tr(new THREE.CylinderGeometry(0.62,0.62,2.6,18,1,true),[0,1.6,0]),0xffffff,'litfass'],[tr(new THREE.CylinderGeometry(0.7,0.7,0.3,18),[0,0.15,0]),0x5a6a5a],
+    [tr(new THREE.CylinderGeometry(0.72,0.7,0.16,18),[0,2.98,0]),0x3d5a46],[tr(new THREE.SphereGeometry(0.62,14,6,0,6.283,0,Math.PI/2),[0,3.02,0],[0,0,0],[1,0.45,1]),0x3d5a46]]);
+  {let nb=R(60,160),nr=R(150,300),nl=R(300,600);
+    for(let i=0;i<N;i+=2){const d=i*ds,zn=zoneAt(i),river=IS_ULM&&riverDist(RX[i],RZ[i]).d<RIVER_HW+70,path=isPath(i);
+      if(d>nb){const ok=river||path||zn.d>0.3||!IS_ULM&&rng()<0.25;if(ok&&(!low||rng()<0.6)){const sd=rng()<0.5?-1:1,[x,z]=lateralPoint(i,sd*6.4);
+          if(rsFree(x,z,i,1)){const [wx,wz]=lateralPoint(i,sd*30),water=IS_ULM&&riverDist(wx,wz).d<RIVER_HW+15,f=(sd>0?face(i)-Math.PI/2:face(i)+Math.PI/2)+(water?Math.PI:0); /* Blick zur Straße, am Ufer aufs Wasser */rsPut(bench,x,groundH(x,z)-0.03,z,f);rsMark(x,z,1);const [bx,bz]=lateralPoint(i+Math.round(1.6/ds),sd*6.5);if(rng()<0.7)rsPut(bin,bx,groundH(bx,bz)-0.03,bz,f);RS.log.push(['bank',i]);nb=d+R(110,260);}else nb=d+20;}else nb=d+R(80,200);}
+      if(IS_ULM&&d>nr&&(zn.t==='alt'||zn.t==='city')&&zn.d>0.4){const sd=rng()<0.5?-1:1,[x,z]=lateralPoint(i,sd*6.7);
+        if(rsFree(x,z,i,1.2)){const ry=head(i);rsPut(rack,x,groundH(x,z)-0.03,z,ry);const n=1+(rng()*4|0);for(let k=0;k<n;k++){const zz=k*0.75-1.1+R(-0.1,0.1);rsPut(bikes[rng()*bikes.length|0],x+Math.sin(ry)*zz,groundH(x,z)-0.03,z+Math.cos(ry)*zz,ry+Math.PI/2+R(-0.1,0.1));}
+          rsMark(x,z,2);RS.log.push(['rad',i]);nr=d+R(160,320);}else nr=d+25;}
+      if(IS_ULM&&d>nl&&(zn.t==='alt'||zn.t==='city')&&zn.d>0.4){const sd=rng()<0.5?-1:1,[x,z]=lateralPoint(i,sd*6.8);
+        if(rsFree(x,z,i,1.4)){rsPut(litf,x,groundH(x,z)-0.05,z,rng()*6);rsMark(x,z,1);camOccAdd(rectPoly(x,z,0,1.4,1.4),groundH(x,z)+3.2);RS.log.push(['litfass',i]);nl=d+R(500,900);}else nl=d+30;}}}
+  // 5) Brunnen in der Altstadt (rundes Becken, Säule, Wasser)
+  if(IS_ULM){const fount=rsTpl([[tr(new THREE.CylinderGeometry(2.0,2.1,0.6,24,1,true),[0,0.3,0]),0xb8ad98],[tr(new THREE.TorusGeometry(2.0,0.12,6,24),[0,0.6,0],[Math.PI/2,0,0]),0xc9bfa8],
+      [tr(new THREE.CircleGeometry(1.95,24),[0,0.48,0],[-Math.PI/2,0,0]),0x5d9ac2],[tr(new THREE.CylinderGeometry(0.22,0.3,2.2,10),[0,1.1,0]),0xb8ad98],[tr(new THREE.SphereGeometry(0.45,10,6),[0,2.3,0]),0xc9a24a],
+      [tr(new THREE.CylinderGeometry(0.7,0.2,0.25,12),[0,1.6,0]),0xb8ad98]]);let n=0;
+    for(let i=0;i<N&&n<(hi?3:2);i+=Math.round(60/ds)){const zn=zoneAt(i);if(zn.t!=='alt'||zn.d<0.5)continue;for(const sd of [-1,1]){const [x,z]=lateralPoint(i,sd*11);let ok=rsFree(x,z,i,2.6);
+      for(let a=0;a<6&&ok;a++){const px=x+Math.cos(a)*2.4,pz=z+Math.sin(a)*2.4;if(nearestRoad(px,pz,7)||houseAt(px,pz,0.5)||(IS_ULM&&nearVRoad(px,pz,4)))ok=false;}
+      if(ok){rsPut(fount,x,groundH(x,z)-0.1,z,0);rsMark(x,z,3);camOccAdd(rectPoly(x,z,0,4.2,4.2),groundH(x,z)+1.5);RS.log.push(['brunnen',i]);n++;i+=Math.round(400/ds);break;}}}}
+  // 6) Zäune, Hecken, Mauern vor Gärten (Vororte, Dörfer) und Weidezäune auf dem Land
+  if(IS_ULM&&!low){const SEG=Math.max(1,Math.round(4/ds));
+    const piece=(kind,a,b,y0,y1)=>{const L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<0.5)return;const mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2,ry=Math.atan2(b[0]-a[0],b[1]-a[1]),y=Math.min(y0,y1)-0.05;
+      const T=kind==='hecke'?rsTpl([[tr(new THREE.BoxGeometry(0.8,1.25,L+0.1),[0,0.62,0]),SEAS.k==='winter'?0x4a5a36:0x2f5c2a],[tr(new THREE.BoxGeometry(0.6,0.25,L*0.7),[0.05,1.3,0]),SEAS.k==='winter'?0x4a5a36:0x34622d]]):
+        kind==='mauer'?rsTpl([[tr(new THREE.BoxGeometry(0.32,0.7,L+0.02),[0,0.35,0]),0xb9b2a4],[tr(new THREE.BoxGeometry(0.4,0.08,L+0.04),[0,0.74,0]),0xa59d8e]]):
+        kind==='latten'?rsTpl([[tr(new THREE.PlaneGeometry(L,1.0),[0,0.5,0],[0,Math.PI/2,0]),0xf2eee6,'latten'],[tr(new THREE.BoxGeometry(0.1,1.1,0.1),[0,0.55,L/2]),0xe8e2d6]]):
+        kind==='gitter'?rsTpl([[tr(new THREE.PlaneGeometry(L,1.1),[0,0.55,0],[0,Math.PI/2,0]),0x3a3f46,'gitter'],[tr(new THREE.BoxGeometry(0.06,1.2,0.06),[0,0.6,L/2]),0x3a3f46]]):
+        rsTpl([[tr(new THREE.BoxGeometry(0.12,1.2,0.12),[0,0.6,L/2]),0x7a5a3a],[tr(new THREE.BoxGeometry(0.05,0.1,L),[0,0.55,0]),0x8a6a48],[tr(new THREE.BoxGeometry(0.05,0.1,L),[0,1.0,0]),0x8a6a48]]);
+      rsPut(T,mx,y,mz,ry);};
+    for(const sd of [-1,1]){let run=0,kind=null,prev=null,gap=R(10,40);
+      for(let i=0;i<N;i+=SEG){const zn=zoneAt(i),town=zn.d>0.3&&zn.t!=='ind',land=zn.d<0.05&&!isPath(i),off=town?7.6:9.5,[x,z]=lateralPoint(i,sd*off);
+        const ok=(town||land)&&rsFree(x,z,i,0.4)&&riverDist(x,z).d>RIVER_HW+10&&!nearVRoad(x,z,7.5)&&(!town||!houseAt(x,z,0.6));
+        if(!ok||gap>0){if(gap>0)gap-=SEG*ds;prev=null;if(run>0&&!ok){run=0;gap=R(4,14);}continue;}
+        if(!kind||run<=0){kind=town?['hecke','latten','mauer','gitter','hecke'][rng()*5|0]:(rng()<0.35?'weide':null);run=town?R(12,40):R(60,260);if(!kind){gap=R(150,500);run=0;continue;}}
+        const p=[x,z],y=groundH(x,z);if(prev)piece(kind,prev.p,p,prev.y,y);prev={p,y};run-=SEG*ds;if(run<=0){gap=town?R(3,9):R(200,700);prev=null;kind=null;}}}}
+  // 7) Gehwege mit Bordstein in Orten (eigenes Pflaster-Material), Zebrastreifen und Rad-Piktogramme auf der Fahrbahn
+  if(IS_ULM){const pm=new THREE.MeshStandardMaterial({map:pavingTex(),vertexColors:true,roughness:0.95,side:THREE.DoubleSide}),G=new Map(),W=4.6;
+    const add=(b,x,y,z,u,v,c)=>{b.P.push(x-b.cx,y,z-b.cz);b.U.push(u,v);b.C.push(c,c,c);};
+    for(const sd of [-1,1]){let prev=null;
+      for(let i=0;i<=N;i+=2){const ii=i%N,zn=zoneAt(ii),[ox,oz]=lateralPoint(ii,sd*7.0),[mx,mz]=lateralPoint(ii,sd*5.8);
+        const ok=zn.d>0.3&&!isPath(ii)&&riverDist(mx,mz).d>RIVER_HW+10&&!nearVRoad(mx,mz,5)&&!houseAt(ox,oz,0)&&footFree(mx,mz,0)&&(()=>{const nr=nearestRoad(ox,oz,7.2);if(!nr)return true;const di=Math.abs(nr.i-ii);return Math.min(di,N-di)*ds<20;})();
+        if(!ok){prev=null;continue;}const y=RH[ii]+0.25,yc=y+0.12,yo=Math.max(yc,terrH(ox,oz)+0.03),L=[[W,y],[W,yc],[W+0.22,yc],[7.0,yo],[7.0,Math.min(yo,terrH(ox,oz))-0.3]].map(([o,h])=>{const [px,pz]=lateralPoint(ii,sd*o);return [px,h,pz,o];});
+        if(prev){const ix=Math.floor(L[2][0]/CHUNK),iz=Math.floor(L[2][2]/CHUNK),key=ix+'|'+iz;let b=G.get(key);if(!b)G.set(key,b={cx:(ix+0.5)*CHUNK,cz:(iz+0.5)*CHUNK,P:[],U:[],C:[]});
+          for(let k=0;k<4;k++){const a0=prev[k],a1=prev[k+1],b0=L[k],b1=L[k+1],c=k===0||k===1?0.95:k===2?0.82:0.8,v0=prev.v,v1=prev.v+2*ds/1.6,uu=q=>q[3]/1.6;
+            const quad=[[a0,v0],[b0,v1],[b1,v1],[a0,v0],[b1,v1],[a1,v0]];if(sd<0){[quad[1],quad[2]]=[quad[2],quad[1]];[quad[4],quad[5]]=[quad[5],quad[4]];}
+            for(const [q,v] of quad)add(b,q[0],q[1],q[2],k===2?uu(q):0.02,k===2?v:0.02,c);}}
+        L.v=prev?prev.v+2*ds/1.6:0;prev=L;}}
+    for(const b of G.values()){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(b.P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(b.U,2));g.setAttribute('color',new THREE.Float32BufferAttribute(b.C,3));g.computeVertexNormals();
+      const m=new THREE.Mesh(g,pm);m.position.set(b.cx,0,b.cz);m.receiveShadow=true;m.userData.lod='hi';scene.add(m);CULLS.push(m);}
+    // Zebrastreifen an Kreuzungen in der Stadt, Rad-Piktogramme auf Radwegen
+    const DP=[],DU=[],white=[(SA.white[0]+5)/1024,1-(SA.white[1]+5)/1024],quad=(i,l0,l1,a0,a1,reg,flip)=>{const r=SA[reg],y=RH[i]+0.27,pt=(l,a)=>{const [x,z]=lateralPoint(i,l);return [x+RTX[i]*a,y,z+RTZ[i]*a];};
+        const c=[pt(l0,a0),pt(l1,a0),pt(l1,a1),pt(l0,a1)],uv=reg?[[0,0],[1,0],[1,1],[0,1]].map(([u,v])=>[(r[0]+(flip?1-u:u)*r[2])/1024,1-(r[1]+(1-v)*r[3])/1024]):[white,white,white,white];
+        for(const k of [0,1,2,0,2,3]){DP.push(...c[k]);DU.push(...uv[k]);}};
+    // Kreuzungen: die Nebenstraßen enden 12 m vor der Streckenmitte → Kreuzung, wo eine näher als 14 m herankommt
+    const light=rsTpl([[tr(new THREE.CylinderGeometry(0.06,0.07,3.3,8),[0,1.65,0]),0x8a9096],[tr(new THREE.BoxGeometry(0.34,0.95,0.24),[0,3.0,0.12]),0x23272c],
+      [tr(new THREE.SphereGeometry(0.09,8,6),[0,3.3,0.25]),0x5a1414],[tr(new THREE.SphereGeometry(0.09,8,6),[0,3.0,0.25]),0x5a4a14],[tr(new THREE.SphereGeometry(0.09,8,6),[0,2.7,0.25]),new THREE.Color(0.35,1.7,0.55)],
+      [tr(new THREE.BoxGeometry(0.5,1.1,0.03),[0,3.0,0.0]),0x23272c]]);
+    let lastZ=-1e9,lastB=-1e9,lastJ=-1e9;
+    for(let i=0;i<N;i+=2){const zn=zoneAt(i),d=i*ds;
+      if(zn.d>0.35&&d-lastJ>80){const v=nearVRoad(RX[i],RZ[i],14);if(v){lastJ=d;const j=(i-Math.round(13/ds)+N)%N,main=(v.s.w||4)>=6||zn.t==='city'&&rng()<0.4;
+        if(!nearVRoad(RX[j],RZ[j],12.5)){
+          if((zn.t==='alt'||zn.t==='city')&&d-lastZ>200&&rng()<0.6){for(let l=-3.9;l<3.8;l+=1.0)quad(j,l,l+0.5,-1.5,1.5);putSign(j,'zebra',5.3);RS.log.push(['zebra',j]);lastZ=d;}
+          if(main&&zn.d>0.45){const [x,z]=lateralPoint((j+2)%N,5.4);if(rsFree(x,z,j,0.4)){rsPut(light,x,groundH(x,z)-0.05,z,face(j));rsMark(x,z,0);RS.log.push(['ampel',j]);
+            quad((j+2)%N,0.1,4.5,-0.25,0.25); /* Haltelinie */}}
+          else if(rng()<0.3)putSign(j,'vorfahrt',5.5);}}}
+      if(isPath(i)&&d-lastB>150){quad(i,-1.3,1.3,-1.3,1.3,'bike',true);RS.log.push(['piktogramm',i]);lastB=d;}}
+    if(DP.length){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(DP,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(DU,2));g.computeVertexNormals();
+      const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:0.8,alphaTest:0.5,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4,color:0xf2f2ee}));m.receiveShadow=true;scene.add(m);}}
+  rsFlush(mat);
+}
 /* ---- Wahrzeichen ---- */
 function std(c,r=0.8,m=0,extra={}){return new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,...extra});}
 // Viele Einzelteile eines Bauwerks zu wenigen Meshes (je Material) zusammenfassen – spart Zeichenaufrufe
@@ -2994,7 +3180,7 @@ function sndBurst(t0,dur,f0,f1,vol,pan,bus){if(vol<0.002)return;const c=SND.ctx,
   s.start(t0,Math.random()*2,dur+0.05);}
 // Vorbeifahren an Leitpfosten (alle 50 m, beide Seiten) und Ulmer Laternen (alle 32 m, abwechselnd) – kurz vor dem Objekt auslösen
 function sndPassBy(d0,d1,v){const W=(pan,vol)=>sndBurst(SND.ctx.currentTime+0.01,clamp(2.4/v,0.16,0.4),2400,650,vol*sat((v-4)/10),pan,SND.bus.amb);
-  const ps=Math.round(50/ds);for(let k=Math.ceil(d0/(ps*ds));k*ps*ds<=d1;k++){const i=(k*ps)%N;if(IS_ULM&&riverDist(RX[i],RZ[i]).d<RIVER_HW+10)continue;W(-0.75,0.05);W(0.75,0.05);}
+  const ps=Math.round(50/ds);for(let k=Math.ceil(d0/(ps*ds));k*ps*ds<=d1;k++){const i=(k*ps)%N;if(IS_ULM&&(riverDist(RX[i],RZ[i]).d<RIVER_HW+10||ulmZone(RX[i],RZ[i]).d>0.3))continue;W(-0.75,0.05);W(0.75,0.05);}
   if(IS_ULM){const ls=Math.round(32/ds);for(let k=Math.ceil(d0/(ls*ds));k*ls*ds<=d1;k++){const i=(k*ls)%N;if(ulmZone(RX[i],RZ[i]).d<0.3)continue;W((Math.floor(i/ls)%2)?0.8:-0.8,0.07);}}}
 function sndBirds(){const c=SND.ctx,t0=c.currentTime+0.05,n=2+Math.floor(Math.random()*4),f0=rnd(2600,4200),g=c.createGain();g.gain.value=0.07;
   if(c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=rnd(-0.8,0.8);g.connect(p);p.connect(SND.bus.amb);}else g.connect(SND.bus.amb);
@@ -4190,7 +4376,7 @@ function clearWorld(){
   ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
   for(const p of NET.peers.values())p.obj=null;}
 async function buildWorld(){
-  seasonCalc();buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);ghostLook();RAIN.obj=null;buildMapBg();applyWeather();
+  seasonCalc();buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildRoadside();buildVegetation();}else{buildVegetation();buildLandmarks();buildRoadside();}initRiders();decorate();toonify(scene);ghostLook();RAIN.obj=null;buildMapBg();applyWeather();
   $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';}
 // Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
 function resetRide(){

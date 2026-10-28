@@ -193,6 +193,14 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Äußerer Boden:** Die große Bodenfläche bis zum Horizont liegt unter dem tiefsten Gelände (flussabwärts ist das
   Donautal tiefer als in Ulm – vorher ragte sie bei Elchingen über die Straße). Schrägdächer echter Häuser nur auf fast
   rechteckigen Grundrissen (Fläche/Mindest-Rechteck > 0,8), sonst ragt das Dach über die Straße.
+- **Straßenrand** (`buildRoadside`, nach den Häusern, vor den Bäumen): Ortsschilder mit echten Namen an Ortsgrenzen (Dörfer =
+  Zonen mit Namen, sonst Ulm/Neu-Ulm nach Donau-/Iller-Seite; kurze Lücken zwischen Stadtteilen zählen nicht), Verkehrsschilder
+  (Kurve, Radweg, Vorfahrt, Zone 30, 50), Bushaltestellen, Bänke mit Abfalleimer, Fahrradständer mit Rädern, Litfaßsäulen,
+  Brunnen, Hecken/Zäune/Mauern vor Gärten, Weidezäune, Ampeln und Zebrastreifen an Kreuzungen (Nebenstraßen enden 12 m vor der
+  Streckenmitte → Kreuzung, wo eine näher als 14 m herankommt), Rad-Piktogramme auf Radwegen, Gehwege mit Bordstein in Orten.
+  Alles in EINEM Material mit Schilder-Atlas `signAtlas` (Bereiche `SA`, Alpha-Test, Rückseiten-Silhouetten `SIL`), je Kachel
+  zusammengefasst (`rsTpl` → `rsPut` → `rsFlush`), Platzprüfung `rsFree`/`rsMark`; `RS.log` listet, was wo steht (für Tests).
+  Leitpfosten nur außerorts. Achtung: in den langen Code-Zeilen nie `//`-Kommentare mitten in die Zeile setzen (verschluckt den Rest).
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
