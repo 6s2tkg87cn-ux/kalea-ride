@@ -22,7 +22,7 @@ tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buil
                           nur dort ersetzt die App ausgedachte Häuser, `osmCovered`; `--routes=` = Routenstand beim Holen)
 tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; aktualisiert auch
                           die Kartenstücke/Routenlinien in ulm-haeuser-holen.html (Häuser entlang aller Routen)
-tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (95 Kartenstücke à 1,2 km, alle Server gleichzeitig,
+tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (100 Kartenstücke à 1,2 km, alle Server gleichzeitig,
                           mit Wiederholung; behält nur Häuser ≤ 220 m an den Routen) und speichert ulm-haeuser.json
 tools/ulm-routen-holen.html   Hilfsseite: Straßen/Radwege/Radrouten/Flüsse/Wasserflächen (Overpass) rund um Ulm → ulm-routen.json (Höhen holt Claude selbst: AWS-Terrarium-Kacheln)
 tools/analyse/            FIT-Dateien auswerten (Physik-Abgleich echt ↔ Zwift ↔ App)
@@ -82,7 +82,17 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
   Bergwertung/Runde mit Gummiband (`a.rb`) zählt nicht als Bestzeit.
 - **Runde geschafft:** `stepLap`/`finishLap` zeigen nach jeder vollen Runde ein Banner wie die Bergwertung. Wer mitten in der
-  Runde einsteigt, bekommt die Rundenzeit erst ab der Ziellinie.
+  Runde einsteigt, bekommt die Rundenzeit erst ab der Ziellinie. Runden speichern Zwischenzeiten alle 100 m (`splits`),
+  Schlüssel `lapKey()` (Welt_Route, `_r` = umgedreht).
+- **Geist** (`GHOST`, `ghostTarget`, `stepGhost`, Schalter `S.ghost`): durchsichtiger Fahrer (`ghostLook` nach `toonify`).
+  Vorrang: am Anstieg die KOM-Bestzeit (Zwischenzeiten alle 50 m), sonst eine gewählte frühere Fahrt (Statistik einer
+  gespeicherten Fahrt → „Als Geist mitfahren“, nur gleiche Welt/Route/Richtung; Abstand über `odoAt`), sonst die Rundenbestzeit.
+  Steht in der Mitfahrer-Liste mit Abstand.
+- **Bildschirm wach** (`keepAwake`): Wake-Lock-Schnittstelle, sonst stummes Mini-Video in Schleife (`NOSLEEP_MP4`);
+  an bei `startRide`, aus bei `endRide`, nach Tab-Wechsel neu.
+- **Tageszeit & Wetter** (`TOD`, `WX`, `applyWeather`, `S.tod` morgen/mittag/abend/auto, `S.wx` sonnig/wolkig/nebel/regen):
+  ändert Sonnenstand und -farbe, Himmel (gemeinsame `SUN_DIR`/`SKYTOP`/`HORIZON`), Licht, Nebeldichte (× in `applyQuality`,
+  auch Wasser-Shader), Wolken; Regen = `RAIN`-Striche rund um die Kamera (`stepRain`). Wird in `buildWorld` neu angewendet.
 - **Richtung & Einstieg** (Menü bei den Routen): `REV` je Route in `kalea_rev` – `reverseArrays` dreht RX/RZ/RH/RNAME
   (Start bleibt Index 0), Anstiege dann per `detectClimbs` (Ulm: Name nach Straße, eigene KOM-/Runden-Schlüssel mit `_r`);
   online zählt die Richtung mit (`sameTrack`/`sameRoom`). `START_AT` = Einstieg (vor einem Anstieg oder alle 5 km), gilt beim
@@ -107,7 +117,14 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
   virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
-  Dauerschalten (`HOLD.pad`, Abbruch nach 4 s).
+  Dauerschalten (`HOLD.pad`/`HOLD.bit`, Abbruch nach 4 s). **Tasten frei belegen:** `S.keymap` = Bit → Aktion (`KEY_DEF`:
+  + Bit 12 und Y Bit 6 schwerer, − Bit 8 und B Bit 5 leichter, d. h. Schalten geht auch nur mit der rechten Hälfte;
+  Aktionen `KEY_ACT`, ausgeführt in `runAction`; „Taste anlernen“ = `startMapLearn`). **Linke Hälfte wach halten**
+  (`S.clickRefresh`): die linke Hälfte sendet ohne „Entsperren“ in der Hersteller-App nach ca. 1 min nichts mehr → alle 45 s
+  ohne gedrückte Taste kurz trennen und still neu verbinden (`pad.refreshing`, `onClickLost`).
+- **Kalibrieren** (Ausrollen, `CAL`, `calibStart`/`calibAnswer`/`onFtmsStatus`): FTMS 0x13 über den Control Point, Status
+  über 0x2ADA (0x14: 04 = aufhören zu treten, 02 = fertig, 03 = Fehler); solange `T.calib` wird kein Widerstand gesendet.
+  Ob der KICKR CORE das per FTMS kann, ist offen – sonst Hinweis auf die Wahoo-App.
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
@@ -130,7 +147,9 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Bebauung und Karte richten sich danach. Ortschaften an den Umland-Routen kommen als Zonen aus `ULM_DATA.zones`
   (`ulmZone` mit 500-m-Raster `ZONEG`). Klöster Wiblingen/Oberelchingen (`buildKloster`) nur, wenn im Bereich.
 - **Routen Ulm:** Große Runde, Donau, Michelsberg, Eselsberg, Kuhberg (Innenstadt) sowie Donau & Kloster Elchingen
-  (25 km), Iller & Kloster Wiblingen (24 km), Blautal & Hochsträß (31 km) – Start/Ziel jeweils Neue Straße am Münster.
+  (25 km), Iller & Kloster Wiblingen (24 km), Blautal & Hochsträß (31 km) und die flache Donauauen-Runde (21 km, ohne
+  Anstieg: Elchingen-Runde ohne Klosterberg, über Unterelchingen abgekürzt; `follow` in `NEW_ROUTES` = Stücke vorhandener
+  Runden als Korridor, `route_part`) – Start/Ziel jeweils Neue Straße am Münster.
   **Echte Runden, nie hin und zurück:** Der Router in `tools/ulm_routen.py` nutzt nur den Teil des Wegenetzes ohne
   Sackgassen/Wendeschleifen (Brücken-Kanten entfernt), wendet nie auf der Stelle, meidet Haarnadeln und befahrene Kanten
   (×30) und weicht gefundenen Wenden automatisch aus. `route_issues` meldet Wenden, Hin-und-zurück und kleine Schleifen.
@@ -176,5 +195,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 ## Veröffentlichen
 - Jeder Push auf `main` baut die App per GitHub Actions (`.github/workflows/pages.yml`) und stellt sie auf
   https://6s2tkg87cn-ux.github.io/kalea-ride/ (Startseite = Offline-Fassung). Das Repository ist öffentlich.
+- **Felix möchte, dass Claude fertige Arbeit selbstständig abgibt:** testen, bauen, PR erstellen und ohne Rückfrage
+  nach `main` mergen.
 - Commits mit der anonymen Adresse `343975191+6s2tkg87cn-ux@users.noreply.github.com` als Autor, nie mit Felix'
   privater E-Mail-Adresse.
