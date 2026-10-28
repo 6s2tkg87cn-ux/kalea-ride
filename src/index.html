@@ -70,8 +70,9 @@ details p{color:#4a3d5c;font-size:13px}
 table.kt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.kt th{text-align:left;font-size:12px;color:var(--mut);border-bottom:2px solid var(--ink);padding:3px 4px}
 table.kt td{padding:5px 4px;border-bottom:1px dashed #cfc7bb;vertical-align:top}
-.autodev{margin-top:8px}.autodev small{display:block;color:var(--mut);font-size:12.5px;line-height:1.4;margin:2px 0 6px}
+.calib.ok{color:#1f8a4c}.calib.bad{color:#b3261e}.autodev{margin-top:8px}.autodev small{display:block;color:var(--mut);font-size:12.5px;line-height:1.4;margin:2px 0 6px}
 .ftpnew{background:#fff4c4;border:2.5px solid var(--ink);border-radius:12px;padding:10px 12px;margin:0 0 12px;line-height:1.5}.ftpnew button{margin:6px 6px 0 0}
+#riders .r.ghost{color:#2a7fb0;font-style:italic}table.kt tr.hl td{background:#fff4c4}#keyTable select{width:100%}
 table.kt tr.link{cursor:pointer}table.kt tr.link:hover td{background:#f3e6f7}.rides-wrap{max-height:360px;overflow:auto;margin:4px 0}
 table.kt small{display:block;color:var(--mut);font-size:11px}
 #loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#490cb8,#9d20a3);font-size:20px;font-weight:600;color:#fff;text-align:center;padding:20px}
@@ -410,6 +411,7 @@ body.realshift .vonly{display:none!important}
         <div id="devSec">
         <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
         <div class="dev"><span class="dot" id="dTrainer"></span><div><b>Smart-Trainer</b> (KICKR Core)<small id="sTrainer">Nicht verbunden</small></div><button id="bTrainer">Verbinden</button></div>
+        <div id="calibRow" class="dev hidden"><span class="dot" style="visibility:hidden"></span><div><b>Kalibrieren</b> (Ausrollen)<small id="vCalib">Selten nötig – z. B. wenn die Watt deutlich von deinem Powermeter abweichen. Rad vorher ca. 10 min warm fahren.</small></div><button id="bCalib">Starten</button></div>
         <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Click-Schalter (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
         <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Click-Schalter</b> (z. B. Zwift Click v2)<small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
         <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
@@ -468,6 +470,8 @@ body.realshift .vonly{display:none!important}
           <label>Fahrgefühl<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft</option><option value="1">Sehr sanft</option></select><small>glättet kurze Wellen, mehr Schwung</small></label>
           <label>Grafikqualität<select id="iQual"><option value="high">Hoch (Schatten, dichtes Gras)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
+          <label>Tageszeit<select id="iTod"><option value="mittag">Mittag</option><option value="morgen">Morgen</option><option value="abend">Abendsonne</option><option value="auto">Wie draußen (nach Uhrzeit)</option></select></label>
+          <label>Wetter<select id="iWx"><option value="sonnig">Sonnig</option><option value="wolkig">Bewölkt</option><option value="nebel">Dunst &amp; Nebel</option><option value="regen">Regen</option></select><small>nur fürs Auge – kostet kaum Leistung</small></label>
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
         <label class="chk"><input type="checkbox" id="iHidePow"> Ohne Wattanzeige fahren – Leistung im Bild ausblenden (Taste P); Workouts zeigen nur das Ziel</label>
@@ -477,6 +481,7 @@ body.realshift .vonly{display:none!important}
           <label>Mitfahrer<select id="iBotMode"><option value="me">Fahren mit mir (passen sich an)</option><option value="solo">Ohne Gruppe (nur andere Fahrer auf der Strecke)</option><option value="fixed">Feste Stärke</option><option value="off">aus</option></select><small>Eine Gruppe fährt mit dir, einige sind langsamer, ab und zu überholt dich jemand</small></label>
           <label>Stärke der Gruppe (W/kg)<input id="iBotWkg" type="number" min="1" max="6" step="0.1" value="2.5"><small>nur bei „Feste Stärke“ – zum Dranbleiben üben</small></label>
         </div>
+        <label class="chk"><input type="checkbox" id="iGhost" checked> 👻 Geist: gegen deine Bestzeit fahren (an jeder Bergwertung und in der Runde; frühere Fahrten startest du unter „Meine Fahrten“)</label>
         <label class="chk"><input type="checkbox" id="iLife" checked> Belebte Umgebung: Gegenverkehr, Fußgänger mit Hunden, Menschen auf Plätzen, Tiere, Boote, parkende Autos</label>
       </details>
       <details><summary>🔊 Töne</summary>
@@ -488,10 +493,12 @@ body.realshift .vonly{display:none!important}
       </details>
       <details class="vonly">
         <summary>🎮 Click-Schalter: Hilfe, Tasten anlernen &amp; Diagnose</summary>
-        <p><b>Click v2</b> besteht aus zwei Hälften, die im Auswahlfenster beide gleich heißen. Verbinde sie nacheinander: + (rechte Hälfte) schaltet schwerer, − (linke Hälfte) leichter. Auf der rechten Hälfte schaltet zusätzlich <b>Y schwerer</b> und <b>B leichter</b>, damit geht es auch nur mit einer Hälfte.</p>
-      <p>Manche Click v2 sperren die Tasten nach einer Weile für andere Apps. Kommen nach etwa einer Minute keine Tasten mehr an, koppel den Click einmal kurz in der Hersteller-App, schließ diese komplett und verbinde ihn dann hier. Das hält ungefähr einen Tag. Der Click darf nicht gleichzeitig mit einer anderen App verbunden sein.</p>
-      <p>Belegung ändern: Button klicken, dann innerhalb von 10 Sekunden die Taste am Click drücken.</p>
-        <button id="lUp">Schwerer-Taste anlernen</button> <button id="lDown">Leichter-Taste anlernen</button> <button id="lReset">Zurücksetzen</button>
+        <p><b>Click v2</b> besteht aus zwei Hälften mit je fünf Tasten, die im Auswahlfenster beide gleich heißen. Verbinde sie nacheinander. Standard: + (rechts) schwerer, − (links) leichter; rechts zusätzlich <b>Y schwerer</b> und <b>B leichter</b> – so geht Schalten auch nur mit der rechten Hälfte.</p>
+        <p><b>Tasten belegen:</b> „Taste anlernen“ tippen, die Taste am Click drücken und dann in der Liste wählen, was sie tun soll.</p>
+        <div id="keyTable"></div>
+        <button id="lMap">Taste anlernen</button> <button id="lReset">Standardbelegung</button>
+        <label class="chk"><input type="checkbox" id="iClickRefresh" checked> Linke Hälfte wach halten (verbindet sie alle 45 s kurz neu)</label>
+        <p class="hint">Bekanntes Verhalten des Click v2: Die linke Hälfte sendet nach etwa einer Minute keine Tasten mehr, wenn sie nicht vorher in der Hersteller-App „entsperrt“ wurde – die rechte läuft weiter. Das kurze Neuverbinden setzt das zurück (währenddessen geht etwa 1 s lang kein Tastendruck links durch). Klappt es trotzdem nicht: Click einmal kurz in der Hersteller-App koppeln, diese ganz schließen (hält ca. einen Tag) – oder alles auf die rechte Hälfte legen. Der Click darf nicht gleichzeitig mit einer anderen App verbunden sein.</p>
         <div id="learnState"></div>
         <pre id="clickLog">Noch keine Daten vom Click.</pre>
       </details>

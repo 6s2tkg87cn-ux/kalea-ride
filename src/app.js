@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,ghost:true,tod:'mittag',wx:'sonnig',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -41,9 +41,9 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
-  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;
+  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod)S.tod=o.tod;if(o.wx)S.wx=o.wx;
   if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,learned:Z.learned}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:2,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,ghost:S.ghost,tod:S.tod,wx:S.wx,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -153,7 +153,7 @@ function lateralPoint(i,off){return [RX[i]-RTZ[i]*off,RZ[i]+RTX[i]*off];}
 const HORIZON=new THREE.Color(0xd3e5f1),SKYTOP=new THREE.Color(0x3a7fd0);
 const SUN_DIR=new THREE.Vector3(0.55,0.62,0.32).normalize();
 const FOG_DENS=(()=>{try{const o=JSON.parse(localStorage.getItem('kalea')||'{}');const q=(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))?o.quality:(IS_MOBILE?'low':'high');return q==='low'?0.00030:0.00021;}catch(e){return 0.00021;}})();
-let renderer,scene,camera,sun,sky,water,player,BOTS=[],smoke=[],boats=[],lavaMat,lavaLight,clouds=[];
+let renderer,scene,camera,sun,hemi,sky,water,player,BOTS=[],smoke=[],boats=[],lavaMat,lavaLight,clouds=[];
 const camPos=new THREE.Vector3(),camLook=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
 const anisotropy=()=>renderer.capabilities.getMaxAnisotropy();
 function initScene(){
@@ -162,7 +162,7 @@ function initScene(){
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
   scene=new THREE.Scene();scene.fog=new THREE.FogExp2(HORIZON.getHex(),FOG_DENS);scene.background=HORIZON.clone();
   camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.3,20000);
-  scene.add(new THREE.HemisphereLight(0xcfe6ff,0x6a7d48,0.62));
+  hemi=new THREE.HemisphereLight(0xcfe6ff,0x6a7d48,0.62);scene.add(hemi);
   scene.add(new THREE.AmbientLight(0xffffff,0.08));
   sun=new THREE.DirectionalLight(0xfff0d8,1.08);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   const sc=sun.shadow.camera;sc.left=-75;sc.right=75;sc.top=75;sc.bottom=-75;sc.near=20;sc.far=1000;
@@ -171,12 +171,42 @@ function initScene(){
   applyQuality();
 }
 const PERF={scale:1,t0:0,frames:0,fps:60,lastF:0,sf:0};
+/* ---- Tageszeit und Wetter ----
+   Nur Licht, Himmel, Nebel, Wolkenfarbe und Regen – keine neue Geometrie, kostet also kaum Leistung.
+   Sonne: Höhe el (Bogenmaß) und Richtung (x = Ost, z = Süd); „Wie draußen“ wählt nach der Uhrzeit. */
+const TOD={morgen:{n:'Morgen',el:0.3,h:[0.92,0.38],sun:0xffd8b0,si:0.9,sky:0x6c9fdc,hor:0xf2dccb,hs:0xe2e4ff,hg:0x66684c,hi:0.56},
+  mittag:{n:'Mittag',el:0.72,h:[0.86,0.5],sun:0xfff0d8,si:1.08,sky:0x3a7fd0,hor:0xd3e5f1,hs:0xcfe6ff,hg:0x6a7d48,hi:0.62},
+  abend:{n:'Abendsonne',el:0.14,h:[-0.88,0.47],sun:0xffa865,si:0.95,sky:0x4c64ad,hor:0xf7b88c,hs:0xffd3bd,hg:0x584a40,hi:0.5}};
+const WX={sonnig:{n:'Sonnig',fog:1,mix:0,dim:1,cl:0xffffff,ce:0x8aa6c8},wolkig:{n:'Bewölkt',fog:2,mix:0.5,dim:0.62,cl:0xe3e6ea,ce:0x77808c},
+  nebel:{n:'Dunst & Nebel',fog:17,mix:0.93,noCl:true,dim:0.45,cl:0xe8eaec,ce:0x8e969f},regen:{n:'Regen',fog:7,mix:0.72,dim:0.42,cl:0xb9c0c8,ce:0x5a6470,rain:true}};
+function curTod(){if(S.tod!=='auto')return TOD[S.tod]?S.tod:'mittag';const h=new Date().getHours()+new Date().getMinutes()/60;return h<10?'morgen':h<17.5?'mittag':'abend';}
+function applyWeather(){if(!scene||!sky)return;const P=TOD[curTod()],W=WX[S.wx]||WX.sonnig,gray=new THREE.Color(0xaab3bd),grayH=new THREE.Color(0xc9cfd5);
+  SUN_DIR.set(Math.cos(P.el)*P.h[0],Math.sin(P.el),Math.cos(P.el)*P.h[1]).normalize();
+  SKYTOP.set(P.sky).lerp(gray,W.mix);HORIZON.set(P.hor).lerp(grayH,W.mix*0.85);
+  scene.fog.color.copy(HORIZON);scene.background.copy(HORIZON);
+  sun.color.set(P.sun);sun.intensity=P.si*W.dim;hemi.color.set(P.hs).lerp(grayH,W.mix*0.6);hemi.groundColor.set(P.hg);hemi.intensity=P.hi*(1+W.mix*0.35);
+  if(water&&water.material.uniforms&&water.material.uniforms.skyCol)water.material.uniforms.skyCol.value.set(0xa7cfec).lerp(HORIZON,0.5);
+  for(const c of clouds){c.visible=!W.noCl;const m=c.material;if(m&&m.color){m.color.set(W.cl);if(m.emissive)m.emissive.set(W.ce);}}
+  applyQuality();setRain(!!W.rain);}
+// Regen: kurze Striche in einem Kasten um die Kamera (wandert mit), ~1000–2400 Linien
+const RAIN={obj:null,n:0,p:null};
+function setRain(on){if(!on){if(RAIN.obj)RAIN.obj.visible=false;return;}
+  if(!RAIN.obj){const n=S.quality==='low'?1000:S.quality==='medium'?1600:2400,p=new Float32Array(n*3),g=new THREE.BufferGeometry(),v=new Float32Array(n*6);
+    for(let i=0;i<n;i++){p[i*3]=rnd(-30,30);p[i*3+1]=rnd(-6,24);p[i*3+2]=rnd(-30,30);}
+    g.setAttribute('position',new THREE.BufferAttribute(v,3));RAIN.obj=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xeef3f8,transparent:true,opacity:0.75,depthWrite:false,fog:false}));
+    RAIN.obj.frustumCulled=false;RAIN.n=n;RAIN.p=p;scene.add(RAIN.obj);}
+  RAIN.obj.visible=true;}
+function stepRain(dt){const R=RAIN.obj;if(!R||!R.visible)return;const p=RAIN.p,v=R.geometry.attributes.position.array,c=camera.position;
+  R.position.set(Math.floor(c.x),Math.floor(c.y),Math.floor(c.z));const ox=c.x-R.position.x,oz=c.z-R.position.z;
+  for(let i=0;i<RAIN.n;i++){let y=p[i*3+1]-14*dt;if(y<-6)y+=30;p[i*3+1]=y;const x=p[i*3]+0.9*dt;p[i*3]=x>30?x-60:x;
+    const k=i*6,X=p[i*3]+ox,Z=p[i*3+2]+oz;v[k]=X;v[k+1]=y;v[k+2]=Z;v[k+3]=X+0.06;v[k+4]=y+1.1;v[k+5]=Z;}
+  R.geometry.attributes.position.needsUpdate=true;}
 function basePR(){const q=S.quality,mx=Math.sqrt(3.7e6/Math.max(1,innerWidth*innerHeight));return Math.max(0.5,Math.min(devicePixelRatio,q==='high'?2:q==='medium'?1.25:1,q==='high'?mx:mx*0.8));}
 function applyQuality(){
   const q=S.quality,hi=q==='high';
   PERF.scale=q==='low'?0.85:1;renderer.setPixelRatio(basePR()*PERF.scale);renderer.setSize(innerWidth,innerHeight);
   {const ms=hi?2048:1024;if(sun.shadow.mapSize.x!==ms){sun.shadow.mapSize.set(ms,ms);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}}
-  sun.castShadow=hi;if(scene.fog)scene.fog.density=q==='low'?0.00030:0.00021;GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;LOD_R=hi?1100:q==='medium'?800:550;
+  sun.castShadow=hi;if(scene.fog)scene.fog.density=(q==='low'?0.00030:0.00021)*((WX[S.wx]||WX.sonnig).fog);if(water&&water.material.uniforms&&water.material.uniforms.fogDensity)water.material.uniforms.fogDensity.value=scene.fog.density;GRASS_R=hi?420:q==='medium'?220:140;CULL_R=hi?7500:q==='medium'?5000:3200;LOD_R=hi?1100:q==='medium'?800:550;
 }
 // Auflösung automatisch anpassen, damit es flüssig bleibt (wichtig auf iPad/Tablet)
 function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=now-PERF.t0;if(el<2000)return;
@@ -1039,7 +1069,7 @@ function buildCityWall(){ // Stadtmauer am Nordufer zwischen Adlerbastei und Her
   const mat=new THREE.MeshStandardMaterial({map:canvasTex(256,64,(x,w,h)=>{x.fillStyle='#bfae92';x.fillRect(0,0,w,h);for(let r=0;r<8;r++)for(let c=0;c<16;c++){const v=Math.random()*24-12;x.fillStyle=`rgb(${180+v},${165+v},${138+v})`;x.fillRect(c*16+(r%2)*8,r*8,15,7);}},true),roughness:0.95});
   mat.map.repeat.set(20,1);const P=[],I=[],UV=[],r=ULM.river;
   const pts=[];for(let i=0;i<r.length;i++){if(r[i][0]<-330||r[i][0]>330)continue;const a=r[Math.max(0,i-1)],b=r[Math.min(r.length-1,i+1)];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz);tx/=l;tz/=l;
-    let nx=-tz,nz=tx,sd=1;if(nz>0){nx=-nx;nz=-nz;sd=-1;}const w=(sd>0?RIVW[0].p[i]:RIVW[0].m[i])+7,q=[r[i][0]+nx*w,r[i][1]+nz*w];q.road=!!nearestRoad(q[0],q[1],7);pts.push(q);} // nicht über die Strecke
+    let nx=-tz,nz=tx,sd=1;if(nz>0){nx=-nx;nz=-nz;sd=-1;}const w=(sd>0?RIVW[0].p[i]:RIVW[0].m[i])+7,q=[r[i][0]+nx*w,r[i][1]+nz*w];q.road=!!nearestRoad(q[0],q[1],11);pts.push(q);} // nicht über die Strecke (Mauerpunkte liegen ~19 m auseinander)
   let u=0;pts.forEach((q,i)=>{const h0=WATER_Y-1,h1=Math.max(finalHeight(q[0],q[1])+5,WATER_Y+9);if(i)u+=Math.hypot(q[0]-pts[i-1][0],q[1]-pts[i-1][1])/12;
     P.push(q[0],h0,q[1],q[0],h1,q[1]);UV.push(u,0,u,1);if(i<pts.length-1&&!q.road&&!pts[i+1].road){const k=i*2;I.push(k,k+2,k+1,k+1,k+2,k+3);}});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();
@@ -1390,7 +1420,7 @@ function initRiders(){
   BOTS=BOT_DEFS.map(([name,color,frame,role])=>({name,color,role,mass:60+Math.random()*22,str:role==='group'?rnd(0.93,1.07):role==='slow'?rnd(0.66,0.8):rnd(1.18,1.32),
     climb:rnd(0.88,1.12),off:rnd(-20,16),cad:rnd(82,94),dist:0,v:0,P:0,wkg:0,lat:0,latT:0,fat:0,surge:0,surgeT:rnd(60,200),seed:Math.random()*100,phase:Math.random()*6,wheel:0,active:true,
     obj:makeRider(color,name,frame,{pony:['Lena K.','Aylin','Marie','Hanna'].includes(name)})}));
-  placeBotsStart();applyBotVis();initOncoming();}
+  placeBotsStart();applyBotVis();initOncoming();initGhost();}
 // Startaufstellung relativ zu dir (auch beim Wiedereinschalten mitten in der Fahrt)
 function placeBotsStart(){const gd=[-14,-7,8,15];let gk=0,sk=0,fk=0;
   for(const b of BOTS){b.P=0;b.fat=0;b.surge=0;b._sg=undefined;
@@ -1718,14 +1748,15 @@ function confetti(){const c=$('fx'),x=c.getContext('2d'),W=c.width=innerWidth,H=
 const LAP={act:null,store:null};
 function lapStore(){if(!LAP.store){try{LAP.store=JSON.parse(localStorage.getItem('kalea_laps')||'{}');}catch(e){LAP.store={};}}return LAP.store;}
 function stepLap(cur,dt){let a=LAP.act;
-  if(!a||cur<a.d0-5){const d0=Math.floor(Math.max(0,cur)/L)*L;LAP.act=cur-d0<30?{d0,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0}:null;return;} // mitten eingestiegen: Rundenzeit ab der Ziellinie
-  a.t+=dt;a.e+=(T.pedaling?S.power:0)*dt;if(S.hr){a.hr+=S.hr*dt;a.hrT+=dt;}if(S.cadence>0){a.cad+=S.cadence*dt;a.cadT+=dt;}a.vmax=Math.max(a.vmax,S.v);
-  if(cur>=a.d0+L){finishLap(a);LAP.act={d0:a.d0+L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0};}}
+  if(!a||cur<a.d0-5){const d0=Math.floor(Math.max(0,cur)/L)*L;LAP.act=cur-d0<30?{d0,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0,splits:[0]}:null;return;} // mitten eingestiegen: Rundenzeit ab der Ziellinie
+  a.t+=dt;a.e+=(T.pedaling?S.power:0)*dt;if(S.hr){a.hr+=S.hr*dt;a.hrT+=dt;}if(S.cadence>0){a.cad+=S.cadence*dt;a.cadT+=dt;}a.vmax=Math.max(a.vmax,S.v);while(a.splits.length*100<=Math.min(cur-a.d0,L))a.splits.push(Math.round(a.t*10)/10);
+  if(cur>=a.d0+L){finishLap(a);LAP.act={d0:a.d0+L,t:0,e:0,hr:0,hrT:0,cad:0,cadT:0,c0:S.climb,vmax:0,splits:[0]};}}
+function lapKey(){return WORLD+'_'+ROUTE.id+(REV?'_r':'');}
 function finishLap(a){if(a.t<30)return;
-  const key=WORLD+'_'+ROUTE.id+(REV?'_r':''),st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name+(REV?' (umgedreht)':''),world:WORLD,len:L,hist:[]});
+  const key=lapKey(),st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name+(REV?' (umgedreht)':''),world:WORLD,len:L,hist:[]});
   const res={t:Math.round(a.t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,cad:a.cadT>10?Math.round(a.cad/a.cadT):0,
     gain:Math.round(S.climb-a.c0),vmax:a.vmax,kj:Math.round(a.e/1000),kg:S.mass,date:Date.now(),sim:S.sim};
-  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb=res;try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
+  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb={...res,splits:a.splits};try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
   const nr=Math.round(a.d0/L)+1;REC.laps.push({n:nr,...res,pb:isPb});
   if(NET.state==='on'&&NET.info&&NET.info.mode==='race')return; // im Rennen zeigt das Ergebnis-Fenster alles
   const show=()=>showLapBanner(res,pb,isPb,nr),wait=KOM.shownT?6000-(performance.now()-KOM.shownT):0;
@@ -1738,6 +1769,29 @@ function showLapBanner(res,pb,isPb,nr){
     <div class="kb-s">${(L/1000).toFixed(2)} km · ${res.gain} hm · max. ${(res.vmax*3.6).toFixed(1)} km/h · ${res.kj} kJ</div>`;
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now();confetti();}
 
+/* ================= Geist: gegen die eigene Bestzeit (Bergwertung, Runde) oder eine frühere Fahrt ================= */
+// Durchsichtiger Fahrer an der Stelle, an der du bei deiner Bestzeit nach gleicher Zeit warst (Zwischenzeiten alle 50 m
+// am Berg bzw. 100 m in der Runde). Aus „Meine Fahrten“ lässt sich auch eine ganze frühere Fahrt als Geist starten.
+const GHOST={obj:null,ride:null,t0:null,d0:0,d:null,v:0,gap:null,kind:'',phase:0,wheel:0};
+function splitDist(sp,step,t){if(!sp||sp.length<2)return null;let i=1;while(i<sp.length&&sp[i]<t)i++;
+  if(i>=sp.length)return (sp.length-1)*step;const t0=sp[i-1],t1=sp[i];return (i-1+(t-t0)/Math.max(0.1,t1-t0))*step;}
+function odoAt(A,t){if(!A.length||t>A[A.length-1].t)return null;let lo=0,hi=A.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(A[m].t<t)lo=m;else hi=m;}
+  const a=A[lo],b=A[hi];return a.d+(b.d-a.d)*clamp((t-a.t)/Math.max(0.5,b.t-a.t),0,1)-A[0].d;}
+function ghostTarget(){if(!S.ghost||!S.started)return null;
+  const k=KOM.act;if(k){const pb=komPB(k.c);if(pb&&pb.splits&&pb.splits.length>1){const d=splitDist(pb.splits,50,k.t);return {d:k.d0+Math.min(d,k.c.len),kind:'Bestzeit '+k.c.name};}}
+  if(GHOST.ride){if(GHOST.t0===null){GHOST.t0=S.elapsed;GHOST.d0=S.dist;}const d=odoAt(GHOST.ride.s,S.elapsed-GHOST.t0);
+    if(d===null){toast('👻 Der Geist ist am Ziel – seine Fahrt ist zu Ende');GHOST.ride=null;return null;}return {d:GHOST.d0+d,kind:'Fahrt vom '+new Date(GHOST.ride.start).toLocaleDateString('de-DE')};}
+  const a=LAP.act;if(a){const e=lapStore()[lapKey()],pb=e&&e.pb;if(pb&&pb.splits&&pb.splits.length>1&&Math.abs((e.len||L)-L)<60){const d=splitDist(pb.splits,100,a.t);return {d:a.d0+Math.min(d,L),kind:'Rundenbestzeit'};}}
+  return null;}
+function initGhost(){GHOST.obj=makeRider(0x8fdcff,null,0xf4f4f2,{helmet:0xffffff,skin:0xdff4ff});scene.add(GHOST.obj);GHOST.obj.visible=false;GHOST.d=null;}
+// nach toonify: durchsichtig, ohne Schatten und ohne Konturen
+function ghostLook(){GHOST.obj.traverse(o=>{if(!o.isMesh)return;o.castShadow=false;o.receiveShadow=false;const m=o.material.clone();m.transparent=true;m.opacity=0.42;m.depthWrite=false;o.material=m;o.renderOrder=3;});}
+function stepGhost(dt){const g=ghostTarget(),o=GHOST.obj;if(!o)return;
+  if(!g){o.visible=false;GHOST.gap=null;GHOST.d=null;return;}
+  if(GHOST.d!==null&&dt>0)GHOST.v+=(clamp((g.d-GHOST.d)/dt,0,30)-GHOST.v)*Math.min(1,dt*3);else GHOST.v=S.v;
+  GHOST.d=g.d;GHOST.gap=g.d-S.dist;GHOST.kind=g.kind;GHOST.phase+=1.45*Math.PI*2*dt*(GHOST.v>1?1:0);GHOST.wheel+=GHOST.v/0.335*dt;
+  placeRider(o,g.d,-0.5,GHOST.v);o.visible=Math.abs(GHOST.gap)<300;if(o.visible)animRider(o,GHOST.phase,GHOST.wheel,{v:GHOST.v,w:3,g:gradeAt(g.d)});}
+
 /* ================= Fahrt-Statistik ================= */
 const REC={s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false};
 const ZONES=[{n:'Z1 Regeneration',lo:0,hi:0.55,c:'#9aa3ad'},{n:'Z2 Grundlage',lo:0.55,hi:0.75,c:'#3e8fe0'},{n:'Z3 Tempo',lo:0.75,hi:0.90,c:'#2fbf62'},
@@ -1747,7 +1801,7 @@ function recStep(dt){if(REC.ended)return;REC.acc+=dt;if(REC.acc<1)return;REC.acc
   const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.odo),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
 function bestAvg(arr,win){if(arr.length<win)return null;let s=0,b=0;for(let i=0;i<arr.length;i++){s+=arr[i];if(i>=win)s-=arr[i-win];if(i>=win-1)b=Math.max(b,s/win);}return b;}
 // Die laufende Fahrt als „Fahrt-Objekt“ – gespeicherte Fahrten haben dieselbe Form (s. saveRide/rideLoad)
-function curRide(){return {id:REC.start,start:REC.start,sim:!!S.sim,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
+function curRide(){return {id:REC.start,start:REC.start,sim:!!S.sim,rev:REV?1:0,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
 function rideSummary(R){R=R||curRide();
   const A=R.s,n=A.length,P=A.map(x=>x.p),ftp=R.ftp||S.ftp;if(!n)return null;
   const mov=A.filter(x=>x.v>0.5).length,dist=Math.max(0,A[n-1].d-A[0].d+(A[0].d>0?0:0));
@@ -1766,7 +1820,7 @@ function saveRideHistory(sum,R){R=R||curRide();if(!sum)return;try{const h=rideHi
   h.unshift({id:R.id,date:R.start,world:R.world,route:R.name,rid:R.route,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV,hr:Math.round(sum.avgHr||0),sim:R.sim?1:0,mmp:mmpOf(R.s.map(x=>x.p))});
   h.sort((a,b)=>b.date-a.date);const drop=h.slice(RIDES_MAX);for(const e of drop)if(e.id)idbDel('ride_'+e.id);
   localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,RIDES_MAX)));}catch(e){}
-  idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,laps:R.laps,koms:R.koms,s:R.s.slice()});}
+  idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,rev:R.rev||0,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,laps:R.laps,koms:R.koms,s:R.s.slice()});}
 async function rideLoad(id){const r=await idbGet('ride_'+id);return r&&r.s?r:null;}
 async function rideDelete(id){try{localStorage.setItem('kalea_rides',JSON.stringify(rideHistory().filter(e=>e.id!==id)));}catch(e){}await idbDel('ride_'+id);}
 // Fenster schließen/App wechseln mitten in der Fahrt: Fahrt trotzdem sichern (wird beim Weiterfahren überschrieben)
@@ -1799,7 +1853,7 @@ function updateFtpUi(){const e=estimateFtp(),el=$('vFtpEst');if(!el)return;
   el.innerHTML=e?`Aus deinen Fahrten der letzten 6 Wochen geschätzt: <b>${e.w} W</b> (${e.why})`:'Noch keine Schätzung – dafür braucht es mindestens eine harte Fahrt mit Leistungsmesser (z. B. 20 min zügig).';}
 function rideHistory(){try{return JSON.parse(localStorage.getItem('kalea_rides')||'[]');}catch(e){return [];}}
 function endRide(){if(!REC.s.length){status('Noch keine Daten – erst ein Stück fahren.');return;}
-  REC.ended=true;S.riding=false;S.paused=true;S.v=0;const sum=rideSummary();FTPNEW=checkFtp(curRide());saveRideHistory(sum);sendResistance(true);
+  REC.ended=true;S.riding=false;S.paused=true;S.v=0;keepAwake(false);const sum=rideSummary();FTPNEW=checkFtp(curRide());saveRideHistory(sum);sendResistance(true);
   if(typeof netEndRide==='function')netEndRide();
   $('bStart').textContent='Neue Fahrt';$('bStart').onclick=newRide;$('bEnd').classList.add('hidden');showStats(true);}
 function kpi(v,u,l,c){return `<div class="kpi" style="--kc:${c}"><b>${v}<small>${u}</small></b><span>${l}</span></div>`;}
@@ -1812,7 +1866,7 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   const hist=arch?[]:rideHistory().filter(h=>h.id!==R.id).slice(0,8);
   el.innerHTML=`<div class="sv-card">
     <div class="sv-head"><div><h2>${arch?'Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE'):final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${R.name} · ${new Date(R.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:arch?'numeric':undefined})}${arch?' · '+new Date(R.start).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':''}</p></div>
-      <div class="sv-btns">${arch?'<button id="svList" class="primary">Alle Fahrten</button><button id="svDel">Löschen</button>':final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
+      <div class="sv-btns">${arch?'<button id="svList" class="primary">Alle Fahrten</button><button id="svGhost" title="Diese Fahrt fährt als durchsichtiger Geist mit">👻 Als Geist mitfahren</button><button id="svDel">Löschen</button>':final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
     <div class="sv-body">${!arch&&final&&FTPNEW?`<div class="ftpnew">💪 <b>${FTPNEW.done?'FTP aktualisiert':'Neue FTP erkannt'}: ${FTPNEW.w} W</b> (bisher ${FTPNEW.old} W) – aus ${FTPNEW.why}.
         ${FTPNEW.done?'':'<button id="ftpYes" class="primary">Übernehmen</button><button id="ftpNo">Nein danke</button>'}</div>`:''}
       <div class="kpis">${kpi((sum.dist/1000).toFixed(2),'km','Distanz','#490cb8')}${kpi(fmtTime(sum.time),'','Fahrzeit','#f8d74e')}${kpi((sum.avgV*3.6).toFixed(1),'km/h','Ø Tempo','#7ad35a')}
@@ -1835,6 +1889,10 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   $('svClose').onclick=closeStats;if($('svBack'))$('svBack').onclick=()=>{closeStats();};if($('svEnd'))$('svEnd').onclick=endRide;
   if($('svNew'))$('svNew').onclick=newRide;
   if($('svList'))$('svList').onclick=()=>{closeStats();$('ridesDet').open=true;renderRides();$('ridesDet').scrollIntoView({block:'start'});};
+  if($('svGhost'))$('svGhost').onclick=()=>{const same=R.world===WORLD&&R.route===ROUTE.id&&(R.rev||0)===(REV?1:0);
+    if(!same){toast('👻 Geht nur auf derselben Route und Richtung – erst „'+R.name+'“ wählen');return;}
+    GHOST.ride=R;GHOST.t0=S.started?S.elapsed:null;GHOST.d0=S.dist;if(!S.ghost){S.ghost=true;$('iGhost').checked=true;saveSettings();}
+    closeStats();toast('👻 Geist der Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE')+(S.started?' fährt ab hier mit':' startet mit dir'));};
   if($('svDel'))$('svDel').onclick=async()=>{const b=$('svDel');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen?';return;}await rideDelete(R.id);closeStats();renderRides();toast('Fahrt gelöscht');};
   wireHistRows(el);
   if($('ftpYes'))$('ftpYes').onclick=()=>{S.ftp=FTPNEW.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();$('ftpYes').parentElement.innerHTML=`💪 <b>FTP auf ${S.ftp} W gesetzt.</b> Zonen, Workouts und TSS richten sich ab jetzt danach.`;FTPNEW=null;};
@@ -2126,13 +2184,16 @@ async function setupTrainer(){
       cp.addEventListener('characteristicvaluechanged',e=>onCP(e.target.value));T.cp=cp;
       await bleWrite(cp,new Uint8Array([0x00]));await bleWrite(cp,new Uint8Array([0x07]));T.lastSent=null;
     }catch(e){T.cp=null;console.warn(e);}
+    // Fähigkeiten (z. B. Ausrollen/Kalibrieren) und Statusmeldungen des Trainers
+    try{const fe=await ftms.getCharacteristic(0x2ACC),v=await fe.readValue();T.feat=v.getUint32(0,true);T.tfeat=v.byteLength>=8?v.getUint32(4,true):0;}catch(e){T.tfeat=null;}
+    try{const st=await ftms.getCharacteristic(0x2ADA);await st.startNotifications();st.addEventListener('characteristicvaluechanged',e=>onFtmsStatus(e.target.value));}catch(e){}
     T.mode='ftms';
   }else{
     const cps=await server.getPrimaryService(0x1818),ch=await cps.getCharacteristic(0x2A63);
     await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCPS(e.target.value));T.mode='cps';T.cp=null;
   }
   T.retries=0;T.lastData=performance.now();rememberDev('trainer',T.dev);
-  setDot('Trainer','on',(T.dev.name||'Trainer')+(T.cp?' · steuerbar (FTMS)':' · nur Leistungsdaten'));status('');
+  setDot('Trainer','on',(T.dev.name||'Trainer')+(T.cp?' · steuerbar (FTMS)':' · nur Leistungsdaten'));status('');$('calibRow').classList.toggle('hidden',!T.cp);
 }
 async function onTrainerLost(){T.cp=null;setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
   while(T.dev&&T.retries<5){T.retries++;await new Promise(r=>setTimeout(r,2000));try{await setupTrainer();return;}catch(e){}}
@@ -2155,9 +2216,34 @@ function parseCPS(dv){try{let o=0;const f=dv.getUint16(o,true);o+=2;S.power=Math
     if(!T.crank||rev!==T.crank.rev)T.crank={rev,tm,at:performance.now()};}
   T.lastData=performance.now();}catch(e){}}
 function onCP(dv){const b=new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength);
+  if(b[0]===0x80&&b[1]===0x13){calibAnswer(b);return;}
   if(b[0]===0x80&&b[2]!==0x01)console.warn('FTMS Control Point: Befehl 0x'+b[1].toString(16)+' Ergebnis '+b[2]);}
+// ---- Kalibrieren (Ausrollen / Spin-down, FTMS-Befehl 0x13) ----
+// Ablauf laut FTMS: Start → Trainer nennt Zieltempo → hochtreten → „Aufhören zu treten“ → ausrollen → Erfolg/Fehler
+const CAL={state:'',lo:0,hi:0,t:0};
+function calibSupported(){return T.tfeat===null||T.tfeat===undefined?null:!!(T.tfeat&(1<<15));}
+function calibUi(msg,cls){$('vCalib').innerHTML=msg;$('vCalib').className='calib '+(cls||'');}
+async function calibStart(){if(!T.cp){calibUi('Erst den Trainer verbinden.','bad');return;}
+  if(calibSupported()===false)calibUi('Dein Trainer meldet kein Ausrollen über die Standard-Schnittstelle – ich versuche es trotzdem …');
+  CAL.state='ask';CAL.t=performance.now();T.calib=true;
+  try{await bleWrite(T.cp,new Uint8Array([0x13,0x01]));}catch(e){calibFail('Befehl ging nicht durch: '+e.message);return;}
+  setTimeout(()=>{if(CAL.state==='ask')calibFail('Der Trainer antwortet nicht auf den Kalibrier-Befehl.');},5000);}
+function calibAnswer(b){if(CAL.state!=='ask')return;
+  if(b[2]!==0x01){calibFail(b[2]===0x02?'Dein Trainer kann das Ausrollen nicht über die Standard-Schnittstelle.':'Der Trainer lehnt das Ausrollen gerade ab (Code '+b[2]+').');return;}
+  CAL.lo=b.length>=5?(b[3]|b[4]<<8)/100:0;CAL.hi=b.length>=7?(b[5]|b[6]<<8)/100:0;CAL.state='speed';calibTick();}
+function onFtmsStatus(dv){const b=new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength);if(b[0]!==0x14||!CAL.state)return;
+  if(b[1]===0x04){CAL.state='coast';calibTick();}
+  else if(b[1]===0x02){CAL.state='';T.calib=false;calibUi('✓ <b>Kalibrierung erfolgreich.</b> Weiter geht’s – der Widerstand ist wieder aktiv.','ok');sendResistance(true);}
+  else if(b[1]===0x03)calibFail('Ausrollen fehlgeschlagen – bitte noch einmal: gleichmäßig hochtreten und dann ganz still halten.');}
+function calibTick(){if(!CAL.state)return;const v=(T.speed||0)*3.6;
+  if(CAL.state==='speed')calibUi(`Tritt locker auf <b>${CAL.hi?Math.ceil(CAL.hi+1):35} km/h</b> oder schneller (jetzt ${v.toFixed(0)} km/h) – dann sagt der Trainer, wann du aufhören sollst.`);
+  else if(CAL.state==='coast')calibUi(`<b>Jetzt aufhören zu treten</b> und das Rad ausrollen lassen (jetzt ${v.toFixed(0)} km/h) …`);
+  if(performance.now()-CAL.t>120000){calibFail('Zeit abgelaufen.');return;}
+  setTimeout(calibTick,400);}
+function calibFail(msg){CAL.state='';T.calib=false;try{if(T.cp)bleWrite(T.cp,new Uint8Array([0x13,0x02]));}catch(e){}
+  calibUi(msg+'<br><small>Für den KICKR CORE geht es sonst in der Wahoo-App (Gerät → Kalibrieren / „Advanced Spindown“). Nötig ist das nur, wenn die Watt deutlich von deinem Powermeter abweichen.</small>','bad');sendResistance(true);}
 function sendResistance(force){
-  if(!T.cp||!S.riding||S.paused)return;
+  if(!T.cp||!S.riding||S.paused||T.calib)return;
   const now=performance.now();
   if(ergActive()){const tw=targetWatts();
     if(!force&&T.lastErg===tw&&now-T.lastSendT<3000)return;
@@ -2267,6 +2353,24 @@ const ZU={svcV1:'00000001-19ca-4651-86e5-fa29dcdd09d1',svcV2:'0000fc82-0000-1000
 const HANDSHAKE=[0x52,0x69,0x64,0x65,0x4f,0x6e];
 // Standardbelegung v2: + (0x1000) oder Y (0x40) = schwerer · − (0x100) oder B (0x20) = leichter
 const V2_UP=0x1000|0x40,V2_DOWN=0x100|0x20;
+// Frei belegbare Tasten (Click v2, Bit-Nummer → Aktion). Standard: + und Y schwerer, − und B leichter.
+const KEY_DEF={12:'up',8:'down',6:'up',5:'down'},KEY_NAME={12:'+ (rechte Hälfte)',8:'− (linke Hälfte)',6:'Y (rechte Hälfte)',5:'B (rechte Hälfte)'};
+const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','Kamera wechseln'],['pow','Wattanzeige ein/aus'],['skip','Workout: nächstes Intervall'],
+  ['erg','ERG an/aus'],['map','Karte umschalten'],['mute','Ton an/aus'],['none','– nichts –']];
+function keymap(){if(!S.keymap){S.keymap={...KEY_DEF};const L=Z.learned||{};for(const a of ['up','down'])if(L[a]&&L[a].kind==='bit')S.keymap[L[a].bit]=a;}return S.keymap;}
+function keyAction(bit){const m=keymap();return m[bit]||'none';}
+function runAction(act,pad){
+  if(act==='up'||act==='down'){shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
+  else if(act==='cam')S.cam=(S.cam+1)%VIEWS.length;
+  else if(act==='pow'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
+  else if(act==='skip')skipWorkoutSeg();
+  else if(act==='erg')$('ergToggle').click();
+  else if(act==='map')cycleMap();
+  else if(act==='mute')toggleMute();}
+function keyName(bit){return KEY_NAME[bit]||('Taste '+bit+(Z.bitSide&&Z.bitSide[bit]?' ('+Z.bitSide[bit]+')':''));}
+function renderKeymap(hl){const el=$('keyTable');if(!el)return;const m=keymap(),bits=Object.keys(m).map(Number).sort((a,b)=>b-a);
+  el.innerHTML='<table class="kt"><tr><th>Taste am Click</th><th>macht</th></tr>'+bits.map(b=>`<tr${b===hl?' class="hl"':''}><td>${keyName(b)}</td><td><select data-bit="${b}">${KEY_ACT.map(([k,t])=>`<option value="${k}"${m[b]===k?' selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')+'</table>';
+  el.querySelectorAll('select').forEach(sel=>sel.onchange=()=>{keymap()[sel.dataset.bit]=sel.value;saveSettings();});}
 Z.pads=[];
 function hex(b){return [...b].map(x=>x.toString(16).padStart(2,'0')).join(' ');}
 function zwrite(ch,bytes){const data=new Uint8Array(bytes);
@@ -2303,13 +2407,17 @@ async function setupClick(pad){
   const rx=await svc.getCharacteristic(ZU.rx);pad.rx=rx;pad.isV2=isV2;pad.version=isV2?'Click v2':'Click v1';
   if(isV2){await zwrite(rx,[...HANDSHAKE,0x02,0x03]);await new Promise(r=>setTimeout(r,250));await zwrite(rx,[0xFF,0x04,0x00]);}
   else await zwrite(rx,HANDSHAKE);
-  pad.connected=true;pad.retries=0;pad.lastMsg=performance.now();rememberDev('click',pad.dev);clickLog('Verbunden: '+pad.version+' – Handshake gesendet');
+  pad.connected=true;pad.retries=0;pad.lastMsg=performance.now();pad.connT=performance.now();rememberDev('click',pad.dev);clickLog('Verbunden: '+pad.version+' – Handshake gesendet');
   try{const bs=await server.getPrimaryService('battery_service'),bl=await bs.getCharacteristic('battery_level'),v=await bl.readValue();pad.batt=v.getUint8(0);clickLog('Akku: '+pad.batt+' %');
     try{await bl.startNotifications();bl.addEventListener('characteristicvaluechanged',e=>{pad.batt=e.target.value.getUint8(0);clickStatus();});}catch(e){}}catch(e){}
   clickStatus('drück + zum Testen');
   if(!S.vshift){S.vshift=true;applyShiftMode();saveSettings();}
 }
-async function onClickLost(pad){pad.connected=false;clickStatus('eine Hälfte getrennt – verbinde neu …');
+async function onClickLost(pad){
+  if(pad.refreshing){pad.connected=false; // geplantes Neuverbinden der linken Hälfte: leise und schnell
+    for(let i=0;i<6;i++){await new Promise(r=>setTimeout(r,i?700:150));try{await setupClick(pad);pad.refreshing=false;return;}catch(e){}}
+    pad.refreshing=false;}
+  pad.connected=false;clickStatus('eine Hälfte getrennt – verbinde neu …');
   const nm=pad.side?'Click-Schalter ('+pad.side+')':'Click-Schalter';status(nm+' getrennt – verbinde neu …'+(pad.batt!=null&&pad.batt<25?' Akku war bei '+pad.batt+' %.':''));if(typeof toast==='function')toast('⚠️ '+nm+' getrennt');
   for(let i=0;i<5;i++){await new Promise(r=>setTimeout(r,2000));try{await setupClick(pad);return;}catch(e){clickLog('Neuverbindung fehlgeschlagen: '+e.message);}}
   Z.pads=Z.pads.filter(p=>p!==pad);clickStatus('getrennt – bitte neu verbinden');status((pad.side?'Click-Schalter ('+pad.side+')':'Click-Schalter')+' bleibt getrennt – Batterie prüfen und im Menü neu verbinden. Bis dahin: Tasten ↑/↓ oder −/+ am Bildschirm.');}
@@ -2342,13 +2450,18 @@ function onClickMsg(pad,dv,src){
     pad.prev.plus=plus;pad.prev.minus=minus;return;}
   if(type===0x23||type===0x07){if(f[1]===undefined)return;
     const pressed=((~f[1])>>>0)&0xFFFF,newly=(pressed&~pad.bits)>>>0;pad.bits=pressed;
-    const L=Z.learned,up=L.up&&L.up.kind==='bit'?(1<<L.up.bit):V2_UP,down=L.down&&L.down.kind==='bit'?(1<<L.down.bit):V2_DOWN;
-    if(HOLD.act&&HOLD.pad===pad&&!(pressed&(HOLD.act==='up'?up:down)))holdStop();
+    if(HOLD.act&&HOLD.pad===pad&&!(pressed&(1<<HOLD.bit)))holdStop();
     if(!newly)return;
     if(!pad.side){if(newly&0x1000)pad.side='rechts (+)';else if(newly&0x100)pad.side='links (−)';if(pad.side)clickStatus();}
-    if(newly&up){shift(1);firstPress(pad);holdStart('up');HOLD.pad=pad;}else if(newly&down){shift(-1);firstPress(pad);holdStart('down');HOLD.pad=pad;}
-    else status('Click-Taste (Bit '+lowestBit(newly)+') hat noch keine Funktion – im Menü anlernen.');}
+    pad.pressT=now;const bit=lowestBit(newly);Z.bitSide=Z.bitSide||{};if(pad.side)Z.bitSide[bit]=pad.side.startsWith('rechts')?'rechte Hälfte':'linke Hälfte';
+    if(Z.mapLearn){Z.mapLearn=false;clearTimeout(Z.learnTimer);const m=keymap();if(!m[bit])m[bit]='none';saveSettings();renderKeymap(bit);
+      $('learnState').textContent=keyName(bit)+' erkannt – jetzt in der Liste auswählen, was sie tun soll.';return;}
+    const act=keyAction(bit);firstPress(pad);
+    if(act==='none'){status(keyName(bit)+' hat noch keine Funktion – im Menü unter „Click-Schalter“ belegen.');return;}
+    runAction(act,pad);if(act==='up'||act==='down')HOLD.bit=bit;}
 }
+function startMapLearn(){Z.mapLearn=true;$('learnState').textContent='Drück jetzt die Taste am Click, die du belegen willst …';
+  clearTimeout(Z.learnTimer);Z.learnTimer=setTimeout(()=>{if(Z.mapLearn){Z.mapLearn=false;$('learnState').textContent='Keine Taste erkannt. Ist der Click verbunden? Im Protokoll unten sieht man, ob Daten ankommen.';}},12000);}
 function startLearn(act){Z.learn=act;$('learnState').textContent=(act==='up'?'Schwerer':'Leichter')+'-Taste jetzt am Click drücken …';
   clearTimeout(Z.learnTimer);Z.learnTimer=setTimeout(()=>{if(Z.learn){Z.learn=null;$('learnState').textContent='Keine Taste erkannt. Kommen im Protokoll unten Daten an, wenn du drückst?';}},10000);}
 function finishLearn(pad,b,hx,type,f){const act=Z.learn;let res=null;
@@ -2362,6 +2475,13 @@ function finishLearn(pad,b,hx,type,f){const act=Z.learn;let res=null;
 function updateClickHud(){const el=$('clickHud');if(!el)return;const on=Z.pads.filter(p=>p.connected);
   if(!Z.pads.length){el.classList.add('hidden');return;}el.classList.remove('hidden');
   el.innerHTML='🎮 '+Z.pads.map(p=>`<span class="${p.connected?'ok':'bad'}">${p.side?(p.side.startsWith('links')?'−':'+'):'●'}${p.batt!=null?' '+p.batt+'%':''}</span>`).join(' ');}
+// Bekanntes Verhalten des Click v2: die linke Hälfte sendet nach ca. 1 min keine Tasten mehr, solange sie nicht über die
+// Hersteller-App „entsperrt“ wurde (die rechte läuft weiter). Neu verbinden setzt das zurück → alle 45 s, wenn gerade keine
+// Taste gedrückt ist. Die linke Hälfte wird an der −-Taste erkannt (oder: zweite Hälfte neben einer bekannten rechten).
+setInterval(()=>{if(!S.clickRefresh)return;const now=performance.now(),right=Z.pads.some(p=>p.connected&&p.side&&p.side.startsWith('rechts'));
+  for(const p of Z.pads){if(!p.connected||!p.isV2||p.refreshing)continue;const left=p.side?p.side.startsWith('links'):right&&Z.pads.filter(q=>q.connected).length>1;
+    if(!left||now-(p.connT||0)<45000||p.bits||now-(p.pressT||0)<2500||(HOLD.act&&HOLD.pad===p))continue;
+    p.refreshing=true;clickLog('Linke Hälfte: kurz neu verbinden (bleibt so wach)');try{p.dev.gatt.disconnect();}catch(e){p.refreshing=false;}}},1000);
 setInterval(()=>{const now=performance.now();for(const p of Z.pads){if(p.connected&&p.isV2&&p.idleSeen&&p.lastMsg&&now-p.lastMsg>45000&&!p.warned){p.warned=true;
   status('Click-Schalter'+(p.side?' ('+p.side+')':'')+' sendet seit 45 s nichts mehr. Batterie leer oder von der Hersteller-App gesperrt? Siehe Hilfe im Menü.');}}},5000);
 /* ================= Schalten ================= */
@@ -2449,9 +2569,10 @@ function updateHud(now){
 function applyHidePow(){$('hud').classList.toggle('nopow',S.hidePow);ridersT=0;}
 function updateRiders(){
   const rows=BOTS.filter(b=>b.active).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
+  if(GHOST.gap!==null)rows.push({n:'👻 '+GHOST.kind,gap:GHOST.gap,ghost:true});
   if(NET.state==='on')for(const q of NET.peers.values())if(q.obj)rows.push({n:'🌐 '+q.n,gap:q.disp-S.dist,w:q.wkg,net:true});
   rows.sort((a,b)=>b.gap-a.gap);
-  $('riders').innerHTML=(rubberOn()?`<div class="r rb"><span>🪢 Gummiband</span><span class="g">${NET.rf>1.005?'holt auf':NET.rf<0.995?'wartet':'zusammen'}</span></div>`:'')+rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}"><span>${r.n}</span><span class="g">${r.me?(S.hidePow?'':r.w.toFixed(1)+' W/kg'):(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
+  $('riders').innerHTML=(rubberOn()?`<div class="r rb"><span>🪢 Gummiband</span><span class="g">${NET.rf>1.005?'holt auf':NET.rf<0.995?'wartet':'zusammen'}</span></div>`:'')+rows.slice(0,12).map(r=>`<div class="r ${r.me?'me':''}${r.net?' net':''}${r.ghost?' ghost':''}"><span>${r.n}</span><span class="g">${r.me?(S.hidePow?'':r.w.toFixed(1)+' W/kg'):(r.gap>0?'+':'−')+Math.abs(Math.round(r.gap))+' m'}</span></div>`).join('');
 }
 function drawProfile(){
   const c=$('profile'),dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=c.clientHeight;
@@ -2981,8 +3102,8 @@ function frame(now){
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
   for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320;if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
-  stepLife(dt,t);
-  netStep(dt,now);updateCamera(dt);updateEnv(dt,t);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
+  stepGhost(S.riding&&!S.paused?dt:0);stepLife(dt,t);
+  netStep(dt,now);updateCamera(dt);updateEnv(dt,t);stepRain(dt);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
 }
@@ -3003,8 +3124,20 @@ function closeMenu(){$('setup').classList.add('hidden');S.paused=false;}
 function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp(+$('iChain').value||50,20,60);S.cog=clamp(+$('iCog').value||17,10,36);
   S.diff=(+$('iDiff').value)/100;
   S.rings=$('iRings').value;S.cassette=$('iCas').value;S.gearMode=$('iGearMode').value;S.repeat=+$('iRepeat').value;S.smooth=+$('iSmooth').value;applyQuality();rebuildGears();saveSettings();sendResistance(true);}
+/* ---- Bildschirm während der Fahrt wach halten ----
+   Wake-Lock-Schnittstelle (Chrome, Edge, neuere iPads); sonst ein stummes 2-s-Mini-Video in Endlosschleife (wie NoSleep). */
+const WAKE={lock:null,video:null};
+const NOSLEEP_MP4='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMrbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlV0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHNbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABeG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAThzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMACDxImSABAAVoy4PLIAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAApAAAAKQAAAABhzdHRzAAAAAAAAAAEAAAACAABAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAACAAAAAQAAABxzdHN6AAAAAAAAAAAAAAACAAAChgAAAAoAAAAUc3RjbwAAAAAAAAABAAADWwAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAKYbWRhdAAAAnAGBf//bNxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxMTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTAgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAOZYiEBb///w9FAAFPf4AAAAAGQZo4CvqA';
+async function keepAwake(on){
+  if(!on){if(WAKE.lock){WAKE.lock.release().catch(()=>{});WAKE.lock=null;}if(WAKE.video)WAKE.video.pause();return;}
+  if(document.visibilityState!=='visible')return;
+  if('wakeLock' in navigator){try{if(!WAKE.lock){WAKE.lock=await navigator.wakeLock.request('screen');WAKE.lock.addEventListener('release',()=>{WAKE.lock=null;});}return;}catch(e){}}
+  if(!WAKE.video){const v=document.createElement('video');v.muted=true;v.loop=true;v.setAttribute('playsinline','');v.setAttribute('muted','');v.src=NOSLEEP_MP4;
+    v.style.cssText='position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.01;pointer-events:none';document.body.appendChild(v);WAKE.video=v;}
+  WAKE.video.play().catch(()=>{});}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.started&&!REC.ended)keepAwake(true);});
 function startRide(sim){
-  readInputs();S.sim=sim;$('simBox').classList.toggle('hidden',!sim);updateGear();
+  readInputs();S.sim=sim;$('simBox').classList.toggle('hidden',!sim);updateGear();keepAwake(true);
   if(!S.started){S.started=true;S.riding=true;if(START_AT&&!(NET.state==='on'&&NET.info&&NET.info.mode==='race')){S.dist=START_AT;placeBotsStart();}const r=roadAt(S.dist-7);camPos.set(r.x,r.h+3,r.z);camLook.set(r.x,r.h,r.z);}
   $('hud').classList.remove('hidden');$('bStart').textContent='Weiterfahren';$('bSim').classList.add('hidden');$('bStats').classList.remove('hidden');$('bEnd').classList.remove('hidden');closeMenu();
   if(!sim&&!T.dev)status('Kein Trainer verbunden – Menü (☰) öffnen oder „Ohne Trainer testen“ wählen.');
@@ -3056,12 +3189,13 @@ function wireUi(){
   $('iQual').onchange=()=>{S.quality=$('iQual').value;if(IS_MOBILE)S.qualitySetOnMobile=true;saveSettings();CHUNK=S.quality==='low'?900:500;rebuildWorld(WORLD,ROUTE.id,'Grafik wird angepasst …');};
   $('iShiftMode').onchange=()=>{S.vshift=$('iShiftMode').value==='click';saveSettings();applyShiftMode();sendResistance(true);};
   $('devGo').onclick=closeDevices;$('devSim').onclick=()=>{closeDevices();startRide(true);};
-  $('bTrainer').onclick=connectTrainer;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
+  $('bTrainer').onclick=connectTrainer;$('bCalib').onclick=calibStart;$('bClick').onclick=connectClick;$('bHr').onclick=connectHr;$('bCad').onclick=connectCad;
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
   $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
   $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
-  $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;
+  $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;$('iGhost').checked=S.ghost;$('iTod').value=S.tod;$('iWx').value=S.wx;
+  $('iTod').onchange=()=>{S.tod=$('iTod').value;saveSettings();applyWeather();};$('iWx').onchange=()=>{S.wx=$('iWx').value;saveSettings();applyWeather();};$('iGhost').onchange=()=>{S.ghost=$('iGhost').checked;saveSettings();};
   $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'||was==='solo')placeBotsStart();};
   $('iBotWkg').onchange=()=>{S.botWkg=clamp(+$('iBotWkg').value||2.5,1,6);$('iBotWkg').value=S.botWkg;saveSettings();};
   $('iLife').onchange=()=>{S.life=$('iLife').checked;saveSettings();applyLifeVis();};
@@ -3070,8 +3204,9 @@ function wireUi(){
   $('iSndBike').onchange=$('iSndAmb').onchange=()=>{saveSettings();if(S.sndBike>0)sndPlay('up1',0.6,1);};$('bFs').onclick=toggleFullscreen;
   document.addEventListener('fullscreenchange',updateFsUi);document.addEventListener('webkitfullscreenchange',updateFsUi);
   addEventListener('resize',()=>{if(!$('setup').classList.contains('hidden'))requestAnimationFrame(drawRouteCards);});$('gUp').onclick=()=>shift(1);$('gDown').onclick=()=>shift(-1);
-  $('lUp').onclick=()=>startLearn('up');$('lDown').onclick=()=>startLearn('down');
-  $('lReset').onclick=()=>{Z.learned={up:null,down:null};saveSettings();$('learnState').textContent='Zuordnung zurückgesetzt.';};
+  $('lMap').onclick=startMapLearn;renderKeymap();
+  $('lReset').onclick=()=>{Z.learned={up:null,down:null};S.keymap={...KEY_DEF};saveSettings();renderKeymap();$('learnState').textContent='Standardbelegung wiederhergestellt.';};
+  $('iClickRefresh').checked=S.clickRefresh;$('iClickRefresh').onchange=()=>{S.clickRefresh=$('iClickRefresh').checked;saveSettings();};
   $('simPow').oninput=()=>{S.simPower=+$('simPow').value;$('simPowV').textContent=S.simPower;};
   rebuildGears(VGEARS[12]);applyShiftMode();
   buildRouteMenu();wireNet();wireOsm();
@@ -3305,7 +3440,7 @@ function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.i
 // alles, was beim Bauen einer Welt angelegt wird, wieder zurücksetzen (Lichter und Kamera bleiben)
 function clearWorld(){
   for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
-  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;
+  HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;
   RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
@@ -3314,13 +3449,13 @@ function clearWorld(){
   ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
   for(const p of NET.peers.values())p.obj=null;}
 async function buildWorld(){
-  buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);buildMapBg();applyQuality();
+  buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildVegetation();}else{buildVegetation();buildLandmarks();}initRiders();decorate();toonify(scene);ghostLook();RAIN.obj=null;buildMapBg();applyWeather();
   $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';}
 // Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
 function resetRide(){
   if(W.active)stopWorkout();
   Object.assign(S,{dist:0,odo:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
-  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});
+  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
   placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');

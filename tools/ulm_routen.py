@@ -739,6 +739,13 @@ NEW_ROUTES = [
          desc='Durch Söflingen ins Blautal bis Arnegg, steil hinauf nach Ermingen, über die Hochfläche und am Kuhberg zurück.',
          wps=[START, (48.3958, 9.9546), (48.41781, 9.91439), (48.4183, 9.9068), (48.37967, 9.8957), (48.3638, 9.8810), (48.3730, 9.9359)],
          climbs=['Erminger Steige', 'Allewind', 'Hochsträß']),
+    # aus vorhandenen Runden zusammengesetzt: follow = (Route, von m, bis m) – die Runde fährt diese Stücke nach
+    dict(id='auen', name='Donauauen-Runde (flach)',
+         desc='Flach und ohne Anstieg: auf dem Donauradweg nach Thalfingen und Unterelchingen, über die Donau, '
+              'an den Seen bei Pfuhl vorbei und durch Neu-Ulm zurück.',
+         wps=[START, (48.41790, 10.01603), (48.43232, 10.04907), (48.44595, 10.07699), (48.44456, 10.08774),
+              (48.41367, 10.06985), (48.40499, 10.03544), (48.39859, 10.00618), (48.3955, 10.0005)],
+         climbs=[], follow=[('elchingen', 0, 9300), ('elchingen', 13300, None)]),
 ]
 # Ältere Innenstadt-Runden: bleiben, wie sie sind, nur Wenden am Ende von Sackgassen werden ersetzt
 # (von m, bis m auf der ursprünglichen Runde, Wegpunkte dazwischen; ohne Wegpunkte = Stichstraße abschneiden)
@@ -764,6 +771,14 @@ def make_grid(dem, osm, step=85.0):
     return {'x0': round(x0, 1), 'dx': step, 'z0': round(z0, 1), 'dz': step, 'nx': nx, 'nz': nz, 'h': H}
 
 
+def route_part(rt, a, b=None):
+    """Stück einer Route (von a bis b Meter) als Linie in lokalen Metern."""
+    X, Z = np.array(rt['x']), np.array(rt['z'])
+    d = np.concatenate([[0], np.cumsum(np.hypot(np.diff(X), np.diff(Z)))])
+    k = (d >= a) & (d <= (b if b is not None else d[-1]))
+    return [(float(x), float(z)) for x, z in zip(X[k], Z[k])]
+
+
 def near_route(routes, x, z, r):
     for rt in routes:
         X, Z = np.array(rt['x'][::10]), np.array(rt['z'][::10])
@@ -783,7 +798,10 @@ def main():
     rivers = build_rivers(osm, dem)
     print('Wegenetz …')
     G = Graph(osm)
-    routes = [build_route(G, dem, r['wps'], r['id'], r['name'], r['desc'], r['climbs']) for r in NEW_ROUTES]
+    routes = []
+    for r in NEW_ROUTES:
+        corr = [route_part(next(q for q in routes if q['id'] == f[0]), f[1], f[2]) for f in r.get('follow', [])]
+        routes.append(build_route(G, dem, r['wps'], r['id'], r['name'], r['desc'], r['climbs'], corr or None))
     print('Höhenraster …')
     grid = make_grid(dem, osm)
     zones = []
