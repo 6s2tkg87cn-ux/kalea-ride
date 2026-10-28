@@ -203,6 +203,11 @@ body.map-on #leftCol{max-height:calc(100% - 84px - 240px)}
 /* Geräte-Fenster beim Start */
 #devDlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(30,15,58,.35));z-index:21}
 #devDlg .card{width:min(560px,100%)}
+#welDlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at center,rgba(255,250,240,0) 30%,rgba(30,15,58,.35));z-index:22}
+#welDlg .card{width:min(560px,100%)}#welDlg h2{font-size:20px;margin:2px 0 10px}#welDlg .wl{display:block;margin-top:10px;font-weight:600}#welDlg .wl .cols{margin-top:6px}
+.pick2{display:flex;gap:10px;margin:12px 0}.pick2 button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:30px;padding:12px 10px;line-height:1.1}
+.pick2 button b{font-size:17px}.pick2 button small{font-size:12.5px;font-weight:400;color:var(--mut);line-height:1.3}.pick2 button.on{background:var(--sun);outline:3px solid var(--ink);outline-offset:1px}
+.wdots{margin-left:auto;display:flex;gap:6px}.wdots i{width:11px;height:11px;border-radius:50%;background:#e4dcef;border:2px solid var(--ink)}.wdots i.on{background:var(--acc)}
 .shiftmode{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#4a3d5c;font-weight:500;margin:4px 0 2px}.shiftmode small{color:var(--mut);font-size:11.5px}
 body.realshift .vonly{display:none!important}
 @media (max-width:900px){
@@ -247,7 +252,7 @@ body.realshift .vonly{display:none!important}
  #toast{font-size:13px;padding:6px 12px;border-width:2.5px}
  #status{font-size:12px}
  /* Menü, Geräte-Fenster, Statistik */
- #setup,#devDlg,#statsView{padding:6px}
+ #setup,#devDlg,#welDlg,#statsView{padding:6px} .pick2.big{flex-direction:column}
  .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
  .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
  #setup .cfoot .hint{display:none}
@@ -301,7 +306,7 @@ body.realshift .vonly{display:none!important}
  #toast{font-size:13px;padding:6px 12px;border-width:2.5px}
  #status{font-size:12px}
  /* Menü, Geräte-Fenster, Statistik */
- #setup,#devDlg,#statsView{padding:6px}
+ #setup,#devDlg,#welDlg,#statsView{padding:6px}
  .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
  .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
  #setup .cfoot .hint{display:none}
@@ -381,6 +386,27 @@ body.realshift .vonly{display:none!important}
 <div id="osmProg" class="hidden" data-state="busy"><div class="op-card"><h2 id="opTitle">Echte Häuser laden</h2>
   <ol class="op-steps"><li id="ops1">Anfrage</li><li id="ops2">Download</li><li id="ops3">Verarbeiten</li><li id="ops4">Speichern</li></ol>
   <div id="opBar" class="op-bar indet"><i></i></div><p id="opText"></p><div id="opBtns" class="actions"></div></div></div>
+<div id="welDlg" class="hidden">
+  <div class="card">
+    <header class="ch"><div class="logo">👋</div><div><h1>Willkommen bei <span>Kalea Ride</span></h1><p class="sub">Kurz einrichten – dann geht’s los. Alles lässt sich später im Menü ändern.</p></div></header>
+    <div class="cbody">
+      <div class="welstep" data-s="0"><h2>Wer fährt?</h2>
+        <div class="grid"><label>Dein Name<input id="wName" type="text" maxlength="16" placeholder="z. B. Felix"><small>wird bei der Online-Fahrt mit Freunden angezeigt</small></label></div>
+        <div class="pick2" id="wSex"><button data-v="m">🚴‍♂️<b>Fahrer</b></button><button data-v="w">🚴‍♀️<b>Fahrerin</b></button></div>
+        <div class="wl">Trikotfarbe<span id="wCols" class="cols"></span></div></div>
+      <div class="welstep hidden" data-s="1"><h2>Deine Werte</h2>
+        <div class="grid"><label>Gewicht (kg)<input id="wMass" type="number" min="30" max="160"><small>zählt am Berg und für Watt pro kg</small></label>
+          <label>FTP (W)<input id="wFtp" type="number" min="60" max="600"><small id="wFtpHint"></small></label></div>
+        <label class="chk"><input type="checkbox" id="wFtpUnknown"> Weiß ich nicht – erst einmal schätzen</label>
+        <p class="hint">Die FTP braucht die App für Trainingszonen und Workouts. Sie erkennt sie später aus deinen Fahrten.</p></div>
+      <div class="welstep hidden" data-s="2"><h2>Wie schaltest du?</h2>
+        <div class="pick2 big" id="wShift"><button data-v="click">🎮<b>Virtuell</b><small>mit Click-Schalter oder Tasten – das Rad bleibt am Trainer in einem Gang, die App schaltet</small></button>
+          <button data-v="real">⚙️<b>Normale Kassette</b><small>ich schalte ganz normal am Rad</small></button></div>
+        <p class="hint" id="wShiftHint"></p></div>
+    </div>
+    <footer class="cfoot"><button id="wBack">Zurück</button><button id="wNext" class="primary">Weiter</button><span class="wdots" id="wDots"></span></footer>
+  </div>
+</div>
 <div id="devDlg" class="hidden">
   <div class="card">
     <header class="ch"><div class="logo">🔌</div><div><h1>Geräte <span>verbinden</span></h1><p class="sub">Trainer, Schaltung und Sensoren – sie bleiben verbunden, auch wenn du Welt oder Strecke wechselst.</p></div></header>
@@ -458,6 +484,7 @@ body.realshift .vonly{display:none!important}
         <p class="hint">Die Fahrten liegen nur in diesem Browser auf diesem Gerät. Mit der Sicherung (eine Datei) nimmst du sie samt Bestzeiten auf ein anderes Gerät mit oder bewahrst sie auf.</p>
       </details>
       <details><summary>🚲 Rad, Gänge &amp; Fahrgefühl</summary>
+        <div class="actions" style="margin-top:4px"><button id="bProfile">👤 Fahrer einrichten</button><span class="hint" style="margin:0">Name, Fahrer/Fahrerin, Trikot, Gewicht, FTP, Schalten</span></div>
         <div class="grid">
           <label>Dein Gewicht (kg)<input id="iWeight" type="number" min="30" max="160" value="75"></label>
           <label>Steigungsgefühl (Trainer-Schwierigkeit): <b id="vDiff">100 %</b><input id="iDiff" type="range" min="25" max="150" value="100"><small>nur Steigungen/Gefälle, 100 % = wie draußen</small></label>
