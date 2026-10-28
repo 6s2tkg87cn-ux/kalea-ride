@@ -195,7 +195,14 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   rechteckigen Grundrissen (Fläche/Mindest-Rechteck > 0,8), sonst ragt das Dach über die Straße.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
-  Shader), `winTile` (Fassade echter Häuser, mit Sockel), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
+  Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
+- **Fassaden** (`facadeAtlas`, `facadeMat`, Stile `FST`: Altbau, Fensterläden, Fachwerk, Nachkriegsbau, Wohnblock mit Balkon,
+  Büro, Halle, Laden): Atlas 4 × 2 Kacheln à Fensterachse 3,4 m × Etage 3,1 m, Kachel je Wand über Attribut `fst` (gerundet,
+  sonst flimmern einzelne Pixel), im Alphakanal das Glas → abends leuchten einzelne Fenster (`NIGHT`, in `applyWeather`).
+  Echte Häuser: Stil nach Gebäudeart/Etagen/Viertel (Dörfer = Zonen mit Namen, `ulmZone().n`), Läden im Erdgeschoss an der
+  Strecke, Farben `FAC_COLS`/`ROOF_COLS`, auf Schrägdächern Kamine, Gauben, Solaranlagen (nach Süden), Schnee im Winter.
+  Ausgedachte Häuser (`buildCityUlm`) nutzen denselben Atlas als Instanzen (`facadeMat(true)`: UV aus der Instanz-Größe,
+  `fst` ≥ 8 = Laden im Erdgeschoss).
 - **Bäume** (`TREE_SP` = Arten mit Geometrie `g`, Form `sx`/`sy`, Sommer-/Herbst-/Blütenfarben, Stammfarbe; `TREE_GEOS`):
   Linde, Ahorn, Kastanie, Buche, Eiche, Platane (runde Krone), Birke, Pappel, Erle (schlank), Trauerweide, Obstbaum (mit
   Äpfeln), Fichte, Kiefer, Busch, Schilf; Kalea: Palme, Tropenbaum, Blütenbaum. Art nach Standort (`species` in
