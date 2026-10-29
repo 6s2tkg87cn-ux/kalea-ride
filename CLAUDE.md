@@ -212,6 +212,14 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Landschaft** (`buildLandscape`, nach dem Straßenrand): Heuballen nach der Ernte, Kiesbänke an der Donau, Bootsstege, Angler,
   Wegkreuze und Aussichtsbänke aus `pois`, Strommasten mit durchhängenden Leitungen (meiden Orte), Windräder auf Anhöhen
   (`LAND.rotors`, `stepLand`).
+- **Bewegung** (mit `S.life`): Autos und Busse auf den Nebenstraßen (`TRAF`, `buildTraffic`/`stepTraffic`: Linien ohne
+  Wasser, Einsetzen 110–420 m von der Kamera, fahren von der Strecke weg), Schmetterlinge am Wegrand (`BFLY`, Frühling bis
+  Herbstanfang, nicht bei Regen), Starenschwarm über den Feldern (`STAR`, Herbst bis Frühling), Wimpel flattern (ein Mesh je
+  Wimpelkette, Attribut `flap`), Wolken ziehen. Bahn/Straßenbahn fehlen: dafür bräuchte es Gleisdaten aus OSM.
+- **Licht & Stimmung:** `glowMat` lässt warmweiße/gelbe Teile (Laternenköpfe, Scheinwerfer, Lichterketten) abends leuchten
+  (`NIGHT`), `HALO` = Lichthöfe der Laternen (Billboards, ein Zeichenaufruf), `wetRoad` = nasse Straße mit Pfützen (`WET` folgt
+  dem Regen: schnell nass, langsam trocken), `MIST` = Bodennebel-Schichten im Tal am Morgen (nur von oben sichtbar, nicht auf
+  `low`), Schneefall statt Regen im Schnee-Winter (`RAIN.snow`), Weihnachtsmarkt am Münster im Advent bzw. im Winter (`buildXmas`).
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
