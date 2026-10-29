@@ -248,7 +248,10 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Herbstfärbung `au` ab Mitte Sept., kahle Bäume `bare` im November/Winter (`bareGeo`, fern graue Zweig-Wolke), Obstblüte
   im April, frisches Grün im Mai, Äpfel Aug.–Okt.; Winter manchmal mit Schnee (Boden in `buildTerrainUlm`, kein Gras/keine
   Blumen). Nur Ulm, Kalea bleibt Sommer. Wechsel baut die Welt neu.
-- **Leistung:** iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`), andere
+- **Leistung:** Stufen `high` (MacBook/PC, alle Details), `medium` (ältere Laptops), `low` (Tablet/iPad/Handy: halbe Mengen,
+  keine Zäune/Gauben/Bodennebel, kleinere Sichtweiten). Ruckelt es trotz kleinster Auflösung über 30 s, schlägt ein Hinweis
+  einmal pro Sitzung die nächstniedrigere Stufe vor (`PERF.slow`). Messwerte (Zeichenaufrufe im Bild): high ~1350–1600,
+  low ~230–470. iPad/Handy laufen auf Qualität `low`. Bäume/Büsche haben eine grobe Fern-Variante (`withLo`), andere
   Kacheln werden in `updateCull` nach `LOD_R`/`CULL_R` umgeschaltet. Gras nur bis `GRASS_R` (`opts.grass`, nicht in `CULLS`). Neue Objekte als `InstancedMesh` bzw. über `mergeGroup`
   in CHUNK-Kacheln, Schatten werden nur jedes 2. Bild neu berechnet – das so beibehalten, Felix' PC wurde
   sonst heiß.

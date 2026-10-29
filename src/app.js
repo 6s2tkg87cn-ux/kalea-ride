@@ -172,7 +172,7 @@ function initScene(){
   addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
   applyQuality();
 }
-const PERF={scale:1,t0:0,frames:0,fps:60,lastF:0,sf:0};
+const PERF={scale:1,t0:0,frames:0,fps:60,lastF:0,sf:0,slow:0,hint:false};
 /* ---- Tageszeit und Wetter ----
    Nur Licht, Himmel, Nebel, Wolkenfarbe und Regen – keine neue Geometrie, kostet also kaum Leistung.
    Sonne: Höhe el (Bogenmaß) und Richtung (x = Ost, z = Süd); „Wie draußen“ wählt nach der Uhrzeit. */
@@ -233,6 +233,9 @@ function applyQuality(){
 function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=now-PERF.t0;if(el<2000)return;
   PERF.fps=PERF.frames*1000/el;PERF.frames=0;PERF.t0=now;const f=$('vFps');if(f)f.textContent=`Aktuell ${Math.round(PERF.fps)} FPS · Auflösung ${Math.round(PERF.scale*100)} % · Wechsel lädt neu`;
   if(!S.started||S.paused)return;const min=S.quality==='high'?0.7:0.5;let ns=PERF.scale;
+  // läuft es trotz kleinerer Auflösung längere Zeit ruckelig, einmal pro Sitzung eine niedrigere Grafikstufe vorschlagen
+  if(PERF.fps<Math.min(28,(S.fps||60)*0.75)&&PERF.scale<=min+0.01)PERF.slow+=el/1000;else PERF.slow=Math.max(0,PERF.slow-el/2000);
+  if(PERF.slow>30&&!PERF.hint&&S.quality!=='low'){PERF.hint=true;toast(S.quality==='high'?'🐢 Das Bild ruckelt – im Menü unter Grafik „Mittel“ wählen läuft deutlich flüssiger':'🐢 Das Bild ruckelt – im Menü unter Grafik „Tablet / iPad“ wählen läuft deutlich flüssiger');}
   if(PERF.fps<42&&ns>min)ns=Math.max(min,ns-0.1);else if(PERF.fps>56&&ns<1)ns=Math.min(1,ns+0.05);
   if(ns!==PERF.scale){PERF.scale=ns;renderer.setPixelRatio(basePR()*ns);renderer.setSize(innerWidth,innerHeight);}}
 // Weit entfernte Kacheln (Häuser, Bäume) ausblenden
