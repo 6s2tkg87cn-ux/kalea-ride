@@ -522,7 +522,7 @@ function withLo(g,lo){g.userData.lo=lo;return g;}
 /* ---- Bäume: Arten, Jahreszeit, Wind ---- */
 // Jahreszeit nach Datum (oder fest im Menü): au = Herbstfärbung, bare = Anteil kahler Laubbäume, bloom = Obstblüte,
 // fresh = frisches Frühlingsgrün, fruit = Äpfel am Baum, snow = Schnee
-const SEAS={k:'sommer',au:0,bare:0,bloom:0,fresh:0,fruit:0,snow:0};
+const SEAS={k:'sommer',au:0,bare:0,bloom:0,fresh:0,fruit:0,snow:0,doy:190};
 function seasonCalc(){const k=S.season||'auto',d=new Date(),doy=(d-new Date(d.getFullYear(),0,1))/864e5,f=(a,b)=>clamp((doy-a)/(b-a),0,1);
   const s={k:'sommer',au:0,bare:0,bloom:0,fresh:0,fruit:0,snow:0};
   if(k==='fruehling')Object.assign(s,{k,bloom:1,fresh:1});
@@ -534,7 +534,8 @@ function seasonCalc(){const k=S.season||'auto',d=new Date(),doy=(d-new Date(d.ge
   else if(doy<140)Object.assign(s,{k:'fruehling',bare:1-f(62,105),bloom:f(92,102)*(1-f(124,134)),fresh:1-f(125,150)});
   else if(doy<253)Object.assign(s,{fruit:f(225,240)});
   else Object.assign(s,{k:'herbst',au:f(253,300),bare:f(302,334)*0.92,fruit:1-f(290,305)});
-  if(!IS_ULM)Object.assign(s,{k:'sommer',au:0,bare:0,bloom:0,fresh:0,fruit:0,snow:0}); // Vulkaninsel: immer Sommer
+  s.doy={fruehling:110,sommer:195,herbst:290,winter:20,schnee:20}[k]||doy;
+  if(!IS_ULM)Object.assign(s,{k:'sommer',au:0,bare:0,bloom:0,fresh:0,fruit:0,snow:0,doy:195}); // Vulkaninsel: immer Sommer
   Object.assign(SEAS,s);WIND.snow.value=SEAS.snow;}
 // Wind für Laub und Fahnen (Zeit, Stärke, Schnee – gemeinsame Uniforms)
 const WIND={t:{value:0},w:{value:0.6},snow:{value:0},cam:{value:new THREE.Vector3()},lod:{value:1100},far:{value:1e9}};
@@ -834,7 +835,7 @@ function komDecor(KI,ok){
 const UY0=460;                  // Höhe über NN, die y=0 entspricht
 const WATER_Y=465.6-UY0;        // Donau-Wasserspiegel in Ulm (~465–466 m ü. NN)
 const RIVER_HW=36;              // halbe Flussbreite
-let ULM=null,RIV=null,RIVW=null,RIVG=null,VR=[],VRHASH=new Map();
+let ULM=null,RIV=null,RIVW=null,RIVG=null,VR=[],VRHASH=new Map(),LAKES=[],LAKEG=null;
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function ulmLL(lon,lat){const o=ULM_DATA.origin,kx=111320*Math.cos(o[0]*Math.PI/180);return [(lon-o[1])*kx,-(lat-o[0])*110540];}
 function ulmInit(){
@@ -845,6 +846,10 @@ function ulmInit(){
   ULM.rivers.forEach((rv,ri)=>{const r=rv.p;for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;RIV.push({a,b,dx,dz,l2:dx*dx+dz*dz||1,tx:dx/l,tz:dz/l,i,ri});}});
   RIVG=new Map();for(const sg of RIV){const x0=Math.min(sg.a[0],sg.b[0])-400,x1=Math.max(sg.a[0],sg.b[0])+400,z0=Math.min(sg.a[1],sg.b[1])-400,z1=Math.max(sg.a[1],sg.b[1])+400;
     for(let i=Math.floor(x0/100);i<=Math.floor(x1/100);i++)for(let j=Math.floor(z0/100);j<=Math.floor(z1/100);j++){const k=i*100000+j;if(!RIVG.has(k))RIVG.set(k,[]);RIVG.get(k).push(sg);}}
+  // Seen und Weiher: Umriss, Wasserspiegel (tiefster Uferpunkt im Höhenraster), 100-m-Raster für schnelle Abfragen
+  LAKES=(ULM.lakes||[]).map(o=>{const P=[];for(let i=0;i<o.p.length;i+=2)P.push([o.p[i],o.p[i+1]]);let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9,y=1e9;
+    for(const q of P){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);z0=Math.min(z0,q[1]);z1=Math.max(z1,q[1]);y=Math.min(y,ulmDem(q[0],q[1])-UY0);}return {n:o.n,P,x0,x1,z0,z1,y:y-0.35};});
+  LAKEG=new Map();for(const L of LAKES)for(let i=Math.floor((L.x0-60)/100);i<=Math.floor((L.x1+60)/100);i++)for(let j=Math.floor((L.z0-60)/100);j<=Math.floor((L.z1+60)/100);j++){const k=i*100000+j;if(!LAKEG.has(k))LAKEG.set(k,[]);LAKEG.get(k).push(L);}
   // Sichtstraßen: feste Nebenstraßen + die Straßen der anderen Routen (ohne Stücke, die auf der gefahrenen Strecke liegen)
   const VL=[],seen=new Set(),ck=(x,z)=>Math.floor(x/9)+'|'+Math.floor(z/9);
   const mark=(x,z)=>{const ix=Math.floor(x/9),iz=Math.floor(z/9);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)seen.add((ix+a)+'|'+(iz+b));};
@@ -865,7 +870,15 @@ function ulmInit(){
 function segDist(s,x,z){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1);return Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);}
 // Abstand zum Fluss. d ist auf die Standardbreite umgerechnet (d − echte halbe Breite + RIVER_HW), so dass alle
 // Vergleiche mit RIVER_HW auch dort stimmen, wo der Fluss schmaler gemacht wurde (riverFit)
-function riverDist(x,z){let best=1e9,bs=null,bt=0;const L=RIVG&&RIVG.get(Math.floor(x/100)*100000+Math.floor(z/100));if(RIVG&&!L)return {d:1e4,s:null,wy:WATER_Y};for(const s of L||RIV){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;bs=s;bt=t;}}
+// Seen zählen mit: d = RIVER_HW + Abstand zum Ufer (innen negativ), s = null, lake = der See
+function riverDist(x,z){const r=riverDist0(x,z);if(!LAKEG)return r;const k=lakeDist(x,z);if(!k)return r;const d=RIVER_HW+k.sd;return d<r.d?{d,raw:Math.abs(k.sd),s:null,side:0,hw:0,wy:k.L.y,lake:k.L}:r;}
+function lakeDist(x,z){const A=LAKEG.get(Math.floor(x/100)*100000+Math.floor(z/100));if(!A)return null;let best=null;
+  for(const L of A){if(x<L.x0-60||x>L.x1+60||z<L.z0-60||z>L.z1+60)continue;const P=L.P;let inside=false,dm=1e9;
+    for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+      const dx=b[0]-a[0],dz=b[1]-a[1],t=clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1),0,1);dm=Math.min(dm,Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t));}
+    const sd=inside?-dm:dm;if(!best||sd<best.sd)best={sd,L};}
+  return best;}
+function riverDist0(x,z){let best=1e9,bs=null,bt=0;const L=RIVG&&RIVG.get(Math.floor(x/100)*100000+Math.floor(z/100));if(RIVG&&!L)return {d:1e4,s:null,wy:WATER_Y};for(const s of L||RIV){const t=clamp(((x-s.a[0])*s.dx+(z-s.a[1])*s.dz)/s.l2,0,1),d=Math.hypot(x-s.a[0]-s.dx*t,z-s.a[1]-s.dz*t);if(d<best){best=d;bs=s;bt=t;}}
   if(!bs)return {d:1e4,s:null,wy:WATER_Y};const side=(bs.tx*(z-bs.a[1])-bs.tz*(x-bs.a[0]))>=0?1:-1,R=RIVW[bs.ri],W=side>0?R.p:R.m,hw=W[bs.i]+(W[bs.i+1]-W[bs.i])*bt;
   return {d:best+RIVER_HW-hw,raw:best,s:bs,side,hw,wy:R.y[bs.i]+(R.y[bs.i+1]-R.y[bs.i])*bt};}
 // Fluss an die echten Häuser und Wege anpassen: wo die (grob vermessene) Flusslinie Häuser oder Uferwege überdecken
@@ -898,7 +911,9 @@ function ulmDem(x,z){const g=ULM.grid;let gx=(x-g.x0)/g.dx,gz=(z-g.z0)/g.dz;
   if(out>0){const t=sstep(out/18);h=h+(476-h)*t*0.8+Math.sin(x*0.0011)*Math.cos(z*0.0013)*25*t;}
   return h;}
 function ulmHeight(x,z){let h=ulmDem(x,z)-UY0;
-  const R=riverDist(x,z),rd=R.d;if(rd<RIVER_HW+40){const bed=R.wy-2.5,t=sstep((rd-RIVER_HW+4)/40);h=bed+(Math.max(h,R.wy+1.2)-bed)*t;}
+  const R=riverDist(x,z),rd=R.d;
+  if(R.lake){const sd=rd-RIVER_HW;if(sd<6){const bed=R.wy-1.3,t=sstep((sd+4)/10);h=bed+(Math.max(h,R.wy+0.5)-bed)*t;}} // See: flaches Becken, Ufer knapp über dem Wasser
+  else if(rd<RIVER_HW+40){const bed=R.wy-2.5,t=sstep((rd-RIVER_HW+4)/40);h=bed+(Math.max(h,R.wy+1.2)-bed)*t;}
   return h;}
 // Stadtviertel (Bebauungsdichte und Charakter)
 const ULM_ZONES=[
@@ -946,13 +961,63 @@ function buildRouteUlm(){
 }
 let RNAME=null;
 /* ---- Gelände ---- */
+/* ---- Felder (Ulm): Feld-Raster schräg zur Nord-Süd-Achse, je Feld Art, Reihenrichtung und Feldwege ---- */
+// Arten: 0 Wiese, 1 Getreide, 2 Mais, 3 Acker (gepflügt), 4 Raps, 5 gemähte Wiese – Farbe je Jahreszeit (SEAS.doy)
+const FIELD={tex:null,off:new THREE.Vector2(),size:new THREE.Vector2(1,1),k:new THREE.Vector4(),col:[1,2,3,4,5].map(()=>new THREE.Color())};
+function fieldCell(fx,fz){const r=mulberry32(fx*7919+fz*104729),a=r(),t=a<0.22?0:a<0.48?1:a<0.66?2:a<0.78?3:a<0.9?4:5;return {t,dir:r()<0.5?0:1,path:(r()<0.22?1:0)+(r()<0.22?2:0)};}
+function fieldAt(x,z){const fx=Math.floor((x*0.8+z*0.35)/170),fz=Math.floor((z*0.8-x*0.35)/120);return fieldCell(fx,fz);}
+function fieldColor(t,c){const d=SEAS.doy,L=(a,b,f)=>c.set(a).lerp(new THREE.Color(b),clamp(f,0,1));
+  if(t===1){if(d<60||d>=335)c.set(0x6f7f45);else if(d<150)L(0x6a9a3a,0x7aa840,(d-60)/90);else if(d<180)L(0x7aa840,0xb8ae52,(d-150)/30);else if(d<215)L(0xb8ae52,0xd6b85a,(d-180)/35);
+    else if(d<270)c.set(0xc8b682);else L(0x8a7650,0x7d8a48,(d-270)/60);}
+  else if(t===2){if(d<130||d>=310)c.set(0x7d6a4c);else if(d<170)L(0x80704c,0x6f8f3a,(d-130)/40);else if(d<275)c.set(0x4f7f2f);else c.set(0xa89062);}
+  else if(t===3){if(d>=160&&d<240)c.set(0x8a8a50);else c.set(0x7a5e40);}
+  else if(t===4){if(d<92||d>=245)c.set(0x5f8f3a);else if(d<138)c.set(0xe2cc2a);else if(d<185)c.set(0x6a8a3a);else if(d<215)c.set(0xb8a070);else c.set(0x7a6a4c);}
+  else if(t===5)c.set(0x6a9a44);else c.set(0x5a8a3c);
+  return c;}
+// Reihen-Kontrast je Art nach Jahreszeit (Getreide, Mais, Acker, Raps)
+// Jahreszeit-Tönung wie beim übrigen Gelände (Schnee, Winter stumpf, Herbst gelblicher, Frühling frischer)
+function seasonTint(c,k=1){const t=new THREE.Color();if(SEAS.snow)c.lerp(t.setRGB(0.86,0.89,0.94),0.9*k);else if(SEAS.k==='winter')c.lerp(t.setRGB(0.5,0.5,0.38),0.38*k);
+  else if(SEAS.au)c.lerp(t.setRGB(0.56,0.55,0.3),0.16*SEAS.au*k);else if(SEAS.fresh)c.lerp(t.setRGB(0.42,0.66,0.26),0.2*SEAS.fresh*k);return c;}
+function fieldK(){FIELD.col.forEach((c,i)=>seasonTint(fieldColor(i+1,c)));const d=SEAS.doy;FIELD.k.set(d>=215&&d<270?0.1:0.06,d>=150&&d<275?0.22:0.17,0.25,0.05);}
+function fieldTexture(){const A=ULM.area,cs=[[A.x0,A.z0],[A.x1,A.z0],[A.x0,A.z1],[A.x1,A.z1]];let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+  for(const [x,z] of cs){const u=Math.floor((x*0.8+z*0.35)/170),v=Math.floor((z*0.8-x*0.35)/120);u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
+  const W=u1-u0+1,H=v1-v0+1,D=new Uint8Array(W*H*4);
+  for(let j=0;j<H;j++)for(let i=0;i<W;i++){const f=fieldCell(u0+i,v0+j),k=(j*W+i)*4;D[k]=f.t;D[k+1]=f.dir*255;D[k+2]=f.path;D[k+3]=255;}
+  const t=new THREE.DataTexture(D,W,H,THREE.RGBAFormat);t.minFilter=t.magFilter=THREE.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;
+  FIELD.tex=t;FIELD.off.set(u0,v0);FIELD.size.set(W,H);fieldK();return t;}
+// Gelände-Material Ulm: Detailtextur (wie detailBlend) + Feldreihen, Fahrgassen und Feldwege im Shader (Attribut fld = wie sehr hier Feld ist)
+function fieldBlend(mat){mat.userData.obc=true;mat.customProgramCacheKey=()=>'fld1';fieldTexture();
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,{fTex:{value:FIELD.tex},fOff:{value:FIELD.off},fSize:{value:FIELD.size},uK:{value:FIELD.k}});FIELD.col.forEach((c,i)=>sh.uniforms['uF'+(i+1)]={value:c});
+    sh.vertexShader='attribute float fld;\nvarying float vFld;\nvarying vec3 vWp;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vFld=fld;vWp=(modelMatrix*vec4(position,1.0)).xyz;');
+    sh.fragmentShader='uniform sampler2D fTex;\nuniform vec2 fOff,fSize;\nuniform vec4 uK;\nuniform vec3 uF1,uF2,uF3,uF4,uF5;\nvarying float vFld;\nvarying vec3 vWp;\n'+sh.fragmentShader.replace('#include <map_fragment>',`vec3 tcol=vec3(1.0);
+#ifdef USE_MAP
+  vec4 texelColor=texture2D(map,vUv);vec4 tc2=texture2D(map,vUv*0.143+vec2(0.37,0.11));
+  texelColor=mapTexelToLinear(texelColor*mix(vec4(1.0),tc2*1.18,0.55));diffuseColor*=texelColor;tcol=texelColor.rgb;
+#endif`).replace('#include <color_fragment>',`#include <color_fragment>
+  if(vFld>0.01){vec2 p=vWp.xz,q=vec2((p.x*0.8+p.y*0.35)/170.0,(p.y*0.8-p.x*0.35)/120.0),cl=floor(q);vec4 F=texture2D(fTex,(cl-fOff+0.5)/fSize);
+    float ty=floor(F.r*255.0+0.5),dist=length(cameraPosition-vWp),ac=F.g>0.5?(p.x*0.8+p.y*0.35)/0.873:(p.y*0.8-p.x*0.35)/0.873;
+    float per=ty<0.5?0.0:ty<1.5?0.3:ty<2.5?0.75:ty<3.5?0.4:ty<4.5?0.5:3.2,k=ty<0.5?0.0:ty<1.5?uK.x:ty<2.5?uK.y:ty<3.5?uK.z:ty<4.5?uK.w:0.07;
+#if __VERSION__>=300
+    float fw=per>0.0?1.0-smoothstep(0.18,0.4,fwidth(ac)/per):0.0; // Reihen nur, solange sie mehrere Pixel breit sind (sonst Moiré)
+#else
+    float fw=1.0-smoothstep(per*35.0,per*80.0,dist);
+#endif
+    float st=per>0.0?sin(ac*6.2832/per)*fw:0.0;
+    float tram=ty>0.5&&ty<1.5?(1.0-smoothstep(0.15,0.45,abs(mod(ac,18.0)-9.0)))*(1.0-smoothstep(200.0,600.0,dist)):0.0;
+    vec3 fc=ty<1.5?uF1:ty<2.5?uF2:ty<3.5?uF3:ty<4.5?uF4:uF5;if(ty>0.5)diffuseColor.rgb=mix(diffuseColor.rgb,tcol*fc,vFld*0.92); // Feldfarbe mit scharfer Kante
+    diffuseColor.rgb*=1.0+vFld*(k*st-tram*0.16);
+    vec2 fr=fract(q)*vec2(170.0,120.0)*0.873;float pb=floor(F.b*255.0+0.5);
+    float pu=mod(pb,2.0)>0.5?1.0-smoothstep(1.1,1.7,fr.x):0.0,pv=pb>1.5?1.0-smoothstep(1.1,1.7,fr.y):0.0;
+    diffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.74,0.69,0.58),max(pu,pv)*vFld*(1.0-smoothstep(300.0,900.0,dist)));}`);};
+  return mat;}
 function buildTerrainUlm(){
   const A=ULM.area,x0=A.x0,x1=A.x1,z0=A.z0,z1=A.z1;
   const W=x1-x0,H=z1-z0,res=S.quality==='high'?24:S.quality==='medium'?34:48,SX=Math.round(W/res),SZ=Math.round(H/res),dx=W/SX,dz=H/SZ;
   // Entlang der Strecke feineres Netz (6–8 m statt 24–48 m), sonst schneiden grobe Dreiecke in Kehren und Hanglagen
   // über die Fahrbahn. Kanten zu groben Nachbarzellen werden linear gehalten, damit keine Risse entstehen.
   const fr=S.quality==='low'?8:6,sub=Math.max(2,Math.round(Math.max(dx,dz)/fr)),fine=new Uint8Array(SX*SZ),FINE=new Map();
-  for(let j=0;j<SZ;j++)for(let i=0;i<SX;i++){if(nearestRoad(x0+(i+0.5)*dx,z0+(j+0.5)*dz,Math.hypot(dx,dz)*0.5+16))fine[j*SX+i]=1;}
+  for(let j=0;j<SZ;j++)for(let i=0;i<SX;i++){const cx=x0+(i+0.5)*dx,cz=z0+(j+0.5)*dz,hd=Math.hypot(dx,dz)*0.5;if(nearestRoad(cx,cz,hd+16))fine[j*SX+i]=1;
+    else if(LAKEG&&S.quality!=='low'){const k=lakeDist(cx,cz);if(k&&Math.abs(k.sd)<hd+8&&nearestRoad(cx,cz,S.quality==='high'?450:250))fine[j*SX+i]=1;}} // Seeufer nahe der Strecke fein, sonst verdeckt das grobe Netz das Wasser
   const isFine=(i,j)=>i>=0&&j>=0&&i<SX&&j<SZ&&fine[j*SX+i]===1;
   const hAt=(x,z)=>{const nr=nearestRoad(x,z,70),rd=riverDist(x,z).d;
     // unter den Brücken kein Damm: dort bleibt das Flussbett frei
@@ -983,13 +1048,12 @@ function buildTerrainUlm(){
   geo.computeVertexNormals();
   const pos=geo.attributes.position,near=new Float32Array(pos.count),vnear=new Float32Array(pos.count),rdist=new Float32Array(pos.count);
   for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),nr=nearestRoad(x,z,70);near[i]=nr?nr.d:99;rdist[i]=riverDist(x,z).d;const vr=nearVRoad(x,z,30);vnear[i]=vr?vr.d:99;}
-  const nor=geo.attributes.normal,cols=new Float32Array(pos.count*3),c=new THREE.Color(),t=new THREE.Color();
+  const nor=geo.attributes.normal,cols=new Float32Array(pos.count*3),FLD=new Float32Array(pos.count),c=new THREE.Color(),t=new THREE.Color();
   for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),h=pos.getY(i),ny=nor.getY(i),p=patch(x,z),zn=ulmZone(x,z);
-    // Feldermuster außerhalb der Stadt
-    const fx=Math.floor((x*0.8+z*0.35)/170),fz=Math.floor((z*0.8-x*0.35)/120),fr=mulberry32(fx*7919+fz*104729)();
-    const fields=[[0.42,0.56,0.25],[0.55,0.60,0.30],[0.62,0.58,0.36],[0.47,0.62,0.28],[0.66,0.55,0.33],[0.38,0.52,0.22]];
-    const f=fields[Math.floor(fr*fields.length)];c.setRGB(f[0]+p*0.03,f[1]+p*0.03,f[2]);
-    t.setRGB(0.34+p*0.05,0.52+p*0.06,0.24);c.lerp(t,0.55); // Wiesen
+    // Felder außerhalb der Stadt: Art und Farbe je Feld (fieldAt), Reihen und Wege macht der Shader (fieldBlend)
+    const fa=fieldAt(x,z);fieldColor(fa.t,c);c.offsetHSL(0,0,p*0.025);t.setRGB(0.34+p*0.05,0.52+p*0.06,0.24);c.lerp(t,fa.t===0?0.6:0.12);
+    FLD[i]=(1-sstep(zn.d*2.2))*sstep((ny-0.9)/0.05)*sstep((near[i]-11)/5)*sstep((vnear[i]-7)/4)*sstep((rdist[i]-RIVER_HW-14)/12);
+    c.lerp(t,0.5*(1-FLD[i])); // wo kein Feld ist (Ränder, Hänge, Ufer): Wiese
     // Stadt: versiegelter Boden
     const u=zn.d;t.setRGB(0.52,0.50,0.47);c.lerp(t,sstep(u*1.3)*0.85);
     if(zn.t==='sub')c.lerp(t.setRGB(0.42,0.52,0.32),0.35*u);
@@ -1005,9 +1069,9 @@ function buildTerrainUlm(){
     else if(SEAS.au)c.lerp(t.setRGB(0.56,0.55,0.3),0.16*SEAS.au);
     else if(SEAS.fresh)c.lerp(t.setRGB(0.42,0.66,0.26),0.2*SEAS.fresh);
     cols[i*3]=c.r;cols[i*3+1]=c.g;cols[i*3+2]=c.b;}
-  geo.setAttribute('color',new THREE.BufferAttribute(cols,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(cols,3));geo.setAttribute('fld',new THREE.BufferAttribute(FLD,1));
   const detail=grassDetailTex();detail.repeat.set(W/7,H/7);
-  const mesh=new THREE.Mesh(geo,detailBlend(new THREE.MeshStandardMaterial({vertexColors:true,map:detail,roughness:1})));mesh.receiveShadow=true;scene.add(mesh);
+  const mesh=new THREE.Mesh(geo,fieldBlend(new THREE.MeshStandardMaterial({vertexColors:true,map:detail,roughness:1})));mesh.receiveShadow=true;scene.add(mesh);
   // äußerer Boden bis zum Horizont – unter dem tiefsten Gelände (flussabwärts liegt das Donautal tiefer als in Ulm)
   let ymin=WATER_Y-6.5;for(let i=1;i<P.length;i+=3)ymin=Math.min(ymin,P[i]-3);
   const outer=new THREE.Mesh(new THREE.PlaneGeometry(60000,60000),new THREE.MeshStandardMaterial({color:SEAS.snow?0xdfe4ea:SEAS.k==='winter'?0x76805a:0x6f8a52,roughness:1}));outer.rotation.x=-Math.PI/2;outer.position.y=ymin;scene.add(outer);
@@ -1033,6 +1097,11 @@ function buildRiverUlm(){
         col=mix(col,vec3(0.9,0.93,0.92),smoothstep(0.86,1.0,vE)*0.35);
         float f=1.0-exp(-pow(fogDensity*dist,2.0));col=mix(col,fogColor,f);gl_FragColor=vec4(col,1.0);}`});
   water=new THREE.Mesh(g,m);water.renderOrder=1;scene.add(water);
+  // Seen: flache Wasserfläche auf ihrem Wasserspiegel (das Gelände ist darunter ausgehoben, s. ulmHeight)
+  const A=ULM.area,LP=[],LE=[];for(const L of LAKES){if(L.x1<A.x0||L.x0>A.x1||L.z1<A.z0||L.z0>A.z1)continue;
+    const tris=THREE.ShapeUtils.triangulateShape(L.P.map(q=>new THREE.Vector2(q[0],q[1])),[]);for(const t of tris)for(const k of t){LP.push(L.P[k][0],L.y,L.P[k][1]);LE.push(0.62);}}
+  if(LP.length){const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(LP,3));lg.setAttribute('edge',new THREE.Float32BufferAttribute(LE,1));
+    const lm=new THREE.Mesh(lg,m);lm.renderOrder=1;scene.add(lm);}
 }
 /* ---- Gebäude-Bausteine ---- */
 function facadeBox(){const g=new THREE.BoxGeometry(1,1,1);g.translate(0,0.5,0);const uv=g.attributes.uv;
@@ -1300,13 +1369,21 @@ function buildRoadside(){
         if(!ok||gap>0){if(gap>0)gap-=SEG*ds;prev=null;if(run>0&&!ok){run=0;gap=R(4,14);}continue;}
         if(!kind||run<=0){kind=town?['hecke','latten','mauer','gitter','hecke'][rng()*5|0]:(rng()<0.35?'weide':null);run=town?R(12,40):R(60,260);if(!kind){gap=R(150,500);run=0;continue;}}
         const p=[x,z],y=groundH(x,z);if(prev)piece(kind,prev.p,p,prev.y,y);prev={p,y};run-=SEG*ds;if(run<=0){gap=town?R(3,9):R(200,700);prev=null;kind=null;}}}}
-  // 7) Gehwege mit Bordstein in Orten (eigenes Pflaster-Material), Zebrastreifen und Rad-Piktogramme auf der Fahrbahn
+  // 7) Seerosen auf Seen nahe der Strecke (nicht im Winter): Blätter flach auf dem Wasser, ein paar Blüten
+  if(IS_ULM&&SEAS.k!=='winter'){const leafT=rsTpl([[tr(new THREE.CircleGeometry(0.42,7,0.4,5.6),[0,0,0],[-Math.PI/2,0,0]),0x3f7a35]]),leafT2=rsTpl([[tr(new THREE.CircleGeometry(0.3,7,0.6,5.4),[0,0,0],[-Math.PI/2,0,0]),0x4f8a3d]]);
+    const flowT=rsTpl([[tr(new THREE.ConeGeometry(0.13,0.14,6,1,true),[0,0.07,0],[Math.PI,0,0]),0xf6f0f2],[tr(new THREE.SphereGeometry(0.05,6,4),[0,0.06,0]),0xf2c832]]),flowP=rsTpl([[tr(new THREE.ConeGeometry(0.13,0.14,6,1,true),[0,0.07,0],[Math.PI,0,0]),0xf2b6c8],[tr(new THREE.SphereGeometry(0.05,6,4),[0,0.06,0]),0xf2c832]]);
+    for(const L of LAKES){const cx=(L.x0+L.x1)/2,cz=(L.z0+L.z1)/2;if(!nearestRoad(cx,cz,Math.max(L.x1-L.x0,L.z1-L.z0)/2+300))continue;const P=L.P;
+      for(let c=0;c<Math.min(14,P.length/3);c++){const q=P[rng()*P.length|0],[ax,az]=[q[0]+(cx-q[0])*R(0.04,0.12),q[1]+(cz-q[1])*R(0.04,0.12)],k0=lakeDist(ax,az);if(!k0||k0.sd>-3||k0.sd<-16)continue;
+        const n=6+(rng()*14|0);for(let j=0;j<n;j++){const x=ax+R(-3.5,3.5),z=az+R(-3.5,3.5),k=lakeDist(x,z);if(!k||k.sd>-1.5)continue;
+          rsPut(rng()<0.6?leafT:leafT2,x,L.y+0.04,z,rng()*6.28,R(0.8,1.3));if(SEAS.k==='sommer'&&rng()<0.15||SEAS.k==='fruehling'&&rng()<0.05)rsPut(rng()<0.7?flowT:flowP,x+0.2,L.y+0.05,z,0);}
+        RS.log.push(['seerosen',0,L.n]);}}}
+  // 8) Gehwege mit Bordstein in Orten (eigenes Pflaster-Material), Zebrastreifen und Rad-Piktogramme auf der Fahrbahn
   if(IS_ULM){const pm=new THREE.MeshStandardMaterial({map:pavingTex(),vertexColors:true,roughness:0.95,side:THREE.DoubleSide}),G=new Map(),W=4.6;
     const add=(b,x,y,z,u,v,c)=>{b.P.push(x-b.cx,y,z-b.cz);b.U.push(u,v);b.C.push(c,c,c);};
     for(const sd of [-1,1]){let prev=null;
       for(let i=0;i<=N;i+=2){const ii=i%N,zn=zoneAt(ii),[ox,oz]=lateralPoint(ii,sd*7.0),[mx,mz]=lateralPoint(ii,sd*5.8);
         const ok=zn.d>0.3&&!isPath(ii)&&riverDist(mx,mz).d>RIVER_HW+10&&!nearVRoad(mx,mz,5)&&!houseAt(ox,oz,0)&&footFree(mx,mz,0)&&(()=>{const nr=nearestRoad(ox,oz,7.2);if(!nr)return true;const di=Math.abs(nr.i-ii);return Math.min(di,N-di)*ds<20;})();
-        if(!ok){prev=null;continue;}const y=RH[ii]+0.25,yc=y+0.12,yo=Math.max(yc,terrH(ox,oz)+0.03),L=[[W,y],[W,yc],[W+0.22,yc],[7.0,yo],[7.0,Math.min(yo,terrH(ox,oz))-0.3]].map(([o,h])=>{const [px,pz]=lateralPoint(ii,sd*o);return [px,h,pz,o];});
+        if(!ok||terrH(ox,oz)<RH[ii]-0.25){prev=null;continue;}const y=RH[ii]+0.25,yc=y+0.12,yo=Math.max(yc,terrH(ox,oz)+0.03),L=[[W,y],[W,yc],[W+0.22,yc],[7.0,yo],[7.0,Math.min(yo,terrH(ox,oz))-0.3]].map(([o,h])=>{const [px,pz]=lateralPoint(ii,sd*o);return [px,h,pz,o];});
         if(prev){const ix=Math.floor(L[2][0]/CHUNK),iz=Math.floor(L[2][2]/CHUNK),key=ix+'|'+iz;let b=G.get(key);if(!b)G.set(key,b={cx:(ix+0.5)*CHUNK,cz:(iz+0.5)*CHUNK,P:[],U:[],C:[]});
           for(let k=0;k<4;k++){const a0=prev[k],a1=prev[k+1],b0=L[k],b1=L[k+1],c=k===0||k===1?0.95:k===2?0.82:0.8,v0=prev.v,v1=prev.v+2*ds/1.6,uu=q=>q[3]/1.6;
             const quad=[[a0,v0],[b0,v1],[b1,v1],[a0,v0],[b1,v1],[a1,v0]];if(sd<0){[quad[1],quad[2]]=[quad[2],quad[1]];[quad[4],quad[5]]=[quad[5],quad[4]];}
@@ -1335,6 +1412,77 @@ function buildRoadside(){
       const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:0.8,alphaTest:0.5,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4,color:0xf2f2ee}));m.receiveShadow=true;scene.add(m);}}
   rsFlush(mat);
 }
+/* ---- Landschaft (Ulm): Heuballen, Strommasten mit Leitungen, Windräder, Kiesbänke, Bootsstege, Angler, Wegkreuze ---- */
+const LAND={rotors:[]};
+function buildLandscape(){
+  const hi=S.quality==='high',low=S.quality==='low',rng=mulberry32(2024),R=(a,b)=>a+rng()*(b-a),A=ULM.area,d=SEAS.doy;
+  const inA=(x,z,m=0)=>x>A.x0+m&&x<A.x1-m&&z>A.z0+m&&z<A.z1-m;
+  const freeL=(x,z,r)=>!nearestRoad(x,z,r+6)&&!nearVRoad(x,z,r+4)&&riverDist(x,z).d>RIVER_HW+r+4&&!houseAt(x,z,r)&&footFree(x,z,r);
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.85});
+  // 1) Heuballen auf abgeernteten Getreidefeldern (Juli–Oktober), eingewickelte Silageballen auf gemähten Wiesen
+  if(d>=185&&d<305&&!SEAS.snow){const straw=rsTpl([[tr(new THREE.CylinderGeometry(0.75,0.75,1.2,14),[0,0.75,0],[0,0,Math.PI/2]),0xd8bd68]]),
+      wrap=rsTpl([[tr(new THREE.CylinderGeometry(0.7,0.7,1.2,14),[0,0.7,0],[0,0,Math.PI/2]),0xf0f0ea]]);let n=0;
+    for(let k=0;k<(hi?700:low?200:400)&&n<(hi?220:low?60:120);k++){const i=rng()*N|0,sd=rng()<0.5?-1:1,[x,z]=lateralPoint(i,sd*R(25,220)),f=fieldAt(x,z);
+      if((f.t!==1&&f.t!==5)||!inA(x,z)||ulmZone(x,z).d>0.05||!freeL(x,z,8)||slopeY(x,z)<0.97)continue;const T=f.t===1?straw:wrap,ry=R(0,3.14),m=2+(rng()*6|0);
+      for(let j=0;j<m;j++){const px=x+Math.cos(ry)*j*R(4,9)+R(-1,1),pz=z+Math.sin(ry)*j*R(4,9)+R(-1,1);if(fieldAt(px,pz).t!==f.t||!freeL(px,pz,2))continue;rsPut(T,px,groundH(px,pz)-0.05,pz,ry+R(-0.3,0.3));n++;}}}
+  // 2) Kiesbänke an der Donau außerhalb der Stadt (flach, knapp über dem Wasser)
+  {const P=[],C=[],c=new THREE.Color(),rv=ULM.rivers[0].p,W=RIVW[0];
+    for(let i=2;i<rv.length-2;i+=1){if(rng()>0.06)continue;const q=rv[i],zn=ulmZone(q[0],q[1]);if(zn.d>0.1||!inA(q[0],q[1],200)||nearestRoad(q[0],q[1],60)||nearVRoad(q[0],q[1],40))continue;
+      const a=rv[i-1],b=rv[i+1];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz)||1;tx/=l;tz/=l;const sd=rng()<0.5?1:-1,hw=sd>0?W.p[i]:W.m[i],y=W.y[i]+0.06,len=R(25,60),wid=R(5,11);
+      const ring=[];for(let k=0;k<=12;k++){const u=(k/12-0.5)*len,v=Math.sqrt(Math.max(0,1-(2*u/len)**2))*wid;ring.push([q[0]+tx*u-tz*sd*(hw+1-v),q[1]+tz*u+tx*sd*(hw+1-v)]);}
+      const cx=q[0]-tz*sd*(hw-wid*0.3),cz=q[1]+tx*sd*(hw-wid*0.3);for(let k=0;k<12;k++){const p0=ring[k],p1=ring[k+1];P.push(cx,y,cz,p0[0],y,p0[1],p1[0],y,p1[1]);for(let m=0;m<3;m++){c.set(m?0xc2b598:0xd2c6aa);C.push(c.r,c.g,c.b);}}}
+    if(P.length){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.computeVertexNormals();
+      const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1}));m.receiveShadow=true;m.renderOrder=2;scene.add(m);}}
+  // 3) Bootsstege und Angler an Seen nahe der Strecke, Angler auch am Donauufer
+  {const plank=rsTpl([[tr(new THREE.BoxGeometry(1.5,0.12,8),[0,0.5,4]),0x9a7650],...[0,2.6,5.2,7.8].flatMap(z=>[[tr(new THREE.CylinderGeometry(0.08,0.08,1.6,6),[-0.65,-0.2,z]),0x6a5038],[tr(new THREE.CylinderGeometry(0.08,0.08,1.6,6),[0.65,-0.2,z]),0x6a5038]])]);
+    const boat=rsTpl([[tr(new THREE.CylinderGeometry(0.7,0.5,3.6,10,1,true,0,Math.PI),[0,0.35,0],[Math.PI/2,0,Math.PI]),0x2e6fb3],[tr(new THREE.BoxGeometry(1.1,0.06,0.3),[0,0.2,0.2]),0x9a7650]]);
+    const angler=(jacket)=>rsTpl([[tr(new THREE.CylinderGeometry(0.2,0.24,0.62,8),[0,0.75,0]),jacket],[tr(new THREE.SphereGeometry(0.15,10,8),[0,1.22,0]),0xf0c8a0],[tr(new THREE.CylinderGeometry(0.17,0.2,0.1,10),[0,1.36,0]),0x4a5a3a],
+      [tr(new THREE.BoxGeometry(0.34,0.34,0.4),[0,0.22,0.06]),0x3a4048],[tr(new THREE.BoxGeometry(0.4,0.06,0.4),[0,0.44,0]),0x6a5038],[tube([0.15,0.85,0.25],[0.4,2.6,2.9],0.015,4),0x2a2a2a],[tube([0.4,2.6,2.9],[0.45,0.02,4.2],0.004,3),0xdddddd],
+      [tr(new THREE.CylinderGeometry(0.12,0.12,0.3,8),[-0.4,0.15,0.1]),0x2f6a3a]]);
+    const anglers=[angler(0x4f6a3a),angler(0x2e5a8a),angler(0x8a4a2a)];
+    const nearLakes=LAKES.filter(L=>inA((L.x0+L.x1)/2,(L.z0+L.z1)/2)&&nearestRoad((L.x0+L.x1)/2,(L.z0+L.z1)/2,Math.max(L.x1-L.x0,L.z1-L.z0)/2+350));
+    for(const L of nearLakes){const cx=(L.x0+L.x1)/2,cz=(L.z0+L.z1)/2,sz=Math.max(L.x1-L.x0,L.z1-L.z0);let placed=0;if(sz<50||rng()<0.35)continue;
+      for(let k=0;k<30&&placed<(sz>250?2:1);k++){const q=L.P[rng()*L.P.length|0],dx=cx-q[0],dz=cz-q[1],l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,sx=q[0]-ux*3,sz=q[1]-uz*3;
+        if(nearestRoad(sx,sz,10)||nearVRoad(sx,sz,6)||houseAt(sx,sz,2)||!footFree(sx,sz,2)||(lakeDist(q[0]+ux*8,q[1]+uz*8)||{sd:9}).sd>-1)continue;const ry=Math.atan2(ux,uz);rsPut(plank,q[0]-ux*1.2,L.y,q[1]-uz*1.2,ry);
+        if(rng()<0.6)rsPut(boat,q[0]+ux*5-uz*1.6,L.y,q[1]+uz*5+ux*1.6,ry+R(-0.2,0.2));if(rng()<0.7)rsPut(anglers[rng()*3|0],q[0]+ux*6.4,L.y+0.56,q[1]+uz*6.4,ry);placed++;const nr=nearestRoad(q[0],q[1],600);RS.log.push(['steg',nr?nr.i:0,L.n]);}}
+    // Angler am Donauufer (auf dem Ufer, Blick aufs Wasser)
+    const rv=ULM.rivers[0].p,W=RIVW[0];let na=0;for(let k=0;k<200&&na<(hi?8:4);k++){const i=2+(rng()*(rv.length-4)|0),q=rv[i];if(!inA(q[0],q[1],100)||!nearestRoad(q[0],q[1],400))continue;
+      const a=rv[i-1],b=rv[i+1];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz)||1;tx/=l;tz/=l;const sd=rng()<0.5?1:-1,hw=sd>0?W.p[i]:W.m[i],x=q[0]-tz*sd*(hw+2.5),z=q[1]+tx*sd*(hw+2.5);
+      if(!freeL(x,z,1.5)&&!(riverDist(x,z).d>RIVER_HW-1&&!nearestRoad(x,z,8)&&!houseAt(x,z,1)))continue;rsPut(anglers[rng()*3|0],x,groundH(x,z)-0.05,z,Math.atan2(tz*sd,-tx*sd));na++;RS.log.push(['angler',0]);}}
+  // 4) Wegkreuze und Aussichtspunkte aus OSM (Bank mit Blick)
+  {const cross=rsTpl([[tr(new THREE.BoxGeometry(0.16,2.6,0.16),[0,1.3,0]),0x6a4a2e],[tr(new THREE.BoxGeometry(1.1,0.14,0.14),[0,1.95,0]),0x6a4a2e],[tr(new THREE.BoxGeometry(0.5,0.18,0.5),[0,2.62,0]),0x4a3a2a],
+      [tr(new THREE.BoxGeometry(0.06,0.5,0.06),[0,1.7,0.1]),0xc9a24a]]),bench=rsTpl([[tr(new THREE.BoxGeometry(1.8,0.06,0.42),[0,0.45,0]),0x9a6a40],[tr(new THREE.BoxGeometry(1.8,0.32,0.05),[0,0.72,-0.22],[-0.15,0,0]),0x9a6a40],...[-0.75,0.75].map(a=>[tr(new THREE.BoxGeometry(0.07,0.45,0.42),[a,0.22,0]),0x6a4a2e])]);
+    for(const [k,n,x,z] of ULM.pois||[]){if(!inA(x,z))continue;const nr=nearestRoad(x,z,900);if(!nr)continue;
+      if(k==='kreuz'){let px=x,pz=z;if(!freeL(px,pz,1)){const [lx,lz]=lateralPoint(nr.i,(nr.d>0?1:-1)*7);px=lx;pz=lz;if(!freeL(px,pz,0.5))continue;}rsPut(cross,px,groundH(px,pz)-0.05,pz,R(0,6));RS.log.push(['kreuz',nr.i,n]);}
+      else if(k==='aussicht'&&freeL(x,z,1.5)){rsPut(bench,x,groundH(x,z)-0.03,z,Math.atan2(x-RX[nr.i],z-RZ[nr.i]));RS.log.push(['aussicht',nr.i,n]);}}}
+  // 5) Strommasten mit Leitungen quer übers Land (meiden Orte, Strecke, Häuser und Wasser)
+  {const tower=merge([...[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>[tube([a*2.6,0,b*2.6],[a*0.6,30,b*0.6],0.14,4),0x8a9096]),[tube([0,30,0],[0,36,0],0.18,4),0x8a9096],
+      ...[24,30].flatMap(y=>[[tr(new THREE.BoxGeometry(y===24?14:10,0.35,0.5),[0,y,0]),0x8a9096]]),...[[-1,-1],[1,-1],[-1,1],[1,1]].flatMap(([a,b])=>[8,16].map(y=>[tube([a*(2.6-y*0.0667),y,b*(2.6-y*0.0667)],[-a*(2.6-(y+6)*0.0667),y+6,b*(2.6-(y+6)*0.0667)],0.06,3),0x8a9096])),
+      ...[-6.5,-4.5,4.5,6.5].map(x=>[tr(new THREE.CylinderGeometry(0.12,0.12,1.4,6),[x,23.3,0]),0xe8e0d0]),...[-4.5,4.5].map(x=>[tr(new THREE.CylinderGeometry(0.12,0.12,1.4,6),[x,29.3,0]),0xe8e0d0])]);
+    const items=[],LP=[];const nl=hi?2:low?1:1;
+    for(let L=0;L<nl;L++){for(let tries=0;tries<20;tries++){const i=rng()*N|0,base=Math.atan2(RTX[i],RTZ[i])+Math.PI/2+R(-0.5,0.5),ux=Math.sin(base),uz=Math.cos(base);
+        const pts=[];for(let s=-9000;s<=9000;s+=R(260,320)){let x=RX[i]+ux*s,z=RZ[i]+uz*s;if(!inA(x,z,300))continue;let ok=false;
+          for(const sh of [0,40,-40,80,-80,120]){const px=x-uz*sh,pz=z+ux*sh;if(ulmZone(px,pz).d<0.03&&freeL(px,pz,6)&&slopeY(px,pz)>0.85){x=px;z=pz;ok=true;break;}}if(ok)pts.push([x,z]);else if(pts.length)pts.push(null);}
+        const runs=[];let cur=[];for(const p of pts){if(p)cur.push(p);else{if(cur.length>3)runs.push(cur);cur=[];}}if(cur.length>3)runs.push(cur);if(!runs.length)continue;
+        for(const run of runs){for(let k=0;k<run.length;k++){const [x,z]=run[k],y=groundH(x,z)-0.2;items.push({x,z,y,sx:1,sy:1,sz:1,ry:base,c:0xffffff});camOccAdd(rectPoly(x,z,base,6,6),y+36);
+          if(k){const [x0,z0]=run[k-1],y0=groundH(x0,z0)-0.2;for(const [o,h] of [[-6.5,22.6],[-4.5,22.6],[4.5,22.6],[6.5,22.6],[-4.5,28.6],[4.5,28.6],[0,36]]){
+            const ax=x0+Math.cos(base)*o,az=z0-Math.sin(base)*o,bx=x+Math.cos(base)*o,bz=z-Math.sin(base)*o,ay=y0+h,by=y+h,sag=Math.hypot(bx-ax,bz-az)*0.025;
+            for(let q=0;q<12;q++){const t0=q/12,t1=(q+1)/12,f=t=>ay+(by-ay)*t-sag*4*t*(1-t);LP.push(ax+(bx-ax)*t0,f(t0),az+(bz-az)*t0,ax+(bx-ax)*t1,f(t1),az+(bz-az)*t1);}}}}}
+        break;}}
+    if(items.length){chunkedInstances(tower,new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.6,metalness:0.2}),items);
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(LP,3));const ln=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x3a3d42}));scene.add(ln);RS.log.push(['strom',items.length]);}}
+  // 6) Windräder auf Anhöhen abseits der Strecke (Rotoren drehen sich)
+  {const tw=merge([[tr(new THREE.CylinderGeometry(1.2,2.3,96,12),[0,48,0]),0xf2f2ee],[tr(new THREE.BoxGeometry(3,3.2,9),[0,97.5,1.5]),0xeeeeea],[tr(new THREE.CylinderGeometry(2.6,2.6,0.6,12),[0,0.3,0]),0xa8a8a2]]);
+    const blade=merge([0,1,2].map(k=>[tr(new THREE.BoxGeometry(2.2,46,0.5),[0,24,0],[0,0,0]).applyMatrix4(new THREE.Matrix4().makeRotationZ(k*2.0944)),0xf4f4f0]).concat([[tr(new THREE.SphereGeometry(1.5,10,8),[0,0,0.6]),0xeeeeea]]));
+    const spots=[];for(let k=0;k<4000&&spots.length<(hi?8:low?3:5);k++){const x=R(A.x0+800,A.x1-800),z=R(A.z0+800,A.z1-800),h=ulmHeight(x,z);if(h<115||nearestRoad(x,z,700)||ulmZone(x,z).d>0.01||!freeL(x,z,20)||slopeY(x,z)<0.95)continue;
+      if(spots.some(s=>Math.hypot(s[0]-x,s[1]-z)<380))continue;const near=spots.length&&rng()<0.7?spots[spots.length-1]:null;if(near&&Math.hypot(near[0]-x,near[1]-z)>900)continue;spots.push([x,z]);}
+    const tm=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.5});
+    for(const [x,z] of spots){const y=groundH(x,z)-0.3,t=new THREE.Mesh(tw,tm),ry=-0.6+R(-0.1,0.1);t.position.set(x,y,z);t.rotation.y=ry;t.castShadow=true;scene.add(t);camOccAdd(rectPoly(x,z,0,6,6),y+100);
+      const r=new THREE.Mesh(blade,tm);r.position.set(x+Math.sin(ry)*6.6,y+97.5,z+Math.cos(ry)*6.6);r.rotation.set(0,ry,R(0,6.28),'YXZ');r.castShadow=true;scene.add(r);LAND.rotors.push({m:r,w:R(1.3,1.8)});}
+    if(spots.length)RS.log.push(['windrad',spots.length]);}
+  rsFlush(mat);
+}
+function stepLand(dt){for(const r of LAND.rotors)r.m.rotation.z-=r.w*dt;}
 /* ---- Wahrzeichen ---- */
 function std(c,r=0.8,m=0,extra={}){return new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,...extra});}
 // Viele Einzelteile eines Bauwerks zu wenigen Meshes (je Material) zusammenfassen – spart Zeichenaufrufe
@@ -1680,6 +1828,10 @@ function buildVegetationUlm(){
         for(const sd of [1,-1]){if(Math.random()<0.35)continue;const hw=sd>0?a[2]:a[3],e=hw+rnd(-2,1.2),x=a[0]+dx*t/l+nx*sd*e,z=a[1]+dz*t/l+nz*sd*e;
           if(x<A.x0||x>A.x1||z<A.z0||z>A.z1||ulmZone(x,z).d>0.2)continue;const rd=riverDist(x,z).d;
           if(rd<RIVER_HW-2.5||rd>RIVER_HW+1.5||nearestRoad(x,z,9)||nearVRoad(x,z,5)||houseAt(x,z,1.5))continue;plantAdd('schilf',x,z,rnd(0.8,1.3));}}}}
+  // Schilf an Seeufern (nur Seen nahe der Strecke)
+  for(const L of LAKES){if(L.x1<A.x0||L.x0>A.x1||L.z1<A.z0||L.z0>A.z1||!nearestRoad((L.x0+L.x1)/2,(L.z0+L.z1)/2,Math.max(L.x1-L.x0,L.z1-L.z0)/2+600))continue;const P=L.P;let s=0;
+    for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let t=0;t<l;t+=low?8:5,s+=low?8:5){if(Math.sin(s*0.017+L.x0)*Math.sin(s*0.005)<0.05)continue;
+      const x=a[0]+(b[0]-a[0])*t/l+rnd(-2.5,2.5),z=a[1]+(b[1]-a[1])*t/l+rnd(-2.5,2.5),k=lakeDist(x,z);if(!k||k.sd<-2.5||k.sd>1.2||nearestRoad(x,z,9)||nearVRoad(x,z,5)||houseAt(x,z,1.5))continue;plantAdd('schilf',x,z,rnd(0.8,1.3));}}}
   plantFlush();
   if(!SEAS.snow)GRASS_CHUNKS.push(...scatter(grassGeo(),new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}),hi?16000:6000,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(5.2,24),[x,z]=lateralPoint(i,off);
     if(ulmZone(x,z).d>0.35||nearestRoad(x,z,5)||nearVRoad(x,z,4)||riverDist(x,z).d<RIVER_HW+26)return null;return [x,z,rnd(0.8,1.6)];},{shadow:false,sink:0.05,grass:true,tint:SEAS.k==='winter'?new THREE.Color(1.15,1.0,0.72):SEAS.au?new THREE.Color(1+0.2*SEAS.au,1,1-0.3*SEAS.au):null}));
@@ -3666,7 +3818,7 @@ function frame(now){
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
   for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320&&camFade(b.obj);if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
-  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepGags(S.riding&&!S.paused?dt:0);stepWeather(dt);stepLife(dt,t);
+  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepGags(S.riding&&!S.paused?dt:0);stepWeather(dt);stepLife(dt,t);stepLand(dt);
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);{const w=curWx();WIND.t.value=t%3600;WIND.w.value=0.45+w.mix*0.45+(+w.rain||0)*0.5;}stepRain(dt);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
@@ -4370,13 +4522,13 @@ function clearWorld(){
   HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;FLY.obj={};FLY.act=null;FLY.fx=null;FLY.bub=null;if(GAG.act&&GAG.act.stop)GAG.act.stop();GAG.act=null;GAG.bub=null;GAG.rp=null;
   BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;FACATLAS=null;
-  RIV=null;RIVW=null;RIVG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
+  RIV=null;RIVW=null;RIVG=null;LAKES=[];LAKEG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
   LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;
   OSM.data=null;OSM.built=0;OSM.embedded=false;
-  ONC.list=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
+  ONC.list=[];LAND.rotors=[];Object.assign(LIFE,{walk:[],wm:null,ducks:[],duckMs:[],dolph:[],rboats:[],statics:[]});
   for(const p of NET.peers.values())p.obj=null;}
 async function buildWorld(){
-  seasonCalc();buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildRoadside();buildVegetation();}else{buildVegetation();buildLandmarks();buildRoadside();}initRiders();decorate();toonify(scene);ghostLook();RAIN.obj=null;buildMapBg();applyWeather();
+  seasonCalc();buildRoute();if(IS_ULM){ULM=ULM_DATA;await osmLoadCached();riverFit();}buildSmoothGrade();buildSky();buildTerrain();buildWater();buildRoad();if(IS_ULM){buildLandmarks();buildRoadside();buildLandscape();buildVegetation();}else{buildVegetation();buildLandmarks();buildRoadside();}initRiders();decorate();toonify(scene);ghostLook();RAIN.obj=null;buildMapBg();applyWeather();
   $('title').innerHTML=IS_ULM?'Kalea Ride <span>Ulm</span>':'Kalea Ride <span>Vulkaninsel</span>';}
 // Fahrt auf null stellen (neue Fahrt, Welt- oder Routenwechsel)
 function resetRide(){

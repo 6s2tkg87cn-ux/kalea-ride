@@ -14,13 +14,14 @@ Zwift Click v2 werden per **Web Bluetooth** verbunden. Zwei Welten: **Kalea** (V
 ```
 src/index.html            Markup + CSS (Comic-Look, Schrift Fredoka) + <script>-Einbindungen
 src/app.js                das ganze Programm (~2400 Zeilen, in Abschnitte gegliedert, s. u.)
-src/data/ulm-data.js      const ULM_DATA = {origin, grid (Höhen), roads, rivers, zones, places, routes[8]} – erzeugt/ergänzt mit tools/ulm_routen.py
+src/data/ulm-data.js      const ULM_DATA = {origin, grid (Höhen), roads, rivers, lakes, pois, zones, places, routes[9]} – erzeugt/ergänzt mit tools/ulm_routen.py
 src/data/osm-buildings.js const OSM_RAW  = 22746 echte Ulmer Gebäude entlang aller 8 Routen (OSM, ODbL), kompakt kodiert
 src/data/sounds.js        const SOUNDS = Fahrgeräusche als data:-URLs (aus tools/sounds_build.py)
 tools/build.py            baut dist/kalea-ride.html, dist/kalea-ride-offline.html, dist/artifact.html
 tools/osm_embed.py        Overpass-JSON (ulm-haeuser.json) → src/data/osm-buildings.js (mit Abdeckung `cov`: wo gesucht wurde;
                           nur dort ersetzt die App ausgedachte Häuser, `osmCovered`; `--routes=` = Routenstand beim Holen)
-tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; aktualisiert auch
+tools/ulm_routen.py       ulm-routen.json → neue Routen (Routing, Radwege bevorzugt), Flüsse, Höhenraster, Ortszonen; mit `--seen` nur Seen
+                          (`lakes`) und Kirchen/Aussichtspunkte/Wegkreuze (`pois`) nahe den Routen ergänzen; aktualisiert auch
                           die Kartenstücke/Routenlinien in ulm-haeuser-holen.html (Häuser entlang aller Routen)
 tools/ulm-haeuser-holen.html  Hilfsseite: lädt die Häuser im Browser über Overpass (100 Kartenstücke à 1,2 km, alle Server gleichzeitig,
                           mit Wiederholung; behält nur Häuser ≤ 220 m an den Routen) und speichert ulm-haeuser.json
@@ -201,6 +202,16 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Alles in EINEM Material mit Schilder-Atlas `signAtlas` (Bereiche `SA`, Alpha-Test, Rückseiten-Silhouetten `SIL`), je Kachel
   zusammengefasst (`rsTpl` → `rsPut` → `rsFlush`), Platzprüfung `rsFree`/`rsMark`; `RS.log` listet, was wo steht (für Tests).
   Leitpfosten nur außerorts. Achtung: in den langen Code-Zeilen nie `//`-Kommentare mitten in die Zeile setzen (verschluckt den Rest).
+- **Seen** (`ULM_DATA.lakes`, `LAKES`/`LAKEG`, `lakeDist` = Abstand zum Ufer, innen negativ): `riverDist` zählt Seen mit
+  (`lake` gesetzt, `s` = null), dadurch meiden Bäume, Häuser, Figuren usw. sie automatisch. Wasserspiegel = tiefster Uferpunkt
+  im Höhenraster − 0,35 m, `ulmHeight` hebt ein flaches Becken aus, am Ufer nahe der Strecke ist das Geländenetz fein.
+  Wasserfläche mit dem Donau-Shader (`buildRiverUlm`), dazu Schilf, Seerosen, Bootsstege mit Booten und Anglern.
+- **Felder** (`fieldAt`/`fieldCell`: schräges 170 × 120-m-Raster, Arten Wiese/Getreide/Mais/Acker/Raps/gemähte Wiese, Farben je
+  Tag im Jahr `SEAS.doy` in `fieldColor`): `fieldBlend` = Gelände-Shader mit Datentextur je Feld (`FIELD.tex`) → Feldfarbe mit
+  scharfer Kante, Reihen (Ausblenden über `fwidth`, sonst Moiré), Fahrgassen, Feldwege; Attribut `fld` = wie sehr hier Feld ist.
+- **Landschaft** (`buildLandscape`, nach dem Straßenrand): Heuballen nach der Ernte, Kiesbänke an der Donau, Bootsstege, Angler,
+  Wegkreuze und Aussichtsbänke aus `pois`, Strommasten mit durchhängenden Leitungen (meiden Orte), Windräder auf Anhöhen
+  (`LAND.rotors`, `stepLand`).
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
