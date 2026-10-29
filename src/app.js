@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -44,8 +44,8 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(o.sex==='w'||o.sex==='m')S.sex=o.sex;if(['auto','fruehling','sommer','herbst','winter','schnee'].includes(o.season))S.season=o.season;if(o.prof)S.prof=1;
   try{const pr=JSON.parse(localStorage.getItem('kalea_net')||'{}');if(pr.col!==undefined)S.netCol=pr.col;}catch(e){} // Trikotfarbe (auch online)
   if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.gearReal==='boolean')S.gearReal=o.gearReal;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -3307,18 +3307,22 @@ function rebuildGears(keepRatio){
     GEAR_COMBO=GEARS.map(g=>{let best=seq[0],bd=1e9;for(const x of seq){const d=Math.abs(Math.log(x.ratio/g));if(d<bd){bd=d;best=x;}}return best||nearestCombo(g);});}
   let bi=0,bd=1e9;GEARS.forEach((g,i)=>{const d=Math.abs(Math.log(g/cur));if(d<bd){bd=d;bi=i;}});S.gear=bi;
   const {rings,cogs}=bikeSetup();
-  $('ringsViz').innerHTML=rings.map(r=>`<i data-r="${r}">${r}</i>`).join('');
-  const maxT=Math.max(...cogs);$('casViz').innerHTML=cogs.map(c=>`<i data-c="${c}" style="height:${Math.round(28+72*c/maxT)}%"></i>`).join('');
+  // Grafik von hinten gesehen: Höhe nach Zähnen, kleines Blatt innen (links), große Ritzel innen (links)
+  const maxT=Math.max(...cogs),top=Math.max(maxT,...rings);
+  $('ringsViz').innerHTML=rings.map(r=>`<i data-r="${r}" style="height:${Math.round(100*r/top)}%"></i>`).join('');
+  $('casViz').innerHTML=cogs.map(c=>`<i data-c="${c}" style="height:${Math.round(Math.max(16,100*c/top))}%"></i>`).join('');
   const n=cogs.length;$('vCas').textContent=n+'-fach · '+Math.min(...cogs)+'–'+maxT+' Zähne'+(n<5?' – bitte alle Ritzel einzeln eingeben':'')+
     (S.gearMode==='bike'?' · ergibt '+GEARS.length+' virtuelle Gänge':'');
   updateGear();}
 function updateGear(){
-  if(!S.vshift&&!S.sim){updateRealGear(performance.now(),true);return;}
+  const virt=S.vshift||S.sim;$('gearBox').classList.toggle('virt',virt);$('gearViz').classList.toggle('hidden',virt&&!S.gearReal);
+  if(!virt){$('gearViz').title='';updateRealGear(performance.now(),true);return;}
   const ratio=GEARS[S.gear],cb=GEAR_COMBO[S.gear];
   $('gearNum').textContent=S.gear+1;
   $('gearRatio').textContent='Übersetzung '+ratio.toFixed(2)+' · Entfaltung '+(ratio*PHYS.circ).toFixed(1)+' m';
   if(cb){const {cogs}=bikeSetup(),approx=S.gearMode!=='bike'&&Math.abs(cb.ratio/ratio-1)>0.015;
     $('realGear').innerHTML=`${approx?'≈ ':''}${cb.r} × ${cb.c}<small>Blatt ${cb.ri+1} · Ritzel ${cogs.length-cb.ci}/${cogs.length}${cb.cross?' · Kreuzgang':''}</small>`;
+    $('gearViz').title=`entspricht ${approx?'etwa ':''}${cb.r} × ${cb.c}`;
     for(const e of $('ringsViz').children)e.className=+e.dataset.r===cb.r?'a':'';
     for(const e of $('casViz').children){const c=+e.dataset.c;e.className=c===cb.c?'a':'';}}}
 
@@ -4074,6 +4078,7 @@ function wireUi(){
   $('iErg').onchange=()=>{S.erg=$('iErg').checked;updateErgUi();sendResistance(true);};
   $('bWo').onclick=()=>{W.ergOn=$('iWoErg').checked;startWorkout($('iWo').value);if(!S.started)startRide(!T.dev);else closeMenu();};
   $('woStop').onclick=stopWorkout;$('woSkip').onclick=skipWorkoutSeg;$('bJump').onclick=()=>jumpTo(START_AT);
+  $('iGearReal').checked=S.gearReal;$('iGearReal').onchange=()=>{S.gearReal=$('iGearReal').checked;saveSettings();updateGear();};
   $('iHidePow').checked=S.hidePow;$('iHidePow').onchange=()=>{S.hidePow=$('iHidePow').checked;saveSettings();applyHidePow();};applyHidePow();
   $('ergPlus').onclick=()=>ergNudge(1);$('ergMinus').onclick=()=>ergNudge(-1);
   $('ergToggle').onclick=()=>{if(W.active&&!W.done)W.ergOn=!W.ergOn;else{S.erg=!S.erg;$('iErg').checked=S.erg;}updateErgUi();sendResistance(true);};
