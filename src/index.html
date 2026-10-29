@@ -104,13 +104,15 @@ table.kt small{display:block;color:var(--mut);font-size:11px}
 #gearHint{font-size:12px;font-weight:700;color:#9d20a3;min-height:0;margin-top:3px}
 #realGear{font-size:20px;font-weight:700;margin:2px 0 6px;font-variant-numeric:tabular-nums}
 #realGear small{font-size:11px;font-weight:600;color:var(--mut);display:block;letter-spacing:.3px}
-#ringsViz{display:flex;justify-content:center;gap:5px;margin-bottom:6px}
-#ringsViz i{font-style:normal;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;border:2px solid var(--ink);background:#fff}
-#ringsViz i.a{background:var(--acc);color:#fff}
-#casViz{display:flex;gap:2px;height:36px;align-items:center;margin:0 0 6px}
-#casViz i{flex:1;background:#e6dccb;border:1.5px solid var(--ink);border-radius:3px;transition:background .1s}
-#casViz i.a{background:var(--acc)}
-#casViz i.n{background:#f9c3d0}
+/* echte Entsprechung als dezente Grafik: Kettenblätter und Ritzel von hinten gesehen (groß innen, klein außen) */
+#gearViz{display:flex;justify-content:center;align-items:center;gap:8px;height:24px;margin:3px 2px 8px;opacity:.85}
+#ringsViz,#casViz{display:flex;align-items:center;gap:2px;height:100%}
+#ringsViz i,#casViz i{display:block;width:5px;border-radius:3px;background:rgba(30,15,58,.15);transition:background .12s}
+#casViz i{width:4px}
+#ringsViz i.a,#casViz i.a{background:var(--acc)}
+/* virtuelles Schalten: nur der virtuelle Gang, groß */
+#gearBox.virt #realGear,#gearBox.virt #gearRatio{display:none}
+#gearBox.virt #gearNum{font-size:56px;margin:2px 0 2px}
 .gb{display:flex;gap:8px}.gb button{flex:1;padding:2px 0;font-size:22px}
 #riders{position:absolute;left:16px;top:96px;width:224px;padding:6px 10px;font-size:14px}
 #riders .r{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1.5px dashed #e2d8c6}
@@ -232,7 +234,7 @@ body.realshift .vonly{display:none!important}
 #sndBtn{position:absolute;top:12px;left:182px;pointer-events:auto;font-size:18px;padding:5px 9px}
 #fsBtn svg{display:block}.fs-out,body.fs .fs-in{display:none!important}body.fs .fs-out{display:block!important}
 #hud{inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-@media (max-height:640px){#riders{display:none}#casViz{display:none}#gearRatio{display:none}.ch .logo{display:none}.ch{padding:8px 14px}.sub{display:none}}
+@media (max-height:640px){#riders{display:none}#gearRatio{display:none}.ch .logo{display:none}.ch{padding:8px 14px}.sub{display:none}}
 /* ---------- iPhone & kleine Handys: Hochformat ---------- */
 @media (max-width:520px){
  #hud .top,#grade,#gearBox,#profileWrap,#simBox,#ergBox,#woBox,#komBox,#mapBox{border-width:2px;box-shadow:2px 3px 0 var(--ink);border-radius:12px}
@@ -241,7 +243,8 @@ body.realshift .vonly{display:none!important}
  .m span{font-size:17px}.m.big span{font-size:20px;-webkit-text-stroke:.5px var(--ink)}
  #grade{font-size:18px;padding:2px 6px;min-width:0}#grade small{font-size:9.5px}
  #gearBox{padding:3px 6px 6px}#gearBox label{font-size:9px}#gearNum{font-size:30px}
- #realGear{font-size:14px;margin:0 0 4px}#realGear small,#ringsViz,#casViz,#gearRatio{display:none}
+ #realGear{font-size:14px;margin:0 0 4px}#realGear small,#gearRatio{display:none}#gearBox.virt #gearNum{font-size:36px}
+ #gearViz{height:16px;gap:4px;margin:1px 0 4px}#ringsViz,#casViz{gap:1px}#ringsViz i,#casViz i{width:3px}
  .gb{gap:5px}.gb button{font-size:17px;padding:0;border-width:2px;box-shadow:1px 2px 0 var(--ink)}#gearHint{font-size:10px}
  #ergBox{padding:4px 6px 6px}#ergBox label{font-size:9px}#ergBox .eh b{font-size:10px;padding:0 6px}
  #ergBox .ev{margin:2px 0}#ergBox .ev span{font-size:20px}#ergBox .ev button{width:30px;font-size:15px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
@@ -296,7 +299,8 @@ body.realshift .vonly{display:none!important}
  .m span{font-size:17px}.m.big span{font-size:20px;-webkit-text-stroke:.5px var(--ink)}
  #grade{font-size:18px;padding:2px 6px;min-width:0}#grade small{font-size:9.5px}
  #gearBox{padding:3px 6px 6px}#gearBox label{font-size:9px}#gearNum{font-size:30px}
- #realGear{font-size:14px;margin:0 0 4px}#realGear small,#ringsViz,#casViz,#gearRatio{display:none}
+ #realGear{font-size:14px;margin:0 0 4px}#realGear small,#gearRatio{display:none}#gearBox.virt #gearNum{font-size:36px}
+ #gearViz{height:16px;gap:4px;margin:1px 0 4px}#ringsViz,#casViz{gap:1px}#ringsViz i,#casViz i{width:3px}
  .gb{gap:5px}.gb button{font-size:17px;padding:0;border-width:2px;box-shadow:1px 2px 0 var(--ink)}#gearHint{font-size:10px}
  #ergBox{padding:4px 6px 6px}#ergBox label{font-size:9px}#ergBox .eh b{font-size:10px;padding:0 6px}
  #ergBox .ev{margin:2px 0}#ergBox .ev span{font-size:20px}#ergBox .ev button{width:30px;font-size:15px;border-width:2px;box-shadow:1px 2px 0 var(--ink)}
@@ -373,8 +377,7 @@ body.realshift .vonly{display:none!important}
     <label>Gang</label>
     <div id="gearNum">13</div>
     <div id="realGear">50 × 17</div>
-    <div id="ringsViz"></div>
-    <div id="casViz"></div>
+    <div id="gearViz"><div id="ringsViz"></div><div id="casViz"></div></div>
     <div id="gearRatio">2.61</div>
     <div id="gearHint"></div>
     <div class="gb vonly"><button id="gDown" title="leichter (↓)">−</button><button id="gUp" title="schwerer (↑)">+</button></div>
@@ -510,6 +513,7 @@ body.realshift .vonly{display:none!important}
           <label class="vonly">Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="14"><small id="vTrainGear">Wird einmal beim Fahren mit Trainer gemessen.</small></label>
           <label>Reifen<select id="iTire"><option value="2.096">700×23C (2096 mm)</option><option value="2.105">700×25C (2105 mm)</option><option value="2.136">700×28C (2136 mm)</option><option value="2.146">700×32C (2146 mm)</option><option value="2.200">700×40C Gravel (2200 mm)</option></select><small>Radumfang für Tempo und Gänge</small></label>
         </div>
+        <label class="chk vonly"><input type="checkbox" id="iGearReal" checked> Echten Gang (Kettenblatt und Ritzel) als kleine Grafik unter dem virtuellen Gang zeigen</label>
         <h2>🛣️ Fahrgefühl</h2>
         <div class="grid">
           <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="light">Leichtlauf (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
