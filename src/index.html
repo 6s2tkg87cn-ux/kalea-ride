@@ -62,6 +62,13 @@ details{border:2.5px solid var(--ink);border-radius:14px;padding:8px 12px;margin
 details summary{cursor:pointer;font-weight:600;font-size:15.5px}
 details[open] summary{margin-bottom:6px}
 details p{color:#4a3d5c;font-size:13px}
+/* Menü-Reiter (oben im Menü, immer sichtbar) */
+.mtabs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:8px 14px 9px;background:var(--paper2);border-bottom:3px solid var(--ink)}
+.mtabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 3px 5px;border-radius:12px;font-size:12.5px;line-height:1.15;text-align:center;box-shadow:2px 2px 0 var(--ink)}
+.mtabs button i{font-style:normal;font-size:21px;line-height:1.15}
+.mtabs button.on{background:var(--sun);box-shadow:inset 0 -4px 0 var(--acc),2px 2px 0 var(--ink)}
+#setup .card{height:min(900px,calc(100vh - 24px));height:min(900px,calc(100dvh - 24px))}/* feste Höhe: springt beim Reiterwechsel nicht */
+.mpane>h2:not(:first-child){margin-top:18px;padding-top:12px;border-top:2px dashed rgba(30,15,58,.25)}
 #clickLog{max-height:120px;overflow:auto;background:#f3efe6;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:11.5px;margin:8px 0 0;white-space:pre-wrap}
 #learnState{margin-top:6px;font-size:13px;color:#b06d00}
 .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center}
@@ -255,6 +262,7 @@ body.realshift .vonly{display:none!important}
  #setup,#devDlg,#welDlg,#statsView{padding:6px} .pick2.big{flex-direction:column}
  .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
  .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
+ .mtabs{grid-template-columns:repeat(3,1fr);gap:5px;padding:6px 10px}.mtabs button{flex-direction:row;gap:4px;font-size:12px;padding:4px 5px}.mtabs button i{font-size:16px}
  #setup .cfoot .hint{display:none}
  button.primary{font-size:16px;padding:7px 16px}
  h2{font-size:16px}.world{padding:6px 10px}.world i{font-size:22px}.world small{font-size:11px}
@@ -309,6 +317,7 @@ body.realshift .vonly{display:none!important}
  #setup,#devDlg,#welDlg,#statsView{padding:6px}
  .card,.sv-card{border-radius:16px;box-shadow:3px 4px 0 var(--ink)}
  .ch .logo,.sub{display:none}.card h1{font-size:22px}.ch{padding:8px 12px}.cbody{padding:8px 12px}.cfoot{padding:8px 12px;gap:8px}
+ .mtabs{gap:5px;padding:5px 12px}.mtabs button{flex-direction:row;gap:4px;font-size:11.5px;padding:3px 4px}.mtabs button i{font-size:15px}
  #setup .cfoot .hint{display:none}
  button.primary{font-size:16px;padding:7px 16px}
  h2{font-size:16px}.world{padding:6px 10px}.world i{font-size:22px}.world small{font-size:11px}
@@ -412,55 +421,134 @@ body.realshift .vonly{display:none!important}
     <header class="ch"><div class="logo">🔌</div><div><h1>Geräte <span>verbinden</span></h1><p class="sub">Trainer, Schaltung und Sensoren – sie bleiben verbunden, auch wenn du Welt oder Strecke wechselst.</p></div></header>
     <div class="cbody"><div id="devSlot"></div></div>
     <footer class="cfoot"><button id="devGo" class="primary">Weiter</button><button id="devSim">Ohne Trainer testen</button>
-      <p class="hint">Geräte nicht gleichzeitig mit einer anderen Trainings-App verbinden. Später geht's auch im Menü unter „Geräte“.</p></footer>
+      <p class="hint">Geräte nicht gleichzeitig mit einer anderen Trainings-App verbinden. Später auch im Menü unter „🚴 Fahrt“.</p></footer>
   </div>
 </div>
 <div id="setup" class="hidden">
   <div class="card">
     <header class="ch"><div class="logo">🚴</div><div><h1 id="title">Kalea <span>Ride</span></h1><p class="sub">Indoor-Radfahren mit Smart-Trainer und virtuellem Schalten</p></div></header>
+    <nav id="mTabs" class="mtabs">
+      <button data-tab="fahrt" class="on"><i>🚴</i>Fahrt</button><button data-tab="grafik"><i>🎨</i>Grafik &amp; Welt</button><button data-tab="rad"><i>🚲</i>Rad &amp; Gänge</button><button data-tab="training"><i>🏋️</i>Training</button><button data-tab="mit"><i>👥</i>Mitfahrer</button><button data-tab="fahrten"><i>📒</i>Meine Fahrten</button>
+    </nav>
     <div class="cbody">
+      <div class="mpane" data-pane="fahrt">
       <section>
-        <h2><b>1</b> Welt &amp; Route</h2>
-        <div class="worlds">
-          <button class="world" data-world="ulm"><i>⛪</i><span>Ulm<small>Echte Straßen, Münster, Donau &amp; vier Hausberge</small></span></button>
-          <button class="world" data-world="kalea"><i>🌋</i><span>Kalea<small>Vulkaninsel mit Palmen, Strand &amp; Krater</small></span></button>
-        </div>
-        <div id="routeList" class="routes"></div>
+          <h2><b>1</b> Welt &amp; Route</h2>
+          <div class="worlds">
+            <button class="world" data-world="ulm"><i>⛪</i><span>Ulm<small>Echte Straßen, Münster, Donau &amp; vier Hausberge</small></span></button>
+            <button class="world" data-world="kalea"><i>🌋</i><span>Kalea<small>Vulkaninsel mit Palmen, Strand &amp; Krater</small></span></button>
+          </div>
+          <div id="routeList" class="routes"></div>
+          <div class="grid">
+            <label>Richtung<select id="iDir"><option value="0">Normal</option><option value="1">Umgedreht (andersherum fahren)</option></select><small>Start/Ziel bleibt gleich, baut die Strecke neu</small></label>
+            <label>Einstieg<select id="iStartAt"></select><small id="vStartAt">gilt beim Losfahren</small><button id="bJump" class="hidden">Jetzt dorthin</button></label>
+          </div>
+          <div id="osmBox" class="osmbox"><div><b>🏠 Echte Häuser aus OpenStreetMap</b> <span id="vOsmBadge" class="obadge">aus</span><small id="vOsm"></small></div><button id="bOsm">Echte Häuser laden</button><button id="bOsmDel" class="hidden">Löschen</button></div>
+          <p class="hint">Ein Wechsel baut die Strecke neu – verbundene Geräte bleiben verbunden. Eine angefangene Fahrt landet in „Meine Fahrten“.</p>
+        <details id="mapDet"><summary>🗺️ Karte der Strecke</summary><canvas id="bigMap"></canvas><p class="hint">Pink: deine Route · Rot: Bergwertungen · Gelbe Punkte: wichtige Wahrzeichen. Im Fahrbetrieb zeigt die Minikarte unten links die Umgebung; tippen oder Taste M schaltet zwischen Umgebung, ganzer Strecke und aus.</p></details>
+      </section>
+      <section>
+          <h2 id="devHome"><b>2</b> Geräte</h2>
+          <div id="devSec">
+          <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
+          <div class="dev"><span class="dot" id="dTrainer"></span><div><b>Smart-Trainer</b> (z. B. KICKR Core, Tacx, Elite, Saris)<small id="sTrainer">Nicht verbunden</small></div><button id="bTrainer">Verbinden</button></div>
+          <p class="hint trhint">Geht mit allen Trainern mit dem Bluetooth-Standard FTMS (fast alle aktuellen), mit Tacx-Trainern über FE-C, mit älteren Wahoo-Trainern und mit Rollen ohne Steuerung, die nur Watt messen.</p>
+          <div id="calibRow" class="dev hidden"><span class="dot" style="visibility:hidden"></span><div><b>Kalibrieren</b> (Ausrollen)<small id="vCalib">Selten nötig – z. B. wenn die Watt deutlich von deinem Powermeter abweichen. Rad vorher ca. 10 min warm fahren.</small></div><button id="bCalib">Starten</button></div>
+          <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Click-Schalter (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
+          <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Click-Schalter</b> (z. B. Zwift Click v2)<small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
+          <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
+          <div class="dev"><span class="dot" id="dHr"></span><div><b>Pulsgurt</b> (optional)<small id="sHr">Nicht verbunden</small></div><button id="bHr">Verbinden</button></div>
+          <div class="dev"><span class="dot" id="dPm"></span><div><b>Powermeter</b> (optional)<small id="sPm">Nicht verbunden – z. B. Pedale oder Kurbel</small></div><button id="bPm">Verbinden</button></div>
+          <label class="chk hidden" id="pmUseRow"><input type="checkbox" id="iPmUse" checked> Watt und Trittfrequenz vom Powermeter nehmen (der Trainer regelt nur den Widerstand)</label>
+          <div class="autodev"><label class="chk"><input type="checkbox" id="iAutoDev" checked> Zuletzt benutzte Geräte beim Start automatisch verbinden</label><small id="vAutoDev"></small><button id="bForgetDev" class="hidden">Gemerkte Geräte vergessen</button></div>
+          </div>
+      </section>
+      </div>
+      <div class="mpane hidden" data-pane="grafik">
+        <h2>🎨 Grafik</h2>
         <div class="grid">
-          <label>Richtung<select id="iDir"><option value="0">Normal</option><option value="1">Umgedreht (andersherum fahren)</option></select><small>Start/Ziel bleibt gleich, baut die Strecke neu</small></label>
-          <label>Einstieg<select id="iStartAt"></select><small id="vStartAt">gilt beim Losfahren</small><button id="bJump" class="hidden">Jetzt dorthin</button></label>
+          <label class="wide">Grafikqualität<select id="iQual"><option value="high">Hoch – alle Details, Schatten (MacBook, PC)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad / Handy (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
+          <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
+          <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
-        <div id="osmBox" class="osmbox"><div><b>🏠 Echte Häuser aus OpenStreetMap</b> <span id="vOsmBadge" class="obadge">aus</span><small id="vOsm"></small></div><button id="bOsm">Echte Häuser laden</button><button id="bOsmDel" class="hidden">Löschen</button></div>
-        <p class="hint">Ein Wechsel baut die Strecke neu – verbundene Geräte bleiben verbunden. Eine angefangene Fahrt landet in „Frühere Fahrten“.</p>
-      </section>
-      <section>
-        <h2 id="devHome"><b>2</b> Geräte</h2>
-        <div id="devSec">
-        <div id="bleWarn" class="warn hidden"><b>iPad/iPhone:</b> Safari und Chrome auf iOS können kein Bluetooth für Webseiten – öffne die App dort im Browser <b>„Bluefy“</b> (App Store). <br>Sonst: Dieser Browser unterstützt kein Web Bluetooth. Bitte öffne die Datei in <b>Chrome</b> oder <b>Edge</b> (Windows, macOS, Android). Du kannst trotzdem im Simulationsmodus fahren.</div>
-        <div class="dev"><span class="dot" id="dTrainer"></span><div><b>Smart-Trainer</b> (z. B. KICKR Core, Tacx, Elite, Saris)<small id="sTrainer">Nicht verbunden</small></div><button id="bTrainer">Verbinden</button></div>
-        <p class="hint trhint">Geht mit allen Trainern mit dem Bluetooth-Standard FTMS (fast alle aktuellen), mit Tacx-Trainern über FE-C, mit älteren Wahoo-Trainern und mit Rollen ohne Steuerung, die nur Watt messen.</p>
-        <div id="calibRow" class="dev hidden"><span class="dot" style="visibility:hidden"></span><div><b>Kalibrieren</b> (Ausrollen)<small id="vCalib">Selten nötig – z. B. wenn die Watt deutlich von deinem Powermeter abweichen. Rad vorher ca. 10 min warm fahren.</small></div><button id="bCalib">Starten</button></div>
-        <label class="shiftmode">Schalten<select id="iShiftMode"><option value="click">Virtuell mit Click-Schalter (Rad bleibt in einem festen Gang)</option><option value="real">Normale Kassette – ich schalte am Rad</option></select><small id="vShiftMode"></small></label>
-        <div class="dev vonly"><span class="dot" id="dClick"></span><div><b>Click-Schalter</b> (z. B. Zwift Click v2)<small id="sClick">Nicht verbunden</small></div><button id="bClick">Verbinden</button></div>
-        <div class="dev"><span class="dot" id="dCad"></span><div><b>Trittfrequenz-Sensor</b> (optional)<small id="sCad">Nicht verbunden – verbessert das Erkennen von Aufhören/Weitertreten</small></div><button id="bCad">Verbinden</button></div>
-        <div class="dev"><span class="dot" id="dHr"></span><div><b>Pulsgurt</b> (optional)<small id="sHr">Nicht verbunden</small></div><button id="bHr">Verbinden</button></div>
-        <div class="dev"><span class="dot" id="dPm"></span><div><b>Powermeter</b> (optional)<small id="sPm">Nicht verbunden – z. B. Pedale oder Kurbel</small></div><button id="bPm">Verbinden</button></div>
-        <label class="chk hidden" id="pmUseRow"><input type="checkbox" id="iPmUse" checked> Watt und Trittfrequenz vom Powermeter nehmen (der Trainer regelt nur den Widerstand)</label>
-        <div class="autodev"><label class="chk"><input type="checkbox" id="iAutoDev" checked> Zuletzt benutzte Geräte beim Start automatisch verbinden</label><small id="vAutoDev"></small><button id="bForgetDev" class="hidden">Gemerkte Geräte vergessen</button></div>
+        <h2>🌦️ Tageszeit, Wetter &amp; Jahreszeit</h2>
+        <div class="grid">
+          <label>Tageszeit<select id="iTod"><option value="zufall">Zufällig</option><option value="mittag">Mittag</option><option value="morgen">Morgen</option><option value="abend">Abendsonne</option><option value="auto">Wie draußen (nach Uhrzeit)</option></select></label>
+          <label>Wetter<select id="iWx"><option value="zufall">Zufällig (meist schön, wechselt ab und zu)</option><option value="sonnig">Sonnig</option><option value="wolkig">Bewölkt</option><option value="nebel">Dunst &amp; Nebel</option><option value="regen">Regen</option></select><small>nur fürs Auge – kostet kaum Leistung</small></label>
+          <label>Jahreszeit<select id="iSeason"><option value="auto">Wie draußen (nach Datum)</option><option value="fruehling">Frühling (Obstblüte)</option><option value="sommer">Sommer</option><option value="herbst">Herbst (buntes Laub)</option><option value="winter">Winter (kahle Bäume)</option><option value="schnee">Winter mit Schnee</option></select><small>Wechsel baut die Welt neu</small></label>
         </div>
-      </section>
-      <details id="trainDet"><summary>🏋️ Training: ERG-Modus &amp; Workouts</summary>
+        <h2>🐄 Leben am Rand</h2>
+        <label class="chk"><input type="checkbox" id="iLife" checked> Belebte Umgebung: Gegenverkehr, Fußgänger mit Hunden, Menschen auf Plätzen, Tiere, Boote, parkende Autos – und in Ulm die Ulmer Überraschungen</label>
+        <details id="gagDet"><summary>🎭 Ulmer Überraschungen</summary>
+          <div class="grid"><label>Wie oft<select id="iGags"><option value="oft">Oft (etwa alle 3–4 km)</option><option value="manchmal">Manchmal (etwa alle 7 km)</option><option value="selten">Selten (etwa alle 14 km)</option><option value="aus">Aus</option></select><small>nur in Ulm, jede höchstens einmal pro Fahrt</small></label></div>
+          <p class="hint"><b id="gagCount"></b> – wer dir schon begegnet ist, steht hier mit seiner Geschichte.</p>
+          <ul id="gagList" class="gags"></ul>
+          <div class="actions"><button id="bGagNow">🎲 Gleich eine Überraschung</button></div>
+        </details>
+        <h2>🔊 Töne</h2>
+          <div class="grid">
+            <label>Rad (Kette, Freilauf, Schalten)<input id="iSndBike" type="range" min="0" max="100" value="60"><small>eigene Aufnahmen vom echten Rad</small></label>
+            <label>Umgebung (Wind, Vögel, Wasser, Stadt)<input id="iSndAmb" type="range" min="0" max="100" value="50"><small>ganz links = aus</small></label>
+          </div>
+          <p class="hint">Taste T oder 🔊 schaltet alle Töne aus und an. iPhone/iPad: Ist der Stummschalter an der Seite aktiv, bleibt es still. Laufende Musik wird nicht unterbrochen.</p>
+      </div>
+      <div class="mpane hidden" data-pane="rad">
+        <h2>👤 Fahrer</h2>
+        <div class="actions" style="margin-top:4px"><button id="bProfile">👤 Fahrer einrichten</button><span class="hint" style="margin:0">Name, Fahrer/Fahrerin, Trikot, Gewicht, FTP, Schalten</span></div>
+        <div class="grid">
+          <label>Dein Gewicht (kg)<input id="iWeight" type="number" min="30" max="160" value="75"></label>
+        </div>
+        <h2>⚙️ Gänge</h2>
+        <div class="grid">
+          <label>Kettenblätter vorne<input id="iRings" type="text" value="50/34" placeholder="z. B. 50/34 oder 40"></label>
+          <label>Kassette<select id="iCasPreset"></select></label>
+          <label class="wide">Ritzel der Kassette (Zähne, alle einzeln)<input id="iCas" type="text" value="11,12,13,14,15,17,19,21,24,27,30,34"><small id="vCas"></small></label>
+          <label class="vonly">Virtuelle Gänge<select id="iGearMode"><option value="std">Standard (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
+          <label class="vonly">Schaltgefühl<select id="iShiftFeel"><option value="soft">Weich (wie draußen, empfohlen)</option><option value="normal">Mittel</option><option value="direct">Direkt (sofort voller Widerstand)</option></select><small>wie schnell der neue Gang „greift“</small></label>
+          <label class="vonly">Schaltschritt bei Dauerdruck<select id="iRepeat"><option value="0">aus</option><option value="220">normal</option><option value="140">schnell</option></select></label>
+          <label class="vonly">Trainer: Kettenblatt (fester Gang)<input id="iChain" type="number" min="20" max="60" value="34"></label>
+          <label class="vonly">Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="14"><small id="vTrainGear">Wird einmal beim Fahren mit Trainer gemessen.</small></label>
+          <label>Reifen<select id="iTire"><option value="2.096">700×23C (2096 mm)</option><option value="2.105">700×25C (2105 mm)</option><option value="2.136">700×28C (2136 mm)</option><option value="2.146">700×32C (2146 mm)</option><option value="2.200">700×40C Gravel (2200 mm)</option></select><small>Radumfang für Tempo und Gänge</small></label>
+        </div>
+        <h2>🛣️ Fahrgefühl</h2>
+        <div class="grid">
+          <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="light">Leichtlauf (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
+          <label>Steigungsgefühl (Trainer-Schwierigkeit): <b id="vDiff">100 %</b><input id="iDiff" type="range" min="25" max="150" value="100"><small>nur Steigungen/Gefälle, 100 % = wie draußen</small></label>
+          <label>Wellen glätten<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft</option><option value="1">Sehr sanft</option></select><small>kurze Wellen weniger spürbar, mehr Schwung</small></label>
+        </div>
+        <details class="vonly">
+          <summary>🎮 Click-Schalter: Hilfe, Tasten anlernen &amp; Diagnose</summary>
+          <p><b>Click v2</b> besteht aus zwei Hälften mit je fünf Tasten, die im Auswahlfenster beide gleich heißen. Verbinde sie nacheinander. Standard: + (rechts) schwerer, − (links) leichter; rechts zusätzlich <b>Y schwerer</b> und <b>B leichter</b> – so geht Schalten auch nur mit der rechten Hälfte.</p>
+          <p><b>Tasten belegen:</b> „Taste anlernen“ tippen, die Taste am Click drücken und dann in der Liste wählen, was sie tun soll.</p>
+          <div id="keyTable"></div>
+          <button id="lMap">Taste anlernen</button> <button id="lReset">Standardbelegung</button>
+          <label class="chk"><input type="checkbox" id="iClickRefresh" checked> Linke Hälfte wach halten (verbindet sie alle 45 s kurz neu)</label>
+          <p class="hint">Bekanntes Verhalten des Click v2: Die linke Hälfte sendet nach etwa einer Minute keine Tasten mehr, wenn sie nicht vorher in der Hersteller-App „entsperrt“ wurde – die rechte läuft weiter. Das kurze Neuverbinden setzt das zurück (währenddessen geht etwa 1 s lang kein Tastendruck links durch). Klappt es trotzdem nicht: Click einmal kurz in der Hersteller-App koppeln, diese ganz schließen (hält ca. einen Tag) – oder alles auf die rechte Hälfte legen. Der Click darf nicht gleichzeitig mit einer anderen App verbunden sein.</p>
+          <div id="learnState"></div>
+          <pre id="clickLog">Noch keine Daten vom Click.</pre>
+        </details>
+      </div>
+      <div class="mpane hidden" data-pane="training">
+        <h2>🏋️ Training: ERG-Modus &amp; Workouts</h2>
         <div class="grid">
           <label>Deine FTP (W)<input id="iFtp" type="number" min="80" max="600" value="250"><small id="vFtpEst"></small></label>
-          <label>FTP automatisch erkennen<select id="iFtpAuto"><option value="ask">Nach der Fahrt nachfragen</option><option value="auto">Automatisch übernehmen</option><option value="off">Aus</option></select><small>nur nach oben – wie Garmin und Zwift</small></label>
+          <label>FTP automatisch erkennen<select id="iFtpAuto"><option value="ask">Nach der Fahrt nachfragen</option><option value="auto">Automatisch übernehmen</option><option value="off">Aus</option></select><small>nur nach oben – wie bei Garmin</small></label>
           <label>ERG-Zielleistung (W)<input id="iErgW" type="number" min="50" max="1200" step="5" value="200"></label>
         </div>
         <label class="chk"><input type="checkbox" id="iErg"> ERG-Modus beim freien Fahren (Trainer hält die Wattzahl, Gänge egal)</label>
         <div class="grid"><label class="wide">Workout<select id="iWo"></select><small id="vWo"></small></label></div>
         <canvas id="woPreview" style="width:100%;height:48px;display:block;border-radius:8px;background:#f3efe6;border:2px solid #1e0f3a"></canvas>
         <div class="actions"><button id="bWo">Workout starten</button><label class="chk" style="margin:0"><input type="checkbox" id="iWoErg" checked> im ERG fahren</label></div>
-      </details>
-      <details id="netDet"><summary>🌐 Online fahren – mit Freunden</summary>
+        <label class="chk"><input type="checkbox" id="iHidePow"> Ohne Wattanzeige fahren – Leistung im Bild ausblenden (Taste P); Workouts zeigen nur das Ziel</label>
+      </div>
+      <div class="mpane hidden" data-pane="mit">
+        <h2>🤖 Computerfahrer</h2>
+        <div class="grid">
+            <label>Mitfahrer<select id="iBotMode"><option value="me">Fahren mit mir (passen sich an)</option><option value="solo">Ohne Gruppe (nur andere Fahrer auf der Strecke)</option><option value="fixed">Feste Stärke</option><option value="off">aus</option></select><small>Eine Gruppe fährt mit dir, einige sind langsamer, ab und zu überholt dich jemand</small></label>
+            <label>Stärke der Gruppe (W/kg)<input id="iBotWkg" type="number" min="1" max="6" step="0.1" value="2.5"><small>nur bei „Feste Stärke“ – zum Dranbleiben üben</small></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="iGhost" checked> 👻 Geist: gegen deine Bestzeit fahren (an jeder Bergwertung und in der Runde; frühere Fahrten startest du unter „Meine Fahrten“)</label>
+        <h2 id="netHome">🌐 Online fahren – mit Freunden</h2>
         <div class="grid"><label>Dein Name<input id="iNetName" type="text" maxlength="16" placeholder="z. B. Felix"></label><label>Trikotfarbe<span id="netCols" class="cols"></span></label>
           <label>Art<select id="iNetMode"><option value="race">Rennen</option><option value="group">Gruppenfahrt</option></select></label>
           <label>Runden (Rennen)<select id="iNetLaps"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label></div>
@@ -472,74 +560,16 @@ body.realshift .vonly{display:none!important}
           <div class="actions"><button id="netSwitch" class="hidden"></button><button id="netStart" class="hidden"></button><button id="netLeave">Raum verlassen</button></div></div>
         <p id="netState" class="netstate">Offline</p>
         <p class="hint">So geht's: Einer erstellt einen Raum und schickt den Code an die anderen. Alle treten mit dem Code bei – wer auf einer anderen Route ist, wird zum Wechseln aufgefordert. Der Gastgeber startet mit 10-Sekunden-Countdown. Gummiband (nur Gruppenfahrt): Wer zurückfällt, kommt etwas schneller voran, wer vorne wegfährt, etwas langsamer – Watt und Widerstand bleiben echt, Bestzeiten zählen dann aber nicht. Name, Position und Watt laufen über einen öffentlichen Online-Server; trag nichts Privates ein.</p>
-      </details>
-      <details id="mapDet"><summary>🗺️ Karte der Strecke</summary><canvas id="bigMap"></canvas><p class="hint">Pink: deine Route · Rot: Bergwertungen · Gelbe Punkte: wichtige Wahrzeichen. Im Fahrbetrieb zeigt die Minikarte unten links die Umgebung; tippen oder Taste M schaltet zwischen Umgebung, ganzer Strecke und aus.</p></details>
-      <details id="komDet"><summary>⛰️ Bergwertungen &amp; Bestzeiten</summary>
-        <div id="komTable"></div>
-        <div class="actions"><button id="bKomReset">Bestzeiten dieser Welt löschen</button></div>
-      </details>
-      <details id="ridesDet"><summary>📒 Meine Fahrten</summary>
+      </div>
+      <div class="mpane hidden" data-pane="fahrten">
+        <h2>📒 Meine Fahrten</h2>
         <div id="ridesList"></div>
         <div class="actions"><button id="bBackup">💾 Sicherung speichern</button><button id="bRestore">📥 Sicherung laden</button><input type="file" id="iRestore" accept=".json,application/json" hidden></div>
         <p class="hint">Die Fahrten liegen nur in diesem Browser auf diesem Gerät. Mit der Sicherung (eine Datei) nimmst du sie samt Bestzeiten auf ein anderes Gerät mit oder bewahrst sie auf.</p>
-      </details>
-      <details><summary>🚲 Rad, Gänge &amp; Fahrgefühl</summary>
-        <div class="actions" style="margin-top:4px"><button id="bProfile">👤 Fahrer einrichten</button><span class="hint" style="margin:0">Name, Fahrer/Fahrerin, Trikot, Gewicht, FTP, Schalten</span></div>
-        <div class="grid">
-          <label>Dein Gewicht (kg)<input id="iWeight" type="number" min="30" max="160" value="75"></label>
-          <label>Steigungsgefühl (Trainer-Schwierigkeit): <b id="vDiff">100 %</b><input id="iDiff" type="range" min="25" max="150" value="100"><small>nur Steigungen/Gefälle, 100 % = wie draußen</small></label>
-          <label>Kettenblätter vorne<input id="iRings" type="text" value="50/34" placeholder="z. B. 50/34 oder 40"></label>
-          <label>Kassette<select id="iCasPreset"></select></label>
-          <label class="wide">Ritzel der Kassette (Zähne, alle einzeln)<input id="iCas" type="text" value="11,12,13,14,15,17,19,21,24,27,30,34"><small id="vCas"></small></label>
-          <label class="vonly">Virtuelle Gänge<select id="iGearMode"><option value="std">Standard (24 Gänge)</option><option value="bike">Wie mein Rad (echte Abstufung)</option></select></label>
-          <label class="wide">Fahrgefühl<select id="iFeel"><option value="real">Realistisch (abgestimmt auf echte Fahrten, bremst vor Kurven)</option><option value="std">Standard (ohne Kurvenbremsen)</option><option value="light">Leichtlauf (rollt leichter, schnellere Abfahrten)</option></select><small>beeinflusst Tempo und Widerstand am Trainer</small></label>
-          <label class="vonly">Schaltgefühl<select id="iShiftFeel"><option value="soft">Weich (wie draußen, empfohlen)</option><option value="normal">Mittel</option><option value="direct">Direkt (sofort voller Widerstand)</option></select><small>wie schnell der neue Gang „greift“</small></label>
-          <label class="vonly">Schaltschritt bei Dauerdruck<select id="iRepeat"><option value="0">aus</option><option value="220">normal</option><option value="140">schnell</option></select></label>
-          <label class="vonly">Trainer: Kettenblatt (fester Gang)<input id="iChain" type="number" min="20" max="60" value="34"></label>
-          <label class="vonly">Trainer: Ritzel (fester Gang)<input id="iCog" type="number" min="10" max="36" value="14"><small id="vTrainGear">Wird einmal beim Fahren mit Trainer gemessen.</small></label>
-          <label>Reifen<select id="iTire"><option value="2.096">700×23C (2096 mm)</option><option value="2.105">700×25C (2105 mm)</option><option value="2.136">700×28C (2136 mm)</option><option value="2.146">700×32C (2146 mm)</option><option value="2.200">700×40C Gravel (2200 mm)</option></select><small>Radumfang für Tempo und Gänge</small></label>
-          <label>Fahrgefühl<select id="iSmooth"><option value="0">Realistisch (jede Welle spürbar)</option><option value="0.6">Sanft</option><option value="1">Sehr sanft</option></select><small>glättet kurze Wellen, mehr Schwung</small></label>
-          <label>Grafikqualität<select id="iQual"><option value="high">Hoch – alle Details, Schatten (MacBook, PC)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad / Handy (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
-          <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
-          <label>Tageszeit<select id="iTod"><option value="zufall">Zufällig</option><option value="mittag">Mittag</option><option value="morgen">Morgen</option><option value="abend">Abendsonne</option><option value="auto">Wie draußen (nach Uhrzeit)</option></select></label>
-          <label>Wetter<select id="iWx"><option value="zufall">Zufällig (meist schön, wechselt ab und zu)</option><option value="sonnig">Sonnig</option><option value="wolkig">Bewölkt</option><option value="nebel">Dunst &amp; Nebel</option><option value="regen">Regen</option></select><small>nur fürs Auge – kostet kaum Leistung</small></label>
-          <label>Jahreszeit<select id="iSeason"><option value="auto">Wie draußen (nach Datum)</option><option value="fruehling">Frühling (Obstblüte)</option><option value="sommer">Sommer</option><option value="herbst">Herbst (buntes Laub)</option><option value="winter">Winter (kahle Bäume)</option><option value="schnee">Winter mit Schnee</option></select><small>Wechsel baut die Welt neu</small></label>
-          <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
-        </div>
-        <label class="chk"><input type="checkbox" id="iHidePow"> Ohne Wattanzeige fahren – Leistung im Bild ausblenden (Taste P); Workouts zeigen nur das Ziel</label>
-      </details>
-      <details><summary>👥 Mitfahrer &amp; Leben</summary>
-        <div class="grid">
-          <label>Mitfahrer<select id="iBotMode"><option value="me">Fahren mit mir (passen sich an)</option><option value="solo">Ohne Gruppe (nur andere Fahrer auf der Strecke)</option><option value="fixed">Feste Stärke</option><option value="off">aus</option></select><small>Eine Gruppe fährt mit dir, einige sind langsamer, ab und zu überholt dich jemand</small></label>
-          <label>Stärke der Gruppe (W/kg)<input id="iBotWkg" type="number" min="1" max="6" step="0.1" value="2.5"><small>nur bei „Feste Stärke“ – zum Dranbleiben üben</small></label>
-        </div>
-        <label class="chk"><input type="checkbox" id="iGhost" checked> 👻 Geist: gegen deine Bestzeit fahren (an jeder Bergwertung und in der Runde; frühere Fahrten startest du unter „Meine Fahrten“)</label>
-        <label class="chk"><input type="checkbox" id="iLife" checked> Belebte Umgebung: Gegenverkehr, Fußgänger mit Hunden, Menschen auf Plätzen, Tiere, Boote, parkende Autos – und in Ulm die Ulmer Überraschungen</label>
-      </details>
-      <details id="gagDet"><summary>🎭 Ulmer Überraschungen</summary>
-        <div class="grid"><label>Wie oft<select id="iGags"><option value="oft">Oft (etwa alle 3–4 km)</option><option value="manchmal">Manchmal (etwa alle 7 km)</option><option value="selten">Selten (etwa alle 14 km)</option><option value="aus">Aus</option></select><small>nur in Ulm, jede höchstens einmal pro Fahrt</small></label></div>
-        <p class="hint"><b id="gagCount"></b> – wer dir schon begegnet ist, steht hier mit seiner Geschichte.</p>
-        <ul id="gagList" class="gags"></ul>
-        <div class="actions"><button id="bGagNow">🎲 Gleich eine Überraschung</button></div>
-      </details>
-      <details><summary>🔊 Töne</summary>
-        <div class="grid">
-          <label>Rad (Kette, Freilauf, Schalten)<input id="iSndBike" type="range" min="0" max="100" value="60"><small>eigene Aufnahmen vom echten Rad</small></label>
-          <label>Umgebung (Wind, Vögel, Wasser, Stadt)<input id="iSndAmb" type="range" min="0" max="100" value="50"><small>ganz links = aus</small></label>
-        </div>
-        <p class="hint">Taste T oder 🔊 schaltet alle Töne aus und an. iPhone/iPad: Ist der Stummschalter an der Seite aktiv, bleibt es still. Laufende Musik wird nicht unterbrochen.</p>
-      </details>
-      <details class="vonly">
-        <summary>🎮 Click-Schalter: Hilfe, Tasten anlernen &amp; Diagnose</summary>
-        <p><b>Click v2</b> besteht aus zwei Hälften mit je fünf Tasten, die im Auswahlfenster beide gleich heißen. Verbinde sie nacheinander. Standard: + (rechts) schwerer, − (links) leichter; rechts zusätzlich <b>Y schwerer</b> und <b>B leichter</b> – so geht Schalten auch nur mit der rechten Hälfte.</p>
-        <p><b>Tasten belegen:</b> „Taste anlernen“ tippen, die Taste am Click drücken und dann in der Liste wählen, was sie tun soll.</p>
-        <div id="keyTable"></div>
-        <button id="lMap">Taste anlernen</button> <button id="lReset">Standardbelegung</button>
-        <label class="chk"><input type="checkbox" id="iClickRefresh" checked> Linke Hälfte wach halten (verbindet sie alle 45 s kurz neu)</label>
-        <p class="hint">Bekanntes Verhalten des Click v2: Die linke Hälfte sendet nach etwa einer Minute keine Tasten mehr, wenn sie nicht vorher in der Hersteller-App „entsperrt“ wurde – die rechte läuft weiter. Das kurze Neuverbinden setzt das zurück (währenddessen geht etwa 1 s lang kein Tastendruck links durch). Klappt es trotzdem nicht: Click einmal kurz in der Hersteller-App koppeln, diese ganz schließen (hält ca. einen Tag) – oder alles auf die rechte Hälfte legen. Der Click darf nicht gleichzeitig mit einer anderen App verbunden sein.</p>
-        <div id="learnState"></div>
-        <pre id="clickLog">Noch keine Daten vom Click.</pre>
-      </details>
+        <h2>⛰️ Bergwertungen &amp; Bestzeiten</h2>
+        <div id="komTable"></div>
+        <div class="actions"><button id="bKomReset">Bestzeiten dieser Welt löschen</button></div>
+      </div>
     </div>
     <footer class="cfoot">
       <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button><button id="bFs" title="Vollbild (F)">Vollbild</button>
