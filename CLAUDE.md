@@ -64,6 +64,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   (`ftpGuess` 2,4/2,1 W/kg) und stellt `S.ftpAuto='auto'`; Schalten virtuell oder Kassette (`S.vshift`). Spieler-Figur immer
   über `makePlayer` (Farbe/Figur aus dem Profil, auch nach Weltwechsel).
 - **Geräte-Fenster** beim Start (`openDevices`/`closeDevices` verschieben `#devSec` zwischen Fenster und Menü).
+- **Menü** (`#setup`) mit Reitern (`#mTabs`, `menuTab(t)`, Bereiche `.mpane[data-pane]`): `fahrt` (Welt & Route, Karte, Geräte),
+  `grafik` (Grafikqualität, Bildrate, Zeichenstil, Tageszeit/Wetter/Jahreszeit, Leben, Ulmer Überraschungen, Töne), `rad` (Fahrer einrichten,
+  Gewicht, Gänge, Fahrgefühl, Click-Hilfe), `training` (FTP, ERG, Workouts, ohne Wattanzeige), `mit` (Computerfahrer, Geist, Online),
+  `fahrten` (Meine Fahrten, Bestzeiten). Neue Einstellungen in den passenden Reiter. Versteckte Canvas haben keine Größe → in `menuTab`
+  neu zeichnen (Routenprofile, Karte, Workout-Vorschau). Hinweistexte nennen den Reiter („Menü → 🚲 Rad & Gänge …“).
 - **Welt-/Routenwechsel ohne Neuladen** (`rebuildWorld` → `clearWorld` + `buildWorld`), damit Bluetooth verbunden
   bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
 - **Töne** (`SND`, `sndStep`, `sndShift`): Schalt-/Ketten-/Freilaufgeräusche aus Felix' Aufnahmen in
@@ -168,7 +173,9 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
   Wiegetritt (steil + kräftig oder Sprint), Unterlenker (schnelle Abfahrt ohne Treten); `placeRider(o,d,lat,v,dir)`
-  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`.
+  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`. **Wiegetritt:** das Rad wiegt (±0,13 rad) unter dem fast ruhigen
+  Oberkörper (Haltung aufrecht gerechnet, dann mit `toB` ins Rad-System gedreht, Kopf gegengedreht); Hüfte nur so hoch, dass kein Bein
+  überstreckt (0,965 × Beinlänge), Oberkörper so weit vor, bis die Hände die Griffe erreichen.
 - **Gelände Ulm** (`buildTerrainUlm`): grobes Netz (24–48 m), entlang der Strecke feine Zellen (6–8 m, `TERR.FINE`),
   Ränder zu groben Zellen linear (keine Risse). Unter der Fahrbahn eine Mulde, daneben max. 35 % Anstieg; die Straße hat
   seitliche Blenden. Exakte Netzhöhe: `terrH(x,z)` (`groundH` nutzt sie abseits der Strecke).

@@ -235,7 +235,7 @@ function perfTick(now){PERF.frames++;if(!PERF.t0){PERF.t0=now;return;}const el=n
   if(!S.started||S.paused)return;const min=S.quality==='high'?0.7:0.5;let ns=PERF.scale;
   // läuft es trotz kleinerer Auflösung längere Zeit ruckelig, einmal pro Sitzung eine niedrigere Grafikstufe vorschlagen
   if(PERF.fps<Math.min(28,(S.fps||60)*0.75)&&PERF.scale<=min+0.01)PERF.slow+=el/1000;else PERF.slow=Math.max(0,PERF.slow-el/2000);
-  if(PERF.slow>30&&!PERF.hint&&S.quality!=='low'){PERF.hint=true;toast(S.quality==='high'?'🐢 Das Bild ruckelt – im Menü unter Grafik „Mittel“ wählen läuft deutlich flüssiger':'🐢 Das Bild ruckelt – im Menü unter Grafik „Tablet / iPad“ wählen läuft deutlich flüssiger');}
+  if(PERF.slow>30&&!PERF.hint&&S.quality!=='low'){PERF.hint=true;toast(S.quality==='high'?'🐢 Das Bild ruckelt – im Menü unter „🎨 Grafik & Welt“ „Mittel“ wählen, dann läuft es deutlich flüssiger':'🐢 Das Bild ruckelt – im Menü unter „🎨 Grafik & Welt“ „Tablet / iPad“ wählen, dann läuft es deutlich flüssiger');}
   if(PERF.fps<42&&ns>min)ns=Math.max(min,ns-0.1);else if(PERF.fps>56&&ns<1)ns=Math.min(1,ns+0.05);
   if(ns!==PERF.scale){PERF.scale=ns;renderer.setPixelRatio(basePR()*ns);renderer.setSize(innerWidth,innerHeight);}}
 // Weit entfernte Kacheln (Häuser, Bäume) ausblenden
@@ -2091,34 +2091,40 @@ const RX1=new THREE.Vector3(1,0,0),BEND_LEG=new THREE.Vector3(0,0.1,1),BEND_ARM=
 function animRider(o,phase,wheelAng,st){const u=o.userData,b=u.bones,now=performance.now()/1000,dt=Math.min(0.2,u.t?now-u.t:0);u.t=now;
   if(st){const tS=(st.w>8.5||(st.g>0.075&&st.w>3.0&&Math.sin(now*0.11+u.seed*3)>-0.1))&&st.v>1.2?1:0,tT=st.v>12.5&&st.w<1.2&&st.g<-0.02?1:0;
     u.stand+=(tS-u.stand)*Math.min(1,dt*2.2);u.tuck+=(tT-u.tuck)*Math.min(1,dt*1.5);}
-  const S1=u.stand,T1=u.tuck*(1-S1),rock=S1*0.12*Math.sin(phase),sway=S1*0.025*Math.sin(phase);
-  // Rad (ganz) im Wiegetritt seitlich kippen
+  // Wiegetritt: das Rad schwingt unter dem Fahrer (rock), der Körper bleibt fast aufrecht und verlagert sich nur leicht zum
+  // tretenden Bein (sway); gerechnet wird „aufrecht“ und dann in Rad-Koordinaten gedreht (toB), weil alle Knochen am Rad hängen
+  const S1=u.stand,T1=u.tuck*(1-S1),rock=S1*0.13*Math.sin(phase),sway=S1*0.035*Math.sin(phase),cr=Math.cos(rock),sr=Math.sin(rock);
+  const toB=v=>{const x=v.x*cr+v.y*sr,y=-v.x*sr+v.y*cr;v.x=x;v.y=y;return v;};
   _rb.makeRotationZ(rock);
   b[RB.bike].matrix.copy(_rb);
   b[RB.crank].matrix.makeRotationX(-phase).setPosition(RIG.BB).premultiply(_rb);
   b[RB.wR].matrix.makeRotationX(-wheelAng).setPosition(RIG.RA).premultiply(_rb);
   b[RB.wF].matrix.makeRotationX(-wheelAng).setPosition(RIG.FA).premultiply(_rb);
-  // Hüfte und Oberkörper
+  // Pedale/Knöchel (am Rad) zuerst – die Hüfte darf nicht so hoch, dass ein Bein überstreckt
+  const AN=[];for(const s of [1,-1]){const ph=-phase+(s>0?0:Math.PI),pd=new THREE.Vector3(s*0.12,RIG.BB.y+Math.cos(ph)*RIG.crank,Math.sin(ph)*-RIG.crank),pitch=0.15+0.2*Math.sin(ph)-0.08*Math.cos(ph)+0.12*S1;
+    AN.push({s,pd,pitch,ank:new THREE.Vector3(0,0.085,-0.1).applyMatrix4(_rf.makeRotationX(pitch).setPosition(pd))});}
   const bob=0.005*Math.sin(phase*2)*(1-S1);
-  _rh.set(sway,0.985+0.095*S1-0.02*T1+bob,-0.195+0.17*S1+0.02*T1);
-  const th=(38+8*S1-16*T1)*Math.PI/180,roll=-rock*0.7+0.03*Math.sin(phase)*(1-S1);
-  _rs.set(_rh.x,_rh.y+Math.sin(th)*RIG.torso,_rh.z+Math.cos(th)*RIG.torso);
-  _rt.set(Math.cos(roll),Math.sin(roll),0);rBoneTo(b[RB.torso],_rb,_rh,_rs,_rt);
-  const hp=_rp.set(_rs.x,_rs.y+0.13-0.04*T1,_rs.z+0.1+0.02*T1);b[RB.head].matrix.makeRotationX(0.12-0.25*T1+0.15*S1).setPosition(hp).premultiply(_rb);
-  // Arme: Schulter → Hände an den Bremsgriffen (Abfahrt: im Unterlenker)
+  _rh.set(sway,0.985+0.11*S1-0.02*T1+bob,-0.195+0.15*S1+0.02*T1);toB(_rh);
+  {const Lmax=(RIG.thigh+RIG.shin)*0.965;for(const A of AN){const dx=_rh.x+A.s*0.085-A.ank.x,dz=_rh.z-A.ank.z,dy2=Lmax*Lmax-dx*dx-dz*dz;if(dy2>0&&_rh.y-A.ank.y>Math.sqrt(dy2))_rh.y=A.ank.y+Math.sqrt(dy2);}}
+  // Oberkörper: im Stehen flacher; so steil wie möglich, solange die Arme die Griffe noch gebeugt erreichen
+  const hand0=_rk.set(0.205,0.905-0.115*T1,0.6-0.01*T1),armMax=(RIG.ua+RIG.fa)*0.95;let th=(38-6*S1-16*T1)*Math.PI/180;
+  for(let k=0;k<12;k++){const sy=_rh.y+Math.sin(th)*RIG.torso,sz=_rh.z+Math.cos(th)*RIG.torso;if(Math.hypot(0.205-0.17,hand0.y-sy,hand0.z-sz)<=armMax||S1<0.05)break;th-=0.035;}
+  const up=_rq.set(0,Math.sin(th),Math.cos(th));toB(up);_rs.copy(_rh).addScaledVector(up,RIG.torso);
+  {const roll=0.03*Math.sin(phase)*(1-S1)-S1*0.05*Math.sin(phase);_rt.set(Math.cos(roll),Math.sin(roll),0);toB(_rt);}
+  rBoneTo(b[RB.torso],_rb,_rh,_rs,_rt);
+  const hp=_rp.set(0,0.13-0.04*T1,0.1+0.02*T1);toB(hp).add(_rs);b[RB.head].matrix.makeRotationZ(-rock).multiply(_rf.makeRotationX(0.12-0.25*T1+0.12*S1)).setPosition(hp).premultiply(_rb);
+  // Arme: Schulter → Hände an den Bremsgriffen (Abfahrt: im Unterlenker); Ellbogen im Stehen etwas nach außen
   const tm=b[RB.torso].matrix;
   for(const [s,ua,fa] of [[1,RB.uaL,RB.faL],[-1,RB.uaR,RB.faR]]){
     const sh=_ra.set(s*0.17,0.515,0).applyMatrix4(_rf.copy(_rb).invert().multiply(tm));
     const hand=_rk.set(s*0.205,0.905-0.115*T1,0.6-0.01*T1);
-    const el=ikKnee(sh,hand,RIG.ua,RIG.fa,_rt.set(s*0.6,BEND_ARM.y,BEND_ARM.z),new THREE.Vector3());
+    const el=ikKnee(sh,hand,RIG.ua,RIG.fa,_rt.set(s*(0.6+0.5*S1),BEND_ARM.y,BEND_ARM.z),new THREE.Vector3());
     rBoneTo(b[ua],_rb,sh,el,RX1);rBoneTo(b[fa],_rb,el,hand,RX1);}
   // Beine: Pedal → Fuß (Ballen über der Achse, Knöchel dahinter) → Knie per IK
-  for(const [s,th2,sh2,ft] of [[1,RB.thL,RB.shL,RB.ftL],[-1,RB.thR,RB.shR,RB.ftR]]){const ph=-phase+(s>0?0:Math.PI);
-    const pd=_rp.set(s*0.12,RIG.BB.y+Math.cos(ph)*RIG.crank,Math.sin(ph)*-RIG.crank),pitch=0.15+0.2*Math.sin(ph)-0.08*Math.cos(ph);
-    b[ft].matrix.makeRotationX(pitch).setPosition(pd).premultiply(_rb);
-    const ank=_ra.set(0,0.085,-0.1).applyMatrix4(_rf.makeRotationX(pitch).setPosition(pd));
-    const hip=_rh.clone().add(_rt.set(s*0.085,0,0)),kn=ikKnee(hip,ank,RIG.thigh,RIG.shin,BEND_LEG,new THREE.Vector3());
-    rBoneTo(b[th2],_rb,hip,kn,RX1);rBoneTo(b[sh2],_rb,kn,ank,RX1);}
+  for(const A of AN){const s=A.s,[th2,sh2,ft]=s>0?[RB.thL,RB.shL,RB.ftL]:[RB.thR,RB.shR,RB.ftR];
+    b[ft].matrix.makeRotationX(A.pitch).setPosition(A.pd).premultiply(_rb);
+    const hip=_rh.clone().add(_rt.set(s*0.085,0,0)),kn=ikKnee(hip,A.ank,RIG.thigh,RIG.shin,BEND_LEG,new THREE.Vector3());
+    rBoneTo(b[th2],_rb,hip,kn,RX1);rBoneTo(b[sh2],_rb,kn,A.ank,RX1);}
   for(const bn of b)bn.matrixWorldNeedsUpdate=true;}
 // Fahrer auf die Straße setzen; in Kurven legt er sich je nach Tempo hinein (dir=−1: Gegenverkehr)
 // Fahrer ganz nah an der Kamera ausblenden (2–4 m), damit nichts angeschnitten durchs Bild fährt; false = gar nicht zeichnen
@@ -2292,7 +2298,7 @@ function measureTrainerGear(now){
   if(!S.trMeas){const old=trainerRatio();S.trMeas=g.ratio;S.trGear=name;saveSettings();
     if(Math.abs(g.ratio/old-1)>0.01)toast(`Trainer-Gang gemessen: ${g.ring} × ${g.cog} statt ${S.chain} × ${S.cog} – wird ab jetzt fest verwendet`);}
   else if(Math.abs(g.ratio/S.trMeas-1)>0.01&&!TG.warned){TG.warned=true;
-    status(`Hinweis: Am Trainer liegt offenbar ${g.ring} × ${g.cog} auf, gespeichert ist ${S.trGear}. Falls du umgebaut hast: Menü → Rad, Gänge → „Neu messen“.`);}
+    status(`Hinweis: Am Trainer liegt offenbar ${g.ring} × ${g.cog} auf, gespeichert ist ${S.trGear}. Falls du umgebaut hast: Menü → 🚲 Rad & Gänge → „Neu messen“.`);}
   showTrainerGear();}
 function showTrainerGear(){const el=$('vTrainGear');if(!el)return;
   if(!S.trMeas){el.textContent='Wird einmal beim Fahren mit Trainer gemessen (gleichmäßig treten, ab 80 W) und dann fest gespeichert.';return;}
@@ -2551,7 +2557,7 @@ async function rideDelete(id){try{localStorage.setItem('kalea_rides',JSON.string
 // Fenster schließen/App wechseln mitten in der Fahrt: Fahrt trotzdem sichern (wird beim Weiterfahren überschrieben)
 function autosaveRide(){if(!REC.ended&&REC.s.length>=60)saveRideHistory(rideSummary());}
 /* ---- FTP automatisch erkennen ----
-   Wie Garmin und früher Zwift: 95 % der besten 20 min. Dazu wie intervals.icu/heutiges Zwift ein Leistungskurven-Modell:
+   Wie Garmin: 95 % der besten 20 min. Dazu wie intervals.icu ein Leistungskurven-Modell:
    aus den besten Leistungen über 3–20 min (letzte 6 Wochen) Critical Power schätzen (Arbeit = CP·t + W'), FTP ≈ CP –
    nur, wenn die Kurve nach echten harten Anstrengungen aussieht. Fahrten im Testmodus zählen nicht. */
 const MMP_D=[180,300,480,600,900,1200,1800,2700,3600],FTP_DAYS=42;
@@ -2569,7 +2575,7 @@ function estimateFtp(cur){const now=Date.now(),env=MMP_D.map(()=>0),from=MMP_D.m
     // plausibel nur bei echter Ausbelastung: W' 6–30 kJ, 3 min deutlich über CP, Modell passt gut
     if(wp>6000&&wp<30000&&at(180)>1.2*cp&&1-ss/st>0.995&&cp<1.05*at(1200))c.push({w:cp,why:`deiner Leistungskurve 3–20 min (CP ${Math.round(cp)} W)`,date:from[MMP_D.indexOf(180)]});}
   if(!c.length)return null;const b=c.sort((a,b)=>b.w-a.w)[0];return {w:Math.round(b.w),why:b.why,date:b.date};}
-// nach einer Fahrt: neue FTP vorschlagen bzw. übernehmen (nur nach oben, wie Garmin/Zwift)
+// nach einer Fahrt: neue FTP vorschlagen bzw. übernehmen (nur nach oben, wie bei Garmin)
 function checkFtp(R){if(S.ftpAuto==='off')return null;const e=estimateFtp(R);if(!e||e.w<S.ftp+3||e.w<S.ftp*1.01)return null;
   if(S.ftpAuto==='auto'){const old=S.ftp;S.ftp=e.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();return {...e,old,done:true};}
   if(S.ftpNo&&e.w<=S.ftpNo+2)return null; // diesen Wert schon abgelehnt
@@ -2613,7 +2619,7 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   el.classList.remove('hidden');if(!final)S.paused=true;
   $('svClose').onclick=closeStats;if($('svBack'))$('svBack').onclick=()=>{closeStats();};if($('svEnd'))$('svEnd').onclick=endRide;
   if($('svNew'))$('svNew').onclick=newRide;
-  if($('svList'))$('svList').onclick=()=>{closeStats();$('ridesDet').open=true;renderRides();$('ridesDet').scrollIntoView({block:'start'});};
+  if($('svList'))$('svList').onclick=()=>{closeStats();menuTab('fahrten');};
   if($('svGhost'))$('svGhost').onclick=()=>{const same=R.world===WORLD&&R.route===ROUTE.id&&(R.rev||0)===(REV?1:0);
     if(!same){toast('👻 Geht nur auf derselben Route und Richtung – erst „'+R.name+'“ wählen');return;}
     GHOST.ride=R;GHOST.t0=S.started?S.elapsed:null;GHOST.d0=S.dist;if(!S.ghost){S.ghost=true;$('iGhost').checked=true;saveSettings();}
@@ -2880,7 +2886,7 @@ function wireNet(){
   $('netCopy').onclick=()=>{const t=NET.room;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('netCopy').textContent='Kopiert ✓';},()=>{});};
   updateNetUi();
   // nach einem Routenwechsel automatisch wieder in den Raum
-  try{const r=JSON.parse(localStorage.getItem('kalea_net_room')||'null');if(r&&Date.now()-r.ts<30*60*1000){$('iNetCode').value=r.room;$('netDet').open=true;netJoin(r.room,!!r.host);}}catch(e){}
+  try{const r=JSON.parse(localStorage.getItem('kalea_net_room')||'null');if(r&&Date.now()-r.ts<30*60*1000){$('iNetCode').value=r.room;menuTab('mit');netJoin(r.room,!!r.host);}}catch(e){}
   if(player&&player.userData.col!==netCol())makePlayer();}
 function markNetCols(){document.querySelectorAll('#netCols .colchip').forEach(b=>b.classList.toggle('on',+b.dataset.c===S.netCol));}
 
@@ -3242,7 +3248,7 @@ function onClickMsg(pad,dv,src){
     if(Z.mapLearn){Z.mapLearn=false;clearTimeout(Z.learnTimer);const m=keymap();if(!m[bit])m[bit]='none';saveSettings();renderKeymap(bit);
       $('learnState').textContent=keyName(bit)+' erkannt – jetzt in der Liste auswählen, was sie tun soll.';return;}
     const act=keyAction(bit);firstPress(pad);
-    if(act==='none'){status(keyName(bit)+' hat noch keine Funktion – im Menü unter „Click-Schalter“ belegen.');return;}
+    if(act==='none'){status(keyName(bit)+' hat noch keine Funktion – im Menü unter „🚲 Rad & Gänge“ → Click-Schalter belegen.');return;}
     runAction(act,pad);if(act==='up'||act==='down')HOLD.bit=bit;}
 }
 function startMapLearn(){Z.mapLearn=true;$('learnState').textContent='Drück jetzt die Taste am Click, die du belegen willst …';
@@ -3272,7 +3278,7 @@ setInterval(()=>{const now=performance.now();for(const p of Z.pads){if(p.connect
 /* ================= Schalten ================= */
 let flashT=0;
 function shift(d){if(ergActive()){ergNudge(d);if(!shift.ergHint){shift.ergHint=1;status('ERG ist an: Die Schalttasten ändern jetzt die Wattzahl, nicht den Gang. Taste E schaltet ERG aus.');setTimeout(()=>status(''),7000);}return;}
-  if(!S.vshift&&!S.sim){if(!shift.realHint){shift.realHint=1;status('Du fährst mit normaler Kassette – geschaltet wird am Rad. (Umstellen: Menü → Geräte → Schalten)');setTimeout(()=>status(''),7000);}return;}
+  if(!S.vshift&&!S.sim){if(!shift.realHint){shift.realHint=1;status('Du fährst mit normaler Kassette – geschaltet wird am Rad. (Umstellen: Menü → 🚴 Fahrt → Geräte → Schalten)');setTimeout(()=>status(''),7000);}return;}
   const g=clamp(S.gear+d,0,GEARS.length-1);if(g===S.gear)return;sndShift(S.gear,g);S.gear=g;S.shiftT=performance.now();if(d>0)S.upT=S.shiftT;
   sendResistance(true);updateGear();
   const el=$('gearNum');el.classList.add('flash');clearTimeout(flashT);flashT=setTimeout(()=>el.classList.remove('flash'),120);}
@@ -3943,6 +3949,14 @@ function updateFsUi(){const on=fsActive();document.body.classList.toggle('fs',on
   for(const id of ['fsBtn','bFs']){const b=$(id);if(b)b.title=on?'Vollbild beenden (F)':'Vollbild (F)';}
   $('bFs').textContent=on?'Vollbild beenden':'Vollbild';}
 function closeMenu(){$('setup').classList.add('hidden');S.paused=false;}
+// Menü-Reiter: immer nur ein Bereich sichtbar; beim Zeigen neu zeichnen, was versteckt keine Größe hatte
+function menuTab(t){
+  for(const b of document.querySelectorAll('#mTabs button'))b.classList.toggle('on',b.dataset.tab===t);
+  for(const p of document.querySelectorAll('.mpane'))p.classList.toggle('hidden',p.dataset.pane!==t);
+  document.querySelector('#setup .cbody').scrollTop=0;
+  if(t==='fahrten'){renderRides();$('komTable').innerHTML=komTable();}
+  else if(t==='training'){updateFtpUi();$('iWo').onchange();}
+  else if(t==='fahrt'){requestAnimationFrame(drawRouteCards);if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));}}
 function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp(+$('iChain').value||50,20,60);S.cog=clamp(+$('iCog').value||17,10,36);
   S.diff=(+$('iDiff').value)/100;
   S.rings=$('iRings').value;S.cassette=$('iCas').value;S.gearMode=$('iGearMode').value;S.repeat=+$('iRepeat').value;S.smooth=+$('iSmooth').value;applyQuality();rebuildGears();saveSettings();sendResistance(true);}
@@ -4040,8 +4054,8 @@ function wireUi(){
   try{const mm=localStorage.getItem('kalea_map');if(mm)MAP.mode=mm;}catch(e){}applyMapMode();
   $('mapC').onclick=cycleMap;$('mapMode').onclick=cycleMap;
   $('mapDet').addEventListener('toggle',()=>{if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));});
-  $('komTable').innerHTML=komTable();$('komDet').addEventListener('toggle',()=>{$('komTable').innerHTML=komTable();});
-  $('ridesDet').ontoggle=()=>{if($('ridesDet').open)renderRides();};
+  $('komTable').innerHTML=komTable();
+  for(const b of document.querySelectorAll('#mTabs button'))b.onclick=()=>menuTab(b.dataset.tab);
   $('bBackup').onclick=backupRides;$('bRestore').onclick=()=>$('iRestore').click();$('iRestore').onchange=()=>{const f=$('iRestore').files[0];if(f)restoreRides(f);$('iRestore').value='';};
   addEventListener('pagehide',autosaveRide);document.addEventListener('visibilitychange',()=>{if(document.hidden)autosaveRide();});setInterval(()=>{if(S.started&&!S.paused)autosaveRide();},120000);
   $('bKomReset').onclick=()=>{const b=$('bKomReset');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen? Nochmal tippen';setTimeout(()=>{delete b.dataset.arm;b.textContent='Bestzeiten dieser Welt löschen';},4000);return;}delete b.dataset.arm;b.textContent='Bestzeiten dieser Welt löschen';const st=komStore();for(const k in st)if(st[k].world===WORLD)delete st[k];komSave();$('komTable').innerHTML=komTable();};
@@ -4055,7 +4069,7 @@ function wireUi(){
   const prev=()=>{const wo=WORKOUTS.find(w=>w.id===$('iWo').value);$('vWo').textContent=wo.desc;drawWorkoutOn($('woPreview'),wo,null,0);};
   $('iWo').onchange=prev;setTimeout(prev,50);
   $('iFtp').onchange=()=>{S.ftp=clamp(+$('iFtp').value||250,80,600);saveSettings();prev();};
-  $('iFtpAuto').value=S.ftpAuto;$('iFtpAuto').onchange=()=>{S.ftpAuto=$('iFtpAuto').value;saveSettings();};$('trainDet').addEventListener('toggle',updateFtpUi);updateFtpUi();
+  $('iFtpAuto').value=S.ftpAuto;$('iFtpAuto').onchange=()=>{S.ftpAuto=$('iFtpAuto').value;saveSettings();};updateFtpUi();
   $('iErgW').onchange=()=>{S.ergW=clamp(+$('iErgW').value||200,50,1200);saveSettings();updateErgUi();sendResistance(true);};
   $('iErg').onchange=()=>{S.erg=$('iErg').checked;updateErgUi();sendResistance(true);};
   $('bWo').onclick=()=>{W.ergOn=$('iWoErg').checked;startWorkout($('iWo').value);if(!S.started)startRide(!T.dev);else closeMenu();};
@@ -4723,7 +4737,7 @@ async function rebuildWorld(world,route,msg){
 
 // Geräte-Fenster beim Start: derselbe Geräte-Abschnitt wie im Menü, nur vorübergehend in das Fenster verschoben
 function openDevices(){$('devSlot').appendChild($('devSec'));$('setup').classList.add('hidden');$('devDlg').classList.remove('hidden');}
-function closeDevices(){$('devHome').after($('devSec'));$('devDlg').classList.add('hidden');openMenu();}
+function closeDevices(){$('devHome').after($('devSec'));$('devDlg').classList.add('hidden');menuTab('fahrt');openMenu();}
 
 
 /* ================= Willkommen: Fahrer beim ersten Start einrichten =================
@@ -4750,7 +4764,7 @@ function welShow(){document.querySelectorAll('#welDlg .welstep').forEach(e=>e.cl
 function welFinish(){S.sex=WEL.sex;S.mass=clamp(+$('wMass').value||75,30,160);const unk=$('wFtpUnknown').checked;S.ftp=clamp(unk?ftpGuess(S.mass,S.sex):(+$('wFtp').value||ftpGuess(S.mass,S.sex)),60,600);
   if(unk)S.ftpAuto='auto';S.vshift=WEL.shift==='click';S.prof=1;S.netCol=WEL.col;const nm=($('wName').value||'').trim().slice(0,16);$('iNetName').value=nm;
   $('iWeight').value=S.mass;$('iFtp').value=S.ftp;$('iFtpAuto').value=S.ftpAuto;saveSettings();saveNetPrefs();markNetCols();applyShiftMode();makePlayer();sendResistance(true);
-  $('welDlg').classList.add('hidden');toast('👤 Eingerichtet'+(nm?' – hallo '+nm:'')+'! Ändern kannst du alles im Menü unter „Fahrer einrichten“.');
+  $('welDlg').classList.add('hidden');toast('👤 Eingerichtet'+(nm?' – hallo '+nm:'')+'! Ändern kannst du alles im Menü unter „🚲 Rad & Gänge“ → Fahrer einrichten.');
   if(WEL.back==='menu')openMenu();else if(AUTO.state==='done')openMenu();else openDevices();}
 function wireWelcome(){
   $('wSex').querySelectorAll('button').forEach(b=>b.onclick=()=>{WEL.sex=b.dataset.v;welShow();});
