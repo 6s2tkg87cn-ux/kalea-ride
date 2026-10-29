@@ -49,6 +49,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `real` (Standard; Crr 0,005, CdA 0,32, +2 kg, ρ nach Höhe, Kurvenbremsen mit 4,2 m/s² Querbeschleunigung,
   bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `light` „Leichtlauf“ (CdA 0,27). Abgestimmt auf Felix' echte
   Edge-540-Fahrten: flach passt die App genau, Zwift ist 4–10 % schneller, echte Abfahrten 45–53 km/h im Rollen.
+  Antriebskraft `P/max(v, …)` in `advance`: 1,5 m/s, am Berg (> 3 %) 0,7 m/s – sonst bleibt man an steilen Rampen ganz stehen.
 - **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
   `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird **einmal** gemessen
   (`measureTrainerGear`, KICKR rechnet mit 2096 mm), auf ganze Zähne gerundet (`snapGear`) und dann fest gespeichert
@@ -121,6 +122,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   früh/spät, Windschatten, ohne Watt, online) und prüft alle 5 s. Einblenden `badgePop` (nacheinander, nicht mit dem Bergwertungs-Banner),
   neue in der Statistik nach „Fahrt beenden“, Album unter Meine Fahrten (`renderBadges`), in der Sicherung enthalten. Beim ersten Start
   werden bisherige Fahrten still nachgetragen. Testmodus zählt nicht (Überraschungen schon).
+- **Sicherheit Online:** Die MQTT-Broker sind öffentlich, jeder kann alle Räume mitlesen und hineinschreiben. Darum
+  übernehmen `onPeerState`/`onRoomInfo`/`onCtl` nur erwartete Felder mit geprüften Werten (`netTxt` entfernt HTML-Zeichen, `netNum`
+  begrenzt Zahlen, `netId`, `netRouteOk`, höchstens `NET_MAXPEERS` Mitfahrer). Fremde Texte nie ungeprüft in `innerHTML`.
+  Sicherungsdateien laufen beim Laden durch `cleanDeep`. Die nachgeladene MQTT-Bibliothek (nur Online-Fassung) hat eine
+  Prüfsumme (`integrity`) – bei einer anderen mqtt-Version neu berechnen.
 - **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.

@@ -2226,7 +2226,8 @@ function advance(v,P,grade,mass,draft,dt){
   // Im sanften Modus wirkt das Rad beim Treten träger (mehr Schwung, Wellen rollt man durch) – beim Ausrollen nicht,
   // und beim Anfahren erst ab etwa 10 km/h, sonst kommt man kaum vom Fleck
   const inertia=(mass+1.5)*(P>20?1+0.8*S.smooth*sat((v-2.5)/4):1);
-  const a=(P/Math.max(v,1.5)-F)/inertia;return Math.max(0,v+a*dt);}
+  // Antriebskraft P/v, bei kleinem Tempo begrenzt; am steilen Berg tiefer (sonst bleibt man ab ~12 % bei 150 W ganz stehen)
+  const a=(P/Math.max(v,grade>0.03?0.7:1.5)-F)/inertia;return Math.max(0,v+a*dt);}
 function stepPhysics(dt){
   const now=performance.now();
   if(T.dev&&now-T.lastData>3000){S.power=0;S.cadence=0;}
@@ -2661,8 +2662,11 @@ async function backupRides(){const h=rideHistory(),rides=[];for(const e of h)if(
   const data={app:'kalea-ride',v:1,date:Date.now(),list:h,rides,kom:komStore(),laps:lapStore(),badges:badgeStore()};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download=`KaleaRide_Sicherung_${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast('💾 Sicherung mit '+h.length+(h.length===1?' Fahrt':' Fahrten')+' gespeichert');}
+function cleanDeep(o){if(typeof o==='string')return o.replace(/[<>&"'`]/g,'');if(Array.isArray(o))return o.map(cleanDeep);
+  if(o&&typeof o==='object'){const r={};for(const k in o)if(k!=='__proto__'&&k!=='constructor'&&k!=='prototype')r[k]=cleanDeep(o[k]);return r;}return o;}
 async function restoreRides(file){let d;try{d=JSON.parse(await file.text());}catch(e){toast('Datei nicht lesbar');return;}
   if(!d||d.app!=='kalea-ride'||!Array.isArray(d.list)){toast('Das ist keine Kalea-Ride-Sicherung');return;}
+  d=cleanDeep(d); // Texte aus der Datei landen später in der Anzeige – Zeichen für HTML entfernen
   const h=rideHistory(),have=new Set(h.map(e=>e.id||e.date));let n=0;
   for(const e of d.list){if(have.has(e.id||e.date))continue;h.push(e);n++;}
   for(const r of d.rides||[])if(r&&r.id&&r.s)await idbSet('ride_'+r.id,r);
@@ -2771,10 +2775,10 @@ const NET={client:null,room:null,id:null,host:false,info:null,peers:new Map(),st
 const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const NET_COLS=[0xeb567b,0x490cb8,0xe8463c,0x7ad35a,0xb06fe0,0xffd23f,0xff8fb8,0x2e7dd7];
 function netPrefix(){return 'kaleaRide/v1/'+NET.room;}
-function loadMqtt(){return new Promise((res,rej)=>{if(window.mqtt)return res();const sc=document.createElement('script');sc.src='https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js';
+function loadMqtt(){return new Promise((res,rej)=>{if(window.mqtt)return res();const sc=document.createElement('script');sc.src='https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js';sc.integrity='sha384-ZFaJg22VvVm4+3ZqY9eRIHGmqdEQb+c7XO+0IKspqdtPGFu6xRiPnK8xeNA//kQJ';sc.crossOrigin='anonymous';
   sc.onload=()=>res();sc.onerror=()=>rej(new Error('MQTT-Bibliothek nicht ladbar – Internet?'));document.head.appendChild(sc);});}
 function netStatus(t,cls){const e=$('netState');if(e){e.textContent=t;e.className='netstate '+(cls||'');}}
-function netName(){return ($('iNetName').value||'').trim().slice(0,16)||'Fahrer';}
+function netName(){return netTxt(($('iNetName').value||'').trim(),16)||'Fahrer';}
 function netCol(){return S.netCol!==undefined?S.netCol:NET_COLS[0];}
 async function netConnect(){
   await loadMqtt();
@@ -2805,9 +2809,19 @@ function publishRoom(){if(NET.client&&NET.host&&NET.info)NET.client.publish(netP
 function netLeave(){if(!NET.client)return;try{NET.client.publish(netPrefix()+'/s/'+NET.id,JSON.stringify({id:NET.id,left:true}));if(NET.host)NET.client.publish(netPrefix()+'/room','',{retain:true});NET.client.end(false);}catch(e){}
   NET.client=null;NET.state='off';NET.hold=false;NET.rf=1;NET.rg=0;for(const p of NET.peers.values())if(p.obj)scene.remove(p.obj);NET.peers.clear();NET.info=null;
   applyBotVis();try{localStorage.removeItem('kalea_net_room');}catch(e){}netStatus('Offline','');$('netBanner').classList.add('hidden');updateNetUi();}
+// Fremde Nachrichten (öffentlicher Server – jeder kann mitschreiben): nur erwartete Felder mit sauberen Werten übernehmen
+const NET_MAXPEERS=30;
+function netTxt(s,n){return String(s==null?'':s).replace(/[<>&"'`\\]/g,'').slice(0,n);}
+function netNum(x,lo,hi,d){x=+x;return Number.isFinite(x)?clamp(x,lo,hi):d;}
+function netId(x){return typeof x==='string'&&/^[a-z0-9]{1,12}$/.test(x)?x:null;}
+function netRouteOk(w,r){return w==='ulm'?ULM_DATA.routes.some(x=>x.id===r):w==='kalea'&&KALEA_ROUTES.some(x=>x.id===r);}
 function sameTrack(m){return m.w===WORLD&&m.r===ROUTE.id&&(m.rv||0)===(REV?1:0);}
 function sameRoom(I){return I&&I.world===WORLD&&I.route===ROUTE.id&&(I.rev||0)===(REV?1:0);} // gleiche Strecke und Richtung
-function onRoomInfo(m){if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Gastgeber hat den Raum geschlossen.','bad');NET.info=null;NET.hold=false;updateNetUi();}return;}
+function onRoomInfo(m){
+  if(m&&m.host){const w=m.world==='ulm'?'ulm':'kalea',rt=netTxt(m.route,24);if(!netId(m.host)||!netRouteOk(w,rt))return;
+    m={host:m.host,world:w,route:rt,rev:m.rev?1:0,routeName:netTxt(m.routeName,60),mode:m.mode==='race'?'race':'group',laps:Math.round(netNum(m.laps,1,20,1)),
+      rubber:!!m.rubber,state:['lobby','countdown','running','done'].includes(m.state)?m.state:'lobby',v:1};}
+  if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Gastgeber hat den Raum geschlossen.','bad');NET.info=null;NET.hold=false;updateNetUi();}return;}
   NET.info=m;if(m.host===NET.id)NET.host=true;
   const same=sameRoom(m);
   if(!same){netStatus(`Raum ${NET.room} fährt „${m.routeName}“ (${m.world==='ulm'?'Ulm':'Kalea'}) – bitte wechseln.`,'busy');}
@@ -2815,9 +2829,12 @@ function onRoomInfo(m){if(!m||!m.host){if(!NET.host&&NET.info){netStatus('Der Ga
   if(m.mode==='race'&&m.state==='lobby'&&same&&S.started&&!NET.fin){NET.hold=true;holdAtStart();}
   if(m.mode!=='race'||m.state==='done')NET.hold=false;
   updateNetUi();}
-function onCtl(m){if(!m||!m.type)return;
+function onCtl(m){if(!m||!m.type)return;m={type:m.type,secs:netNum(m.secs,1,30,10)};
   if(m.type==='countdown'&&NET.info&&sameTrack({w:NET.info.world,r:NET.info.route})){NET.cd=performance.now()+m.secs*1000;NET.hold=true;holdAtStart();showNetBanner();}}
-function onPeerState(m){if(!m||!m.id||m.id===NET.id)return;
+function onPeerState(m){if(!m||!netId(m.id)||m.id===NET.id)return;
+  if(!m.left){if(!NET.peers.has(m.id)&&NET.peers.size>=NET_MAXPEERS)return;
+    m={id:m.id,n:netTxt(m.n,16),col:Math.round(netNum(m.col,0,0xffffff,0x490cb8)),g:m.g===1?1:0,w:m.w==='ulm'?'ulm':'kalea',r:netTxt(m.r,24),rv:m.rv?1:0,
+      d:netNum(m.d,-1000,1e7,0),v:netNum(m.v,0,40,0),p:Math.round(netNum(m.p,0,3000,0)),wkg:netNum(m.wkg,0,40,0),c:netNum(m.c,0,250,0),lap:Math.round(netNum(m.lap,0,1000,1)),fin:m.fin==null?null:netNum(m.fin,0,1e6,null)};}
   if(m.left){const p=NET.peers.get(m.id);if(p&&p.obj)scene.remove(p.obj);NET.peers.delete(m.id);updateNetUi();return;}
   let p=NET.peers.get(m.id);const now=performance.now();
   if(!p){p={id:m.id,disp:m.d,obj:null,lat:((parseInt(m.id,36)%9)-4)*0.55,phase:0,wheel:0};NET.peers.set(m.id,p);updateNetUi();}
