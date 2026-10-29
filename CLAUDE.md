@@ -220,6 +220,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   (`NIGHT`), `HALO` = Lichthöfe der Laternen (Billboards, ein Zeichenaufruf), `wetRoad` = nasse Straße mit Pfützen (`WET` folgt
   dem Regen: schnell nass, langsam trocken), `MIST` = Bodennebel-Schichten im Tal am Morgen (nur von oben sichtbar, nicht auf
   `low`), Schneefall statt Regen im Schnee-Winter (`RAIN.snow`), Weihnachtsmarkt am Münster im Advent bzw. im Winter (`buildXmas`).
+- **Wahrzeichen-Details:** Rathaus mit bemalter Fassade (`rathausFacadeTex`, Laubengang) und astronomischer Uhr am Ostgiebel
+  (`astroClockTex`), Erker; Metzgerturm mit Tordurchgang und Uhr; Schwörhaus mit Schwörbalkon und Dachreiter; Brücken mit
+  Mittelholm und Laternen (`lampGlass` leuchtet abends, Lichthöfe über `HALO_PTS`). `box()` nimmt auch eine Material-Liste je Seite.
+- **Fahrer-Vielfalt:** `makeRider(…,{pattern,deep})` – Trikotmuster 0 klassisch, 1 Brust-Streifen, 2 Schärpe, 3 Seitenteile
+  (Farbe als Funktion in `rLatheBands`), Hochprofilfelgen (`rWheel(…,deep)`); ohne Angabe nach dem Namen gewürfelt.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
