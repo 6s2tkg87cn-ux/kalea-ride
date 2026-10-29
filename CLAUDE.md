@@ -69,8 +69,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Geräte-Fenster** beim Start (`openDevices`/`closeDevices` verschieben `#devSec` zwischen Fenster und Menü).
 - **Menü** (`#setup`) mit Reitern (`#mTabs`, `menuTab(t)`, Bereiche `.mpane[data-pane]`): `fahrt` (Welt & Route, Karte, Geräte),
   `grafik` (Grafikqualität, Bildrate, Zeichenstil, Tageszeit/Wetter/Jahreszeit, Leben, Ulmer Überraschungen, Töne), `rad` (Fahrer einrichten,
-  Gewicht, Gänge, Fahrgefühl, Click-Hilfe), `training` (FTP, ERG, Workouts, ohne Wattanzeige), `mit` (Computerfahrer, Geist, Online),
-  `fahrten` (Meine Fahrten, Bestzeiten). Neue Einstellungen in den passenden Reiter. Versteckte Canvas haben keine Größe → in `menuTab`
+  Gewicht, Gänge, Fahrgefühl, Click-Hilfe), `training` (FTP, ERG, Workouts, ohne Wattanzeige, Zonen, Maximalpuls), `mit` (Computerfahrer, Geist, Online),
+  `fahrten` (Meine Fahrten, Abzeichen, Bestzeiten). Neue Einstellungen in den passenden Reiter. Versteckte Canvas haben keine Größe → in `menuTab`
   neu zeichnen (Routenprofile, Karte, Workout-Vorschau). Hinweistexte nennen den Reiter („Menü → 🚲 Rad & Gänge …“).
 - **Welt-/Routenwechsel ohne Neuladen** (`rebuildWorld` → `clearWorld` + `buildWorld`), damit Bluetooth verbunden
   bleibt. Wer neue globale Welt-Arrays/Caches anlegt, muss sie in `clearWorld` zurücksetzen.
@@ -108,6 +108,19 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   **Fisch Heilbronner** (Marktstand), **Nabada**, **Fischerstechen** (Zillen Heck voraus, einer fällt), **Ulmer Schachtel**,
   **Münsterglocken** (nur Ton, `sndBell`), **Lichterserenade** (nur bei Abendsonne, additive Leuchtpunkte). Figuren aus
   `figParts`/`seatParts`/`armPivot`, alles wird beim Start gebaut und mit `gagEnd` wieder entfernt (`disposeTree`).
+- **Windschatten** (`draftGain`/`draftFactor`): Faktor auf den Luftwiderstand – dicht dahinter (≤ 1,5 m) −30 %, bis 8 m auslaufend
+  auf −8 %, ab zwei Fahrern knapp davor +5 % (max. −38 %); gilt für dich, Mitfahrer und Online-Fahrer. Anzeige `#draftBox` unter dem Gang
+  (`updateDraft`, geglättet, ab 3 %).
+- **Zonen** (`S.zones`, Taste Z, Click-Aktion `zones`): Leistungszonen `ZONES` (7, nach FTP), Pulszonen `HRZONES` (5, Anteil am Maximalpuls
+  wie Garmin; `hrMaxUsed` = `S.hrMax`, sonst höchster 5 s gehaltener Puls `S.hrSeen` ab 165, sonst 185). Im HUD ersetzt ein Zonen-Balken
+  (`zoneBar`, `.zb`) die Beschriftung von Leistung/Puls; mit `S.hidePow` steht statt der Watt groß die Zone. Statistik: Zeit in Leistungs-
+  und Pulszonen (`zt`/`hzt`).
+- **Abzeichen** (`BADGES`, `kalea_badges` = `{got:{id:Zeit},wo}`): je Abzeichen `ok` (Bedingung), `goal`+`v` (mit Fortschritt) oder `ev`
+  (nur per `award`, z. B. `pb`, `sprint`, `ftp`). `badgeCtx` = Gesamtwerte aus `kalea_rides` (`badgeBase`, ohne Testmodus und laufende
+  Fahrt) + laufende Fahrt + Runden/Bergwertungen/Überraschungen; `stepBadges` zählt je Fahrt in `BADGE.r` (Regen, Schnee, Abendsonne,
+  früh/spät, Windschatten, ohne Watt, online) und prüft alle 5 s. Einblenden `badgePop` (nacheinander, nicht mit dem Bergwertungs-Banner),
+  neue in der Statistik nach „Fahrt beenden“, Album unter Meine Fahrten (`renderBadges`), in der Sicherung enthalten. Beim ersten Start
+  werden bisherige Fahrten still nachgetragen. Testmodus zählt nicht (Überraschungen schon).
 - **Online-Gummiband** (`netRubber`, `NET.rf`, Raum-Flag `NET.info.rubber`, nur Gruppenfahrt): jeder Client rechnet den
   Abstand zur Gruppenmitte und bewegt sich mit `S.dist+=S.v·NET.rf·dt` (0,6…1,6) – Watt/Widerstand bleiben echt.
   Gesendet wird die effektive Geschwindigkeit. Stehende (<0,8 m/s) oder >1,5 km entfernte Mitfahrer zählen nicht.
@@ -171,7 +184,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
-  `kalea_rides`, `kalea_rev`, `kalea_devs`, `kalea_laps`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+  `kalea_rides`, `kalea_rev`, `kalea_devs`, `kalea_laps`, `kalea_badges`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
 - **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
@@ -273,7 +286,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, N nächstes
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
   Workout-Intervall, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).

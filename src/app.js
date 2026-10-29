@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,zones:true,hrMax:0,hrSeen:0,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -44,8 +44,8 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(o.sex==='w'||o.sex==='m')S.sex=o.sex;if(['auto','fruehling','sommer','herbst','winter','schnee'].includes(o.season))S.season=o.season;if(o.prof)S.prof=1;
   try{const pr=JSON.parse(localStorage.getItem('kalea_net')||'{}');if(pr.col!==undefined)S.netCol=pr.col;}catch(e){} // Trikotfarbe (auch online)
   if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
-  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.gearReal==='boolean')S.gearReal=o.gearReal;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
+  if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.gearReal==='boolean')S.gearReal=o.gearReal;if(typeof o.zones==='boolean')S.zones=o.zones;if(o.hrMax>0)S.hrMax=o.hrMax;if(o.hrSeen>0)S.hrSeen=o.hrSeen;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,zones:S.zones,hrMax:S.hrMax,hrSeen:S.hrSeen,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -2209,11 +2209,15 @@ function stepOncoming(dt){const on=S.life&&S.started;
     o.obj.visible=d2<320*320;if(d2<200*200)animRider(o.obj,o.phase,o.wheel,{v:o.v,w:2,g:-gradeAt(o.d)});}}
 
 /* ================= Physik ================= */
-function draftFactor(d,self){
-  const check=o=>{const g=o-d;return g>0.6&&g<7;};
-  if(self!==player&&check(S.dist))return 0.72;
-  for(const b of BOTS)if(b!==self&&b.active&&check(b.dist))return 0.72;
-  if(self===player&&NET.state==='on'&&netDraftCheck(d))return 0.72;return 1;}
+// Windschatten: weniger Luftwiderstand hinter einem Vordermann – dicht dran (bis 1,5 m) 30 %, bis 8 m auslaufend auf 8 %;
+// fährt mehr als einer knapp vor dir (Gruppe), kommen 5 % dazu. Ergebnis = Faktor auf den Luftwiderstand.
+function draftGain(g){return g<0.5||g>8?0:g<1.5?0.30:0.30-(g-1.5)*0.034;}
+function draftFactor(d,self){let best=0,n=0;
+  const add=o=>{const s=draftGain(o-d);if(s>0){n++;if(s>best)best=s;}};
+  if(self!==player)add(S.dist);
+  for(const b of BOTS)if(b!==self&&b.active)add(b.dist);
+  if(self===player&&NET.state==='on')for(const p of NET.peers.values())if(p.obj)add(p.disp);
+  return 1-Math.min(0.38,best+(n>1?0.05:0));}
 function roadForce(v,grade,mass,draft){const th=Math.atan(grade);
   return mass*PHYS.g*(Math.sin(th)+PHYS.crr*Math.cos(th))+0.5*PHYS.rho*PHYS.cda*draft*v*v;}
 function advance(v,P,grade,mass,draft,dt){
@@ -2239,7 +2243,7 @@ function stepPhysics(dt){
     // Realistisch: vor engen Kurven bremst man – vor allem bergab (draußen fährt man Abfahrten nie voll laufen)
     if(f.curves){const vc=curveLimit(S.dist),vl=Math.min(vc,VCOMF);if(S.v>vl+0.3){S.v=Math.max(vl,S.v-CURVE_DEC*1.4*dt);S.brakeT=now;
       if(vc<VCOMF&&now-(S.brakeMsg||0)>20000&&S.v>9){S.brakeMsg=now;toast('🛑 Kurve – du bremst auf '+Math.round(vl*3.6)+' km/h');}}}}
-  recStep(dt);const prevD=S.dist;S.dist+=S.v*NET.rf*dt;S.odo+=S.v*NET.rf*dt;if(Math.abs(NET.rf-1)>0.03){if(KOM.act)KOM.act.rb=true;if(LAP.act)LAP.act.rb=true;}if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);
+  recStep(dt);const prevD=S.dist;S.dist+=S.v*NET.rf*dt;S.odo+=S.v*NET.rf*dt;if(Math.abs(NET.rf-1)>0.03){if(KOM.act)KOM.act.rb=true;if(LAP.act)LAP.act.rb=true;}if(S.v>0.2)S.elapsed+=dt;S.wheel+=S.v/0.335*dt;stepKom(prevD,S.dist,S.v>0.2?dt:0);stepLap(S.dist,S.v>0.2?dt:0);stepBadges(dt);
   const h=roadAt(S.dist).h;if(S.lastH!==null&&h>S.lastH)S.climb+=h-S.lastH;S.lastH=h;
   S.legPhase+=S.cadence/60*Math.PI*2*dt;
   const t=performance.now()/1000;
@@ -2363,13 +2367,14 @@ function targetWatts(){
   if(W.active&&!W.done){const sg=W.wo.segs[W.idx];return Math.round(segWatts(sg,clamp(W.t/sg[0],0,1))*(typeof sg[1]==='object'?1:W.bias));}
   return S.erg?S.ergW:null;}
 function startWorkout(id){const wo=WORKOUTS.find(w=>w.id===id);if(!wo)return;
-  Object.assign(W,{active:true,wo,idx:0,t:0,total:0,bias:1,done:false,acc:{},max1:0,win:[],lowT:0});
+  Object.assign(W,{active:true,wo,idx:0,t:0,total:0,real:0,bias:1,done:false,acc:{},max1:0,win:[],lowT:0});
   $('woBox').classList.remove('hidden');drawWorkout();sendResistance(true);}
 // Abschnitt überspringen (z. B. Einrollen schon erledigt)
 function skipWorkoutSeg(){if(!W.active||W.done)return;W.total+=W.wo.segs[W.idx][0]-W.t;W.t=0;W.idx++;
   if(W.idx>=W.wo.segs.length){finishWorkout();return;}sendResistance(true);updateWorkoutHud();toast('⏭ Weiter mit: '+W.wo.segs[W.idx][3]);}
 function stopWorkout(){W.active=false;$('woBox').classList.add('hidden');sendResistance(true);}
 function finishWorkout(reason){W.done=true;let msg=reason||'Workout geschafft! 🎉';
+  if(!S.sim&&(W.real>=woDuration(W.wo)*0.8||W.wo.id==='ramp'&&W.real>=480)){badgeStore().wo++;badgeSave();badgeCheck(false);} // wirklich gefahren, nicht übersprungen
   if(W.acc.test20&&W.acc.test20.n>0){const avg=W.acc.test20.sum/W.acc.test20.n;msg=`20-min-Schnitt ${Math.round(avg)} W → neue FTP ≈ ${Math.round(avg*0.95)} W`;S.ftpSuggest=Math.round(avg*0.95);}
   if(W.wo.id==='ramp'&&W.max1>0){msg=`Beste 1-min-Leistung ${Math.round(W.max1)} W → FTP ≈ ${Math.round(W.max1*0.75)} W`;S.ftpSuggest=Math.round(W.max1*0.75);}
   $('woSeg').textContent='Fertig';$('woNext').innerHTML=msg+(S.ftpSuggest?` <button id="woApply">als FTP übernehmen</button>`:'');
@@ -2377,7 +2382,7 @@ function finishWorkout(reason){W.done=true;let msg=reason||'Workout geschafft! �
   sendResistance(true);}
 function stepWorkout(dt){
   if(!W.active||W.done)return;
-  const sg=W.wo.segs[W.idx];W.t+=dt;W.total+=dt;
+  const sg=W.wo.segs[W.idx];W.t+=dt;W.total+=dt;W.real+=dt;
   if(sg[5]){const k=sg[5];W.acc[k]=W.acc[k]||{sum:0,n:0};W.acc[k].sum+=S.power*dt;W.acc[k].n+=dt;}
   W.win.push([W.total,S.power]);while(W.win.length&&W.total-W.win[0][0]>60)W.win.shift();
   if(W.total>60){const avg=W.win.reduce((a,b)=>a+b[1],0)/W.win.length;W.max1=Math.max(W.max1,avg);}
@@ -2441,7 +2446,7 @@ function finishKom(a,t){
   if(!komSame(e,c)){e.pb=null;e.hist=[];e.len=c.len;e.gain=c.gain;}
   const res={t:Math.round(t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,kg:S.mass,date:Date.now(),sim:S.sim,route:ROUTE.name};
   if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.name=c.name;e.len=c.len;e.gain=c.gain;e.hist.unshift(res);e.hist=e.hist.slice(0,20);
-  if(isPb)e.pb={...res,splits:a.splits};komSave();REC.koms.push({name:c.name,t:res.t,p:res.p,len:c.len,pb:isPb});showKomBanner(c,res,pb,isPb);}
+  if(isPb)e.pb={...res,splits:a.splits};komSave();if(isPb&&pb&&!S.sim)award('pb');REC.koms.push({name:c.name,t:res.t,p:res.p,len:c.len,pb:isPb});showKomBanner(c,res,pb,isPb);}
 function fmtDelta(x){const s=Math.round(Math.abs(x));return (x<0?'−':'+')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function showKomBanner(c,res,pb,isPb){
   const v=c.len/res.t*3.6,vam=c.gain/res.t*3600,b=$('komBanner');b.classList.remove('lap');
@@ -2487,7 +2492,7 @@ function finishLap(a){if(a.t<30)return;
   const key=lapKey(),st=lapStore(),e=st[key]||(st[key]={name:ROUTE.name+(REV?' (umgedreht)':''),world:WORLD,len:L,hist:[]});
   const res={t:Math.round(a.t*10)/10,p:Math.round(a.e/Math.max(1,a.t)),hr:a.hrT>10?Math.round(a.hr/a.hrT):0,cad:a.cadT>10?Math.round(a.cad/a.cadT):0,
     gain:Math.round(S.climb-a.c0),vmax:a.vmax,kj:Math.round(a.e/1000),kg:S.mass,date:Date.now(),sim:S.sim};
-  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb={...res,splits:a.splits};try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}
+  if(a.rb)res.rb=true;const pb=e.pb,isPb=!a.rb&&(!pb||res.t<pb.t);e.hist.unshift(res);e.hist=e.hist.slice(0,20);if(isPb)e.pb={...res,splits:a.splits};try{localStorage.setItem('kalea_laps',JSON.stringify(st));}catch(x){}if(isPb&&pb&&!S.sim)award('pb');
   const nr=Math.round(a.d0/L)+1;REC.laps.push({n:nr,...res,pb:isPb});
   if(NET.state==='on'&&NET.info&&NET.info.mode==='race')return; // im Rennen zeigt das Ergebnis-Fenster alles
   const show=()=>showLapBanner(res,pb,isPb,nr),wait=KOM.shownT?6000-(performance.now()-KOM.shownT):0;
@@ -2528,11 +2533,21 @@ const REC={s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false};
 const ZONES=[{n:'Z1 Regeneration',lo:0,hi:0.55,c:'#9aa3ad'},{n:'Z2 Grundlage',lo:0.55,hi:0.75,c:'#3e8fe0'},{n:'Z3 Tempo',lo:0.75,hi:0.90,c:'#2fbf62'},
   {n:'Z4 Schwelle',lo:0.90,hi:1.05,c:'#f2c230'},{n:'Z5 VO2max',lo:1.05,hi:1.20,c:'#ff7a1a'},{n:'Z6 Anaerob',lo:1.20,hi:1.50,c:'#e8463c'},{n:'Z7 Sprint',lo:1.50,hi:99,c:'#9b5de5'}];
 function zoneOf(p,ftp){const f=p/(ftp||S.ftp);return ZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
+// Pulszonen wie Garmin: Anteil am Maximalpuls (eingetragen, sonst höchster gemessener Wert, sonst 185)
+const HRZONES=[{n:'Z1 Aufwärmen',lo:0,hi:0.6,c:'#9aa3ad'},{n:'Z2 Leicht',lo:0.6,hi:0.7,c:'#3e8fe0'},{n:'Z3 Aerob',lo:0.7,hi:0.8,c:'#2fbf62'},
+  {n:'Z4 Schwelle',lo:0.8,hi:0.9,c:'#ff7a1a'},{n:'Z5 Maximal',lo:0.9,hi:99,c:'#e8463c'}];
+function hrMaxUsed(){return S.hrMax>0?S.hrMax:S.hrSeen>=165?S.hrSeen:185;}
+function hrZoneOf(hr,mx){const f=hr/(mx||hrMaxUsed());return HRZONES.findIndex(z=>f>=z.lo&&f<z.hi);}
+const HRSEEN=[];
+function updateHrMaxUi(){const el=$('vHrMax');if(!el)return;
+  el.textContent=S.hrMax>0?'Pulszonen nach deinem Wert':S.hrSeen>=165?`automatisch: ${S.hrSeen} (höchster gemessener Wert)`:'noch geschätzt: 185 – am besten deinen Wert eintragen (z. B. vom Garmin)';}
 function recStep(dt){if(REC.ended)return;REC.acc+=dt;if(REC.acc<1)return;REC.acc-=1;
+  // höchster Puls, der mindestens 5 s anlag (einzelne Ausreißer des Gurts zählen nicht)
+  if(S.hr>=100&&S.hr<=225&&!S.sim){HRSEEN.push(S.hr);if(HRSEEN.length>5)HRSEEN.shift();const m=Math.min(...HRSEEN);if(HRSEEN.length===5&&m>S.hrSeen){S.hrSeen=m;saveSettings();updateHrMaxUi();}}else HRSEEN.length=0;
   const r=roadAt(S.dist);REC.s.push({t:Math.round(S.elapsed),d:Math.round(S.odo),v:+S.v.toFixed(2),p:Math.round(T.pedaling?S.power:0),c:Math.round(S.cadence),hr:S.hr||0,h:+(r.h+(IS_ULM?UY0:0)).toFixed(1),x:+r.x.toFixed(1),z:+r.z.toFixed(1)});}
 function bestAvg(arr,win){if(arr.length<win)return null;let s=0,b=0;for(let i=0;i<arr.length;i++){s+=arr[i];if(i>=win)s-=arr[i-win];if(i>=win-1)b=Math.max(b,s/win);}return b;}
 // Die laufende Fahrt als „Fahrt-Objekt“ – gespeicherte Fahrten haben dieselbe Form (s. saveRide/rideLoad)
-function curRide(){return {id:REC.start,start:REC.start,sim:!!S.sim,rev:REV?1:0,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass};}
+function curRide(){return {id:REC.start,start:REC.start,sim:!!S.sim,rev:REV?1:0,s:REC.s,laps:REC.laps,koms:REC.koms,world:WORLD,route:ROUTE.id,name:ROUTE.name+(REV?' (umgedreht)':''),L,ftp:S.ftp,mass:S.mass,hrMax:hrMaxUsed()};}
 function rideSummary(R){R=R||curRide();
   const A=R.s,n=A.length,P=A.map(x=>x.p),ftp=R.ftp||S.ftp;if(!n)return null;
   const mov=A.filter(x=>x.v>0.5).length,dist=Math.max(0,A[n-1].d-A[0].d+(A[0].d>0?0:0));
@@ -2542,16 +2557,17 @@ function rideSummary(R){R=R||curRide();
   const IF=np/ftp,tss=n*np*IF/(ftp*3600)*100,kj=P.reduce((a,b)=>a+b,0)/1000;
   const hrs=A.filter(x=>x.hr>0).map(x=>x.hr),cads=A.filter(x=>x.c>0).map(x=>x.c);
   const zt=ZONES.map(()=>0);for(const p of P){const z=zoneOf(p,ftp);if(z>=0&&p>0)zt[z]++;}
+  const hmx=R.hrMax||hrMaxUsed(),hzt=HRZONES.map(()=>0);for(const x of A)if(x.hr>0)hzt[hrZoneOf(x.hr,hmx)]++;
   const curve=[[5,'5 s'],[30,'30 s'],[60,'1 min'],[300,'5 min'],[600,'10 min'],[1200,'20 min'],[3600,'60 min']].map(([w,l])=>({w,l,p:bestAvg(P,w)}));
   return {n,mov,dist,time:A[n-1].t,avgV:mov?dist/mov:0,maxV:Math.max(...A.map(x=>x.v)),gain,avgP,maxP,np,IF,tss,kj,kcal:kj*1.0,
-    avgHr:hrs.length?hrs.reduce((a,b)=>a+b,0)/hrs.length:0,maxHr:hrs.length?Math.max(...hrs):0,avgCad:cads.length?cads.reduce((a,b)=>a+b,0)/cads.length:0,zt,curve};}
+    avgHr:hrs.length?hrs.reduce((a,b)=>a+b,0)/hrs.length:0,maxHr:hrs.length?Math.max(...hrs):0,avgCad:cads.length?cads.reduce((a,b)=>a+b,0)/cads.length:0,zt,hzt,hmx,curve};}
 // Fahrten: Übersicht in localStorage (kalea_rides, neueste zuerst), alle Messwerte in IndexedDB (ride_<id>)
 const RIDES_MAX=500;
 function saveRideHistory(sum,R){R=R||curRide();if(!sum)return;try{const h=rideHistory().filter(e=>e.id!==R.id);
   h.unshift({id:R.id,date:R.start,world:R.world,route:R.name,rid:R.route,dist:sum.dist,time:sum.time,gain:sum.gain,avgP:Math.round(sum.avgP),np:Math.round(sum.np),tss:Math.round(sum.tss),avgV:sum.avgV,hr:Math.round(sum.avgHr||0),sim:R.sim?1:0,mmp:mmpOf(R.s.map(x=>x.p))});
   h.sort((a,b)=>b.date-a.date);const drop=h.slice(RIDES_MAX);for(const e of drop)if(e.id)idbDel('ride_'+e.id);
   localStorage.setItem('kalea_rides',JSON.stringify(h.slice(0,RIDES_MAX)));}catch(e){}
-  idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,rev:R.rev||0,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,laps:R.laps,koms:R.koms,s:R.s.slice()});}
+  idbSet('ride_'+R.id,{v:1,id:R.id,start:R.start,world:R.world,route:R.route,rev:R.rev||0,name:R.name,L:R.L,ftp:R.ftp,mass:R.mass,hrMax:R.hrMax,laps:R.laps,koms:R.koms,s:R.s.slice()});}
 async function rideLoad(id){const r=await idbGet('ride_'+id);return r&&r.s?r:null;}
 async function rideDelete(id){try{localStorage.setItem('kalea_rides',JSON.stringify(rideHistory().filter(e=>e.id!==id)));}catch(e){}await idbDel('ride_'+id);}
 // Fenster schließen/App wechseln mitten in der Fahrt: Fahrt trotzdem sichern (wird beim Weiterfahren überschrieben)
@@ -2577,14 +2593,14 @@ function estimateFtp(cur){const now=Date.now(),env=MMP_D.map(()=>0),from=MMP_D.m
   if(!c.length)return null;const b=c.sort((a,b)=>b.w-a.w)[0];return {w:Math.round(b.w),why:b.why,date:b.date};}
 // nach einer Fahrt: neue FTP vorschlagen bzw. übernehmen (nur nach oben, wie bei Garmin)
 function checkFtp(R){if(S.ftpAuto==='off')return null;const e=estimateFtp(R);if(!e||e.w<S.ftp+3||e.w<S.ftp*1.01)return null;
-  if(S.ftpAuto==='auto'){const old=S.ftp;S.ftp=e.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();return {...e,old,done:true};}
+  if(S.ftpAuto==='auto'){const old=S.ftp;S.ftp=e.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();award('ftp');return {...e,old,done:true};}
   if(S.ftpNo&&e.w<=S.ftpNo+2)return null; // diesen Wert schon abgelehnt
   return {...e,old:S.ftp};}
 function updateFtpUi(){const e=estimateFtp(),el=$('vFtpEst');if(!el)return;
   el.innerHTML=e?`Aus deinen Fahrten der letzten 6 Wochen geschätzt: <b>${e.w} W</b> (${e.why})`:'Noch keine Schätzung – dafür braucht es mindestens eine harte Fahrt mit Leistungsmesser (z. B. 20 min zügig).';}
 function rideHistory(){try{return JSON.parse(localStorage.getItem('kalea_rides')||'[]');}catch(e){return [];}}
 function endRide(){if(!REC.s.length){status('Noch keine Daten – erst ein Stück fahren.');return;}
-  REC.ended=true;S.riding=false;S.paused=true;S.v=0;keepAwake(false);const sum=rideSummary();FTPNEW=checkFtp(curRide());saveRideHistory(sum);sendResistance(true);
+  REC.ended=true;S.riding=false;S.paused=true;S.v=0;keepAwake(false);const sum=rideSummary();FTPNEW=checkFtp(curRide());saveRideHistory(sum);BADGE.base=null;badgeCheck(false);BADGE.q.length=0;sendResistance(true);
   if(typeof netEndRide==='function')netEndRide();
   $('bStart').textContent='Neue Fahrt';$('bStart').onclick=newRide;$('bEnd').classList.add('hidden');showStats(true);}
 function kpi(v,u,l,c){return `<div class="kpi" style="--kc:${c}"><b>${v}<small>${u}</small></b><span>${l}</span></div>`;}
@@ -2598,7 +2614,7 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
   el.innerHTML=`<div class="sv-card">
     <div class="sv-head"><div><h2>${arch?'Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE'):final?'Fahrt beendet 🎉':'Deine Fahrt bisher'}</h2><p>${R.name} · ${new Date(R.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:arch?'numeric':undefined})}${arch?' · '+new Date(R.start).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':''}</p></div>
       <div class="sv-btns">${arch?'<button id="svList" class="primary">Alle Fahrten</button><button id="svGhost" title="Diese Fahrt fährt als durchsichtiger Geist mit">👻 Als Geist mitfahren</button><button id="svDel">Löschen</button>':final?'<button id="svNew" class="primary">Neue Fahrt</button>':'<button id="svBack" class="primary">Weiterfahren</button><button id="svEnd">Fahrt beenden</button>'}<button id="svFit" title="Für Strava (wird als virtuelle Fahrt erkannt) und Garmin Connect">FIT speichern</button><button id="svTcx" title="Datei für Strava, Garmin Connect oder TrainingPeaks">TCX speichern</button><button id="svClose">✕</button></div></div>
-    <div class="sv-body">${!arch&&final&&FTPNEW?`<div class="ftpnew">💪 <b>${FTPNEW.done?'FTP aktualisiert':'Neue FTP erkannt'}: ${FTPNEW.w} W</b> (bisher ${FTPNEW.old} W) – aus ${FTPNEW.why}.
+    <div class="sv-body">${!arch&&final&&BADGE.r&&BADGE.r.got.length?`<div class="ftpnew">🏅 <b>Neue Abzeichen:</b> ${BADGE.r.got.map(id=>{const b=BADGES.find(x=>x.id===id);return b?`${b.i} <b>${b.n}</b> <small>(${b.d})</small>`:'';}).join(' · ')}</div>`:''}${!arch&&final&&FTPNEW?`<div class="ftpnew">💪 <b>${FTPNEW.done?'FTP aktualisiert':'Neue FTP erkannt'}: ${FTPNEW.w} W</b> (bisher ${FTPNEW.old} W) – aus ${FTPNEW.why}.
         ${FTPNEW.done?'':'<button id="ftpYes" class="primary">Übernehmen</button><button id="ftpNo">Nein danke</button>'}</div>`:''}
       <div class="kpis">${kpi((sum.dist/1000).toFixed(2),'km','Distanz','#490cb8')}${kpi(fmtTime(sum.time),'','Fahrzeit','#f8d74e')}${kpi((sum.avgV*3.6).toFixed(1),'km/h','Ø Tempo','#7ad35a')}
         ${kpi(Math.round(sum.gain),'hm','Höhenmeter','#e8463c')}${kpi(Math.round(sum.avgP),'W','Ø Leistung','#eb567b')}${kpi(Math.round(sum.np),'W','Normalized Power','#f48fa8')}
@@ -2608,7 +2624,7 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
       <h3>Verlauf <small>über die Strecke – mit dem Finger oder der Maus darüberfahren</small></h3>
       <div class="sv-chartwrap"><canvas id="svSeries"></canvas><div id="svTip" class="sv-tip hidden"></div></div>
       <div class="sv-two">
-        <div><h3>Zeit in Leistungszonen <small>FTP ${R.ftp||S.ftp} W</small></h3><canvas id="svZones"></canvas></div>
+        <div><h3>Zeit in Leistungszonen <small>FTP ${R.ftp||S.ftp} W</small></h3><canvas id="svZones"></canvas>${hh?`<h3>Zeit in Pulszonen <small>max. Puls ${sum.hmx} bpm</small></h3><canvas id="svHrZones"></canvas>`:''}</div>
         <div><h3>Beste Leistung <small>Watt über die Dauer</small></h3><canvas id="svCurve"></canvas></div>
       </div>
       <div class="sv-two">
@@ -2626,10 +2642,10 @@ function showStats(final,R){const arch=!!R;R=R||curRide();SVR=R;
     closeStats();toast('👻 Geist der Fahrt vom '+new Date(R.start).toLocaleDateString('de-DE')+(S.started?' fährt ab hier mit':' startet mit dir'));};
   if($('svDel'))$('svDel').onclick=async()=>{const b=$('svDel');if(!b.dataset.arm){b.dataset.arm='1';b.textContent='Wirklich löschen?';return;}await rideDelete(R.id);closeStats();renderRides();toast('Fahrt gelöscht');};
   wireHistRows(el);
-  if($('ftpYes'))$('ftpYes').onclick=()=>{S.ftp=FTPNEW.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();$('ftpYes').parentElement.innerHTML=`💪 <b>FTP auf ${S.ftp} W gesetzt.</b> Zonen, Workouts und TSS richten sich ab jetzt danach.`;FTPNEW=null;};
+  if($('ftpYes'))$('ftpYes').onclick=()=>{S.ftp=FTPNEW.w;$('iFtp').value=S.ftp;saveSettings();updateFtpUi();const nb=!badgeStore().got.ftp;award('ftp',true);$('ftpYes').parentElement.innerHTML=`💪 <b>FTP auf ${S.ftp} W gesetzt.</b> Zonen, Workouts und TSS richten sich ab jetzt danach.${nb?' 🏅 Neues Abzeichen: <b>Stärker geworden</b>':''}`;FTPNEW=null;};
   if($('ftpNo'))$('ftpNo').onclick=()=>{S.ftpNo=FTPNEW.w;saveSettings();$('ftpNo').parentElement.remove();FTPNEW=null;};
   $('svTcx').onclick=()=>exportTcx(R);$('svFit').onclick=()=>exportFit(R);
-  requestAnimationFrame(()=>{drawSeries(sum,R);drawZones(sum);drawCurve(sum,R);drawTrack(R);});}
+  requestAnimationFrame(()=>{drawSeries(sum,R);drawZones($('svZones'),ZONES,sum.zt);if(hh)drawZones($('svHrZones'),HRZONES,sum.hzt);drawCurve(sum,R);drawTrack(R);});}
 let SVR=null,FTPNEW=null; // die gerade angezeigte Fahrt · neu erkannte FTP nach der letzten Fahrt
 function closeStats(){$('statsView').classList.add('hidden');const arch=SVR&&SVR.id!==REC.start;SVR=null;if(REC.ended||arch||!S.started){openMenu();return;}S.paused=false;}
 // Liste der Fahrten (Statistik und Menü „Meine Fahrten“)
@@ -2642,7 +2658,7 @@ function renderRides(){const h=rideHistory(),el=$('ridesList');if(!el)return;
   el.innerHTML=`<p class="hint"><b>${h.length}</b> ${h.length===1?'Fahrt':'Fahrten'} · <b>${Math.round(km).toLocaleString('de-DE')}</b> km · <b>${Math.floor(t/3600)} h ${Math.round(t%3600/60)} min</b> Fahrzeit – antippen zum Ansehen</p><div class="rides-wrap"><table class="kt rides">${histRows(h)}</table></div>`;wireHistRows(el);}
 // Sicherung: alle Fahrten mit Messwerten, Bestzeiten und Rundenzeiten als Datei (für ein anderes Gerät)
 async function backupRides(){const h=rideHistory(),rides=[];for(const e of h)if(e.id){const r=await rideLoad(e.id);if(r)rides.push(r);}
-  const data={app:'kalea-ride',v:1,date:Date.now(),list:h,rides,kom:komStore(),laps:lapStore()};
+  const data={app:'kalea-ride',v:1,date:Date.now(),list:h,rides,kom:komStore(),laps:lapStore(),badges:badgeStore()};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download=`KaleaRide_Sicherung_${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast('💾 Sicherung mit '+h.length+(h.length===1?' Fahrt':' Fahrten')+' gespeichert');}
 async function restoreRides(file){let d;try{d=JSON.parse(await file.text());}catch(e){toast('Datei nicht lesbar');return;}
@@ -2654,7 +2670,8 @@ async function restoreRides(file){let d;try{d=JSON.parse(await file.text());}cat
   // Bestzeiten zusammenführen: jeweils die bessere behalten, Verläufe mischen
   const merge=(dst,src,save)=>{for(const k in src||{}){const a=dst[k],b=src[k];if(!a){dst[k]=b;continue;}
     if(b.pb&&(!a.pb||b.pb.t<a.pb.t))a.pb=b.pb;const seen=new Set(a.hist.map(x=>x.date));for(const x of b.hist||[])if(!seen.has(x.date))a.hist.push(x);a.hist.sort((x,y)=>y.date-x.date);a.hist=a.hist.slice(0,20);}save();};
-  merge(komStore(),d.kom,komSave);merge(lapStore(),d.laps,()=>{try{localStorage.setItem('kalea_laps',JSON.stringify(LAP.store));}catch(e){}});
+  if(d.badges&&d.badges.got){const st=badgeStore();for(const k in d.badges.got)if(!st.got[k]||d.badges.got[k]<st.got[k])st.got[k]=d.badges.got[k];st.wo=Math.max(st.wo||0,d.badges.wo||0);badgeSave();}
+  BADGE.base=null;merge(komStore(),d.kom,komSave);merge(lapStore(),d.laps,()=>{try{localStorage.setItem('kalea_laps',JSON.stringify(LAP.store));}catch(e){}});
   renderRides();$('komTable').innerHTML=komTable();toast(`📥 ${n} ${n===1?'Fahrt':'Fahrten'} übernommen`+(d.list.length-n?` (${d.list.length-n} schon vorhanden)`:''));}
 function prepCanvas(c,hgt){const dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=hgt||c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return [x,w,h];}
 // gestapelte Verlaufs-Diagramme mit gemeinsamer x-Achse (Distanz), jedes mit eigener y-Achse
@@ -2690,12 +2707,12 @@ function drawSeries(sum,R){
     tip.classList.remove('hidden');tip.style.left=Math.min(px+12,w-150)+'px';tip.style.top='8px';
     c.__line=px;};
   c.onmousemove=move;c.ontouchmove=e=>{move(e);};c.onmouseleave=()=>tip.classList.add('hidden');}
-function drawZones(sum){const c=$('svZones');const [x,w,h]=prepCanvas(c);const tot=sum.zt.reduce((a,b)=>a+b,0)||1,mxf=Math.max(...sum.zt)/tot||1,rowH=(h-6)/ZONES.length,L0=110;
+function drawZones(c,Z,zt){const [x,w,h]=prepCanvas(c);const tot=zt.reduce((a,b)=>a+b,0)||1,mxf=Math.max(...zt)/tot||1,rowH=(h-6)/Z.length,L0=110;
   x.font='600 11.5px Fredoka,system-ui';x.textBaseline='middle';
-  ZONES.forEach((z,k)=>{const y=3+k*rowH,f=sum.zt[k]/tot,bw=Math.max(f>0?4:0,f/mxf*(w-L0-100));
+  Z.forEach((z,k)=>{const y=3+k*rowH,f=zt[k]/tot,bw=Math.max(f>0?4:0,f/mxf*(w-L0-100));
     x.fillStyle='#1e0f3a';x.textAlign='right';x.fillText(z.n,L0-8,y+rowH/2);
     x.fillStyle=z.c;x.strokeStyle='#1e0f3a';x.lineWidth=1.5;if(bw>0){x.beginPath();x.roundRect?x.roundRect(L0,y+3,bw,rowH-6,4):x.rect(L0,y+3,bw,rowH-6);x.fill();x.stroke();}
-    x.fillStyle='#4a3d5c';x.textAlign='left';x.fillText(Math.round(f*100)+' % · '+fmtTime(sum.zt[k]),L0+bw+6,y+rowH/2);});}
+    x.fillStyle='#4a3d5c';x.textAlign='left';x.fillText(Math.round(f*100)+' % · '+fmtTime(zt[k]),L0+bw+6,y+rowH/2);});}
 function drawCurve(sum,R){const ftp=R.ftp||S.ftp,c=$('svCurve');const [x,w,h]=prepCanvas(c);const cv=sum.curve,mx=Math.max(ftp*1.2,...cv.map(q=>q.p||0)),L0=8,B=22,bw=(w-L0*2)/cv.length;
   x.font='600 11px Fredoka,system-ui';x.textAlign='center';
   const fy=h-B-(ftp/mx)*(h-B-18);x.setLineDash([5,4]);x.strokeStyle='rgba(30,15,58,.5)';x.beginPath();x.moveTo(0,fy);x.lineTo(w,fy);x.stroke();x.setLineDash([]);x.fillStyle='#6b6577';x.textAlign='left';x.fillText('FTP',2,fy-6);x.textAlign='center';
@@ -2853,7 +2870,6 @@ function showRaceResult(){const r=raceRanking(),b=$('komBanner');b.classList.rem
   b.innerHTML=`<div class="kb-t">ZIEL · ${ROUTE.name.toUpperCase()}</div><div class="kb-time">${fmtTime(NET.fin)}</div><div class="kb-pb new">Platz ${r.findIndex(x=>x.me)+1} von ${r.length}</div>
     <table class="kt" style="margin-top:6px;background:#fff;border-radius:8px">${r.map((x,i)=>`<tr><td>${i+1}.</td><td>${x.n}</td><td><b>${x.fin?fmtTime(x.fin):'unterwegs · '+(x.d/1000).toFixed(1)+' km'}</b></td></tr>`).join('')}</table>`;
   b.classList.remove('hidden');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');KOM.shownT=performance.now()+6000;confetti();}
-function netDraftCheck(d){for(const p of NET.peers.values()){if(!p.obj)continue;const g=p.disp-d;if(g>0.6&&g<7)return true;}return false;}
 function updateNetUi(){
   const on=NET.state==='on',info=NET.info,same=sameRoom(info);
   $('netOff').classList.toggle('hidden',on);$('netOn').classList.toggle('hidden',!on);
@@ -3146,7 +3162,7 @@ const HANDSHAKE=[0x52,0x69,0x64,0x65,0x4f,0x6e];
 const V2_UP=0x1000|0x40,V2_DOWN=0x100|0x20;
 // Frei belegbare Tasten (Click v2, Bit-Nummer → Aktion). Standard: + und Y schwerer, − und B leichter.
 const KEY_DEF={12:'up',8:'down',6:'up',5:'down'},KEY_NAME={12:'+ (rechte Hälfte)',8:'− (linke Hälfte)',6:'Y (rechte Hälfte)',5:'B (rechte Hälfte)'};
-const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','Kamera wechseln'],['pow','Wattanzeige ein/aus'],['skip','Workout: nächstes Intervall'],
+const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','Kamera wechseln'],['pow','Wattanzeige ein/aus'],['zones','Zonen ein/aus'],['skip','Workout: nächstes Intervall'],
   ['erg','ERG an/aus'],['map','Karte umschalten'],['mute','Ton an/aus'],['none','– nichts –']];
 function keymap(){if(!S.keymap){S.keymap={...KEY_DEF};const L=Z.learned||{};for(const a of ['up','down'])if(L[a]&&L[a].kind==='bit')S.keymap[L[a].bit]=a;}return S.keymap;}
 function keyAction(bit){const m=keymap();return m[bit]||'none';}
@@ -3154,6 +3170,7 @@ function runAction(act,pad){
   if(act==='up'||act==='down'){shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
   else if(act==='cam')S.cam=(S.cam+1)%VIEWS.length;
   else if(act==='pow'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
+  else if(act==='zones')toggleZones();
   else if(act==='skip')skipWorkoutSeg();
   else if(act==='erg')$('ergToggle').click();
   else if(act==='map')cycleMap();
@@ -3352,16 +3369,30 @@ let hudT=0,ridersT=0;
 function updateHud(now){
   if(now-hudT<120)return;hudT=now;
   const r=roadAt(S.dist);
-  $('hPow').textContent=Math.round(T.pedaling?S.power:0);$('hCad').textContent=Math.round(S.cadence);$('hSpd').textContent=(S.v*3.6).toFixed(1);$('hSpdL').textContent=NET.rf!==1?(NET.rf>1?'🪢 Tempo +':'🪢 Tempo −')+Math.round(Math.abs(NET.rf-1)*100)+' %':'Tempo';
+  {const dt=Math.min(0.5,(now-(ZN.t||now))/1000);ZN.t=now;updateZones(dt);updateDraft();}
+  $('hPow').textContent=S.hidePow&&S.zones?(ZN.pk>=0?'Z'+(ZN.pk+1):'–'):Math.round(T.pedaling?S.power:0);$('hPow').style.color=S.hidePow&&S.zones&&ZN.pk>=0?ZONES[ZN.pk].c:'';$('hCad').textContent=Math.round(S.cadence);$('hSpd').textContent=(S.v*3.6).toFixed(1);$('hSpdL').textContent=NET.rf!==1?(NET.rf>1?'🪢 Tempo +':'🪢 Tempo −')+Math.round(Math.abs(NET.rf-1)*100)+' %':'Tempo';
   $('hHr').textContent=S.hr?S.hr:'–';$('hDist').textContent=(S.odo/1000).toFixed(2);$('hTime').textContent=fmtTime(S.elapsed);$('hElev').textContent=Math.round(S.climb);
   const gp=r.grade*100,ge=$('grade'),ef=gradeAt(S.dist)*100,fmt=x=>(x>=0?'':'−')+Math.abs(x).toFixed(1)+'%';
   ge.innerHTML=fmt(gp)+(S.smooth&&Math.abs(ef-gp)>0.4?`<small>gefühlt ${fmt(ef)}</small>`:'');
   ge.style.background=gp>8?'#ff8a80':gp>4?'#ffb35c':gp>1?'#ffe98a':gp<-1?'#a8e3ff':'#fffaf0';
   {const vw=S.sim||!S.vshift?null:wheelSpeed();$('gearHint').textContent=(vw!==null&&T.pedaling&&S.v>4&&vw<S.v*0.85)?'Freilauf – hochschalten ↑':'';}
   if(!S.vshift&&!S.sim)updateRealGear(now);
-  updateKomHud(now);if(now-ridersT>500){ridersT=now;updateRiders();drawProfile();updateErgUi();updateWorkoutHud();}
+  updateKomHud(now);badgePop(now);if(now-ridersT>500){ridersT=now;updateRiders();drawProfile();updateErgUi();updateWorkoutHud();}
 }
-function applyHidePow(){$('hud').classList.toggle('nopow',S.hidePow);ridersT=0;}
+function applyHidePow(){$('hud').classList.toggle('nopow',S.hidePow);$('hud').classList.toggle('zones',S.zones);ridersT=0;hudT=0;}
+function toggleZones(){S.zones=!S.zones;$('iZones').checked=S.zones;saveSettings();applyHidePow();toast(S.zones?'Zonen an':'Zonen aus');}
+// Zonen-Balken: ein Abschnitt je Zone in Zonenfarbe, der aktuelle breit mit Zonennummer
+function zoneBar(el,Z,k){if(el.childElementCount!==Z.length)el.innerHTML=Z.map((z,i)=>`<b style="--zc:${z.c}"></b>`).join('');
+  [...el.children].forEach((b,i)=>{const on=i===k;b.className=on?'a':'';b.textContent=on?'Z'+(i+1):'';b.style.color=on&&zDark(Z[i].c)?'#1e0f3a':'#fff';});el.title=k>=0?Z[k].n:'';}
+function zDark(c){const n=parseInt(c.slice(1),16);return ((n>>16)*0.3+((n>>8)&255)*0.59+(n&255)*0.11)>170;}
+const ZN={p:0};
+function updateZones(dt){const P=T.pedaling?S.power:0;ZN.p+=(P-ZN.p)*(1-Math.exp(-dt/1.5));
+  const pk=P>0||ZN.p>15?zoneOf(ZN.p):-1,hk=S.hr>0?hrZoneOf(S.hr):-1;
+  zoneBar($('pZone'),ZONES,pk);zoneBar($('hZone'),HRZONES,hk);$('hrTile').classList.toggle('zhr',hk>=0);ZN.pk=pk;}
+// Windschatten-Anzeige (geglättet, erst ab 3 %)
+const DRAFTV={s:0};
+function updateDraft(){const f=S.v>2?1-draftFactor(S.dist,player):0;DRAFTV.s+=(f-DRAFTV.s)*0.35;
+  const on=DRAFTV.s>0.03;$('draftBox').classList.toggle('hidden',!on);if(on)$('draftV').textContent='−'+Math.round(DRAFTV.s*100)+' %';}
 function updateRiders(){
   const rows=BOTS.filter(b=>b.active).map(b=>({n:b.name,gap:b.dist-S.dist,w:b.wkg})).concat([{n:'Du',gap:0,me:true,w:S.power/S.mass}]);
   if(GHOST.gap!==null)rows.push({n:'👻 '+GHOST.kind,gap:GHOST.gap,ghost:true});
@@ -3958,7 +3989,7 @@ function menuTab(t){
   for(const b of document.querySelectorAll('#mTabs button'))b.classList.toggle('on',b.dataset.tab===t);
   for(const p of document.querySelectorAll('.mpane'))p.classList.toggle('hidden',p.dataset.pane!==t);
   document.querySelector('#setup .cbody').scrollTop=0;
-  if(t==='fahrten'){renderRides();$('komTable').innerHTML=komTable();}
+  if(t==='fahrten'){renderRides();renderBadges();$('komTable').innerHTML=komTable();}
   else if(t==='training'){updateFtpUi();$('iWo').onchange();}
   else if(t==='fahrt'){requestAnimationFrame(drawRouteCards);if($('mapDet').open)requestAnimationFrame(()=>drawMap($('bigMap'),{mode:'route',big:true}));}}
 function readInputs(){S.mass=clamp(+$('iWeight').value||75,30,160);S.chain=clamp(+$('iChain').value||50,20,60);S.cog=clamp(+$('iCog').value||17,10,36);
@@ -4079,6 +4110,8 @@ function wireUi(){
   $('bWo').onclick=()=>{W.ergOn=$('iWoErg').checked;startWorkout($('iWo').value);if(!S.started)startRide(!T.dev);else closeMenu();};
   $('woStop').onclick=stopWorkout;$('woSkip').onclick=skipWorkoutSeg;$('bJump').onclick=()=>jumpTo(START_AT);
   $('iGearReal').checked=S.gearReal;$('iGearReal').onchange=()=>{S.gearReal=$('iGearReal').checked;saveSettings();updateGear();};
+  $('iZones').checked=S.zones;$('iZones').onchange=()=>{S.zones=$('iZones').checked;saveSettings();applyHidePow();};
+  $('iHrMax').value=S.hrMax||'';$('iHrMax').onchange=()=>{const v=+$('iHrMax').value;S.hrMax=v>=120&&v<=230?Math.round(v):0;if(!S.hrMax)$('iHrMax').value='';saveSettings();updateHrMaxUi();};updateHrMaxUi();
   $('iHidePow').checked=S.hidePow;$('iHidePow').onchange=()=>{S.hidePow=$('iHidePow').checked;saveSettings();applyHidePow();};applyHidePow();
   $('ergPlus').onclick=()=>ergNudge(1);$('ergMinus').onclick=()=>ergNudge(-1);
   $('ergToggle').onclick=()=>{if(W.active&&!W.done)W.ergOn=!W.ergOn;else{S.erg=!S.erg;$('iErg').checked=S.erg;}updateErgUi();sendResistance(true);};
@@ -4092,6 +4125,7 @@ function wireUi(){
     else if(k==='f'||k==='F')toggleFullscreen();
     else if(k==='t'||k==='T')toggleMute();
     else if(k==='p'||k==='P'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
+    else if(k==='z'||k==='Z')toggleZones();
     else if(k==='n'||k==='N')skipWorkoutSeg();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}
@@ -4465,7 +4499,7 @@ const GAGS=[
 function gagNext(f){return S.odo+Math.max(800,(GAG_GAP[S.gags]||7000)*f*rnd(0.6,1.4));}
 function gagPlan(){if(FLY.act)flyEnd();if(GAG.act)gagEnd();GAG.seen=new Set();GAG.next=gagNext(0.6);}
 function gagAlbum(){try{return JSON.parse(localStorage.getItem('kalea_gags')||'{}');}catch(e){return {};}}
-function gagSeen(id){const a=gagAlbum();a[id]=(a[id]||0)+1;try{localStorage.setItem('kalea_gags',JSON.stringify(a));}catch(e){}renderGags();}
+function gagSeen(id){const a=gagAlbum();a[id]=(a[id]||0)+1;try{localStorage.setItem('kalea_gags',JSON.stringify(a));}catch(e){}renderGags();badgeCheck(false);}
 // im Juli (Schwörwoche), um Einsteins Geburtstag und im Advent kommen die passenden Szenen öfter
 function gagSeason(id){const d=new Date(),m=d.getMonth()+1,day=d.getDate();
   if(m===7&&['nabada','fischer','lichter','schachtel'].includes(id))return 4;if(id==='einstein'&&m===3&&Math.abs(day-14)<=3)return 5;if(id==='chor'&&m===12)return 3;return 1;}
@@ -4691,6 +4725,85 @@ function gagLichter(sp){const n=S.quality==='low'?160:280,P=new Float32Array(n*3
     geo.attributes.position.needsUpdate=true;m.material.size=2.3+0.25*Math.sin(tt*5);return !(gagPassed(sp.d,160)||tt>120);}};}
 
 gagPlan();
+/* ================= Abzeichen =================
+   Erfolge zum Sammeln (kalea_badges = {got:{id:Zeitpunkt},wo:Anzahl fertiger Workouts}). Gesamtwerte kommen aus „Meine Fahrten“
+   plus der laufenden Fahrt, BADGE.r zählt je Fahrt Wetter, Windschatten usw. mit. Testmodus zählt nicht (Überraschungen schon).
+   ok = Bedingung, goal/v = Ziel mit Fortschritt, ev = wird nur bei einem Ereignis vergeben (award). */
+const BADGES=[
+  {id:'first',i:'🚲',n:'Losgerollt',d:'Die erste Fahrt mit mindestens 5 km',ok:c=>c.maxRideKm>=5},
+  {id:'km100',i:'💯',n:'Hunderter',d:'100 km insgesamt',goal:100,v:c=>c.km},
+  {id:'km500',i:'🛣️',n:'Fünfhunderter',d:'500 km insgesamt',goal:500,v:c=>c.km},
+  {id:'km1000',i:'🌍',n:'Tausender',d:'1000 km insgesamt',goal:1000,v:c=>c.km},
+  {id:'muenster',i:'⛪',n:'Münsterhoch',d:'162 hm in einer Fahrt – so hoch wie der Münsterturm',ok:c=>c.maxRideHm>=162},
+  {id:'everest',i:'🏔️',n:'Everest gesammelt',d:'8849 Höhenmeter insgesamt',goal:8849,v:c=>c.hm},
+  {id:'hour',i:'⏱️',n:'Stundenfahrer',d:'Eine Fahrt über 1 Stunde',ok:c=>c.maxRideT>=3600},
+  {id:'twoh',i:'🥨',n:'Langer Kanten',d:'Eine Fahrt über 2 Stunden',ok:c=>c.maxRideT>=7200},
+  {id:'lap',i:'🏁',n:'Runde geschafft',d:'Eine Runde einmal komplett gefahren',ok:c=>c.laps.size>0},
+  {id:'ulm',i:'🗺️',n:'Ulm-Kenner',d:'Jede Ulmer Runde einmal komplett gefahren',goal:()=>ULM_DATA.routes.length,v:c=>c.ulmLaps},
+  {id:'kalea',i:'🌋',n:'Insel-Kenner',d:'Jede Runde auf Kalea einmal komplett gefahren',goal:()=>KALEA_ROUTES.length,v:c=>c.kaleaLaps},
+  {id:'kom',i:'⛰️',n:'Bergfest',d:'Die erste Bergwertung komplett gefahren',ok:c=>c.koms>0},
+  {id:'kom10',i:'🐐',n:'Bergziege',d:'10 verschiedene Bergwertungen gefahren',goal:10,v:c=>c.koms},
+  {id:'pb',i:'👻',n:'Schneller als der Geist',d:'Eine eigene Bestzeit am Berg oder in der Runde verbessert',ev:1},
+  {id:'sprint',i:'⚡',n:'Sprinter',d:'5 Sekunden lang über 10 W/kg',ev:1},
+  {id:'ftp',i:'💪',n:'Stärker geworden',d:'Deine FTP ist gestiegen',ev:1},
+  {id:'workout',i:'🏋️',n:'Durchgezogen',d:'Ein Workout bis zum Ende gefahren',ok:c=>c.wo>0},
+  {id:'wo10',i:'📈',n:'Fleißig',d:'10 Workouts bis zum Ende gefahren',goal:10,v:c=>c.wo},
+  {id:'streak',i:'📅',n:'Dranbleiber',d:'4 Wochen hintereinander jede Woche gefahren',goal:4,v:c=>c.streak},
+  {id:'draft',i:'🌬️',n:'Windschattenfuchs',d:'10 Minuten einer Fahrt im Windschatten',ok:c=>c.r.draftT>=600},
+  {id:'feel',i:'🙈',n:'Nach Gefühl',d:'20 Minuten ohne Wattanzeige gefahren',ok:c=>c.r.nopowT>=1200},
+  {id:'group',i:'👥',n:'Gemeinsam stark',d:'10 Minuten online mit Freunden gefahren',ok:c=>c.r.groupT>=600},
+  {id:'rain',i:'☔',n:'Regenfahrer',d:'10 km im Regen – und trotzdem trocken',ok:c=>c.r.rainKm>=10},
+  {id:'snow',i:'❄️',n:'Wintertraining',d:'5 km im Schneegestöber',ok:c=>c.r.snowKm>=5},
+  {id:'eve',i:'🌇',n:'Abendrunde',d:'10 km in der Abendsonne',ok:c=>c.r.eveKm>=10},
+  {id:'early',i:'🐓',n:'Frühaufsteher',d:'10 km vor 7 Uhr morgens',ok:c=>c.r.earlyKm>=10},
+  {id:'owl',i:'🦉',n:'Nachteule',d:'10 km nach 21 Uhr',ok:c=>c.r.owlKm>=10},
+  {id:'gag1',i:'🎭',n:'Ulmer Original',d:'Die erste Ulmer Überraschung erlebt',ok:c=>c.gags>0},
+  {id:'gagall',i:'🐦',n:'Spatzenschlau',d:'Alle Ulmer Überraschungen erlebt',goal:()=>GAGS.length,v:c=>c.gags}];
+const BADGE={st:null,base:null,r:null,q:[],showT:0,p5:[],acc:0,chk:0};
+function badgeStore(){if(!BADGE.st){try{BADGE.st=JSON.parse(localStorage.getItem('kalea_badges')||'null');}catch(e){}BADGE.fresh=!BADGE.st;if(!BADGE.st)BADGE.st={got:{},wo:0};}return BADGE.st;}
+function badgeSave(){try{localStorage.setItem('kalea_badges',JSON.stringify(badgeStore()));}catch(e){}}
+function badgeGoal(b){return typeof b.goal==='function'?b.goal():b.goal;}
+function badgeRide(){return {rainKm:0,snowKm:0,eveKm:0,earlyKm:0,owlKm:0,draftT:0,nopowT:0,groupT:0,got:[]};}
+function weekNo(t){return Math.floor(((t-new Date(t).getTimezoneOffset()*60000)/86400000+3)/7);} // Wochen ab Montag (1.1.1970 war ein Donnerstag)
+// Gesamtwerte der gespeicherten Fahrten (ohne Testmodus und ohne die laufende Fahrt)
+function badgeBase(){let km=0,hm=0,mk=0,mt=0,mh=0;const wk=new Set();
+  for(const e of rideHistory()){if(e.sim||e.id===REC.start)continue;const k=(e.dist||0)/1000;km+=k;hm+=e.gain||0;mk=Math.max(mk,k);mt=Math.max(mt,e.time||0);mh=Math.max(mh,e.gain||0);if((e.time||0)>=600)wk.add(weekNo(e.date));}
+  return BADGE.base={km,hm,mk,mt,mh,wk};}
+function streakOf(wk){let best=0,run=0,prev=null;for(const w of [...wk].sort((x,y)=>x-y)){run=prev!==null&&w===prev+1?run+1:1;best=Math.max(best,run);prev=w;}return best;}
+function badgeCtx(){const B=BADGE.base||badgeBase(),live=S.started&&!S.sim&&!REC.ended,rk=live?S.odo/1000:0,wk=new Set(B.wk);if(live&&S.elapsed>=600)wk.add(weekNo(Date.now()));
+  const laps=new Set(),ls=lapStore();for(const k in ls)if((ls[k].hist||[]).some(h=>!h.sim))laps.add(k.replace(/_r$/,''));
+  let koms=0;const ks=komStore();for(const k in ks)if((ks[k].hist||[]).some(h=>!h.sim))koms++;
+  const ga=gagAlbum();
+  return {km:B.km+rk,hm:B.hm+(live?S.climb:0),maxRideKm:Math.max(B.mk,rk),maxRideT:Math.max(B.mt,live?S.elapsed:0),maxRideHm:Math.max(B.mh,live?S.climb:0),streak:streakOf(wk),
+    laps,ulmLaps:ULM_DATA.routes.filter(r=>laps.has('ulm_'+r.id)).length,kaleaLaps:KALEA_ROUTES.filter(r=>laps.has('kalea_'+r.id)).length,
+    koms,wo:badgeStore().wo||0,gags:GAGS.filter(g=>ga[g.id]).length,r:BADGE.r||badgeRide()};}
+function badgeCheck(quiet){const st=badgeStore(),c=badgeCtx();let n=0;
+  for(const b of BADGES){if(st.got[b.id]||b.ev)continue;const g=badgeGoal(b);if(b.ok?b.ok(c):b.v(c)>=g){award(b.id,quiet);n++;}}return n;}
+function award(id,quiet){const st=badgeStore();if(st.got[id])return;st.got[id]=Date.now();badgeSave();
+  if(!quiet){BADGE.q.push(id);if(BADGE.r)BADGE.r.got.push(id);}renderBadges();}
+// je Fahrt mitzählen; alle 5 s prüfen
+function stepBadges(dt){if(!S.started||REC.ended)return;const r=BADGE.r||(BADGE.r=badgeRide());
+  if(!S.sim&&S.v>0.5){const km=S.v*NET.rf*dt/1000,rain=+curWx().rain>0.5,h=new Date().getHours();
+    if(rain&&RAIN.snow)r.snowKm+=km;else if(rain)r.rainKm+=km;if(curTod()==='abend')r.eveKm+=km;
+    if(h>=5&&h<7)r.earlyKm+=km;if(h>=21||h<4)r.owlKm+=km;
+    if(draftFactor(S.dist,player)<0.9)r.draftT+=dt;if(S.hidePow)r.nopowT+=dt;
+    if(NET.state==='on'&&[...NET.peers.values()].some(p=>p.obj))r.groupT+=dt;}
+  BADGE.acc+=dt;if(BADGE.acc>=1){BADGE.acc-=1;
+    if(!S.sim){const P=BADGE.p5;P.push(T.pedaling?S.power:0);if(P.length>5)P.shift();if(P.length===5&&P.reduce((a,b)=>a+b,0)/5>=10*S.mass)award('sprint');}
+    if(++BADGE.chk>=5){BADGE.chk=0;badgeCheck(false);}}}
+// neues Abzeichen kurz einblenden (nacheinander, nicht gleichzeitig mit dem Bergwertungs-Banner)
+function badgePop(now){const el=$('badgePop');if(BADGE.showT&&now-BADGE.showT<5000)return;
+  if(BADGE.showT){el.classList.add('hidden');BADGE.showT=0;}
+  if(!BADGE.q.length||KOM.shownT)return;const id=BADGE.q.shift(),b=BADGES.find(x=>x.id===id);if(!b)return;
+  el.innerHTML=`<i>${b.i}</i><div><small>🏅 Neues Abzeichen</small><b>${b.n}</b><span>${b.d}</span></div>`;
+  el.classList.remove('hidden');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');BADGE.showT=now;}
+function badgeNum(v){return Math.floor(v).toLocaleString('de-DE');}
+function renderBadges(){const el=$('badgeList');if(!el)return;const st=badgeStore(),c=badgeCtx();let n=0;
+  el.innerHTML=BADGES.map(b=>{const t=st.got[b.id];if(t)n++;const g=badgeGoal(b),v=!t&&b.v?Math.min(g,b.v(c)):null;
+    return `<div class="bdg ${t?'on':''}" title="${b.d}"><i>${b.i}</i><b>${b.n}</b><small>${t?'✔ '+new Date(t).toLocaleDateString('de-DE'):b.d}</small>`+
+      (v!==null?`<span class="bp"><em style="width:${Math.round(v/g*100)}%"></em></span><small>${badgeNum(v)} / ${badgeNum(g)}</small>`:'')+'</div>';}).join('');
+  $('badgeCount').textContent=`${n} von ${BADGES.length} Abzeichen gesammelt`;}
+
 /* ================= Welt/Route wechseln ohne Neuladen (Bluetooth-Geräte bleiben verbunden) ================= */
 let REBUILD=false,SCENE_BASE=null;
 function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.isInstancedMesh&&c.dispose)c.dispose();
@@ -4715,7 +4828,7 @@ async function buildWorld(){
 function resetRide(){
   if(W.active)stopWorkout();
   Object.assign(S,{dist:0,odo:0,v:0,elapsed:0,climb:0,lastH:null,legPhase:0,wheel:0,started:false,riding:false,paused:false});
-  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;gagPlan();wxRandomize(); // neue Fahrt: neues Zufallswetter
+  Object.assign(REC,{s:[],acc:0,start:Date.now(),koms:[],laps:[],ended:false});GHOST.t0=null;BADGE.r=badgeRide();BADGE.base=null;BADGE.p5.length=0;gagPlan();wxRandomize(); // neue Fahrt: neues Zufallswetter
   KOM.act=null;KOM.shownT=0;LAP.act=null;$('komBanner').classList.add('hidden');$('komBox').classList.add('hidden');
   placeBotsStart();
   $('hud').classList.add('hidden');$('statsView').classList.add('hidden');$('simBox').classList.add('hidden');
@@ -4795,6 +4908,7 @@ function decorate(){
 async function boot(){
   loadSettings();CHUNK=S.quality==='low'?900:500;initScene();SCENE_BASE=new Set(scene.children);await buildWorld();wireUi();
   $('loading').classList.add('hidden');if(S.prof)openDevices();else openWelcome();autoConnect();
+  {const fresh=badgeStore()&&BADGE.fresh,n=badgeCheck(true);if(fresh)badgeSave();if(fresh&&n)setTimeout(()=>toast(`🏅 ${n} Abzeichen für deine bisherigen Fahrten – im Menü unter „📒 Meine Fahrten“`),7000);}
   if(OSM.built)toast('🏠 '+OSM.built.toLocaleString('de-DE')+' echte Häuser aus OpenStreetMap sind aktiv');
   requestAnimationFrame(frame);
 }
