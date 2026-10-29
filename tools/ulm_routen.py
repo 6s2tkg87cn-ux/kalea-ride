@@ -8,6 +8,10 @@ Ergebnis: src/data/ulm-data.js wird ergänzt
   - routes: drei neue Runden (Routing auf OSM-Wegen, Radwege bevorzugt, ohne Sackgassen und Wenden), Höhen aus dem
             Raster; bei den alten Innenstadt-Runden werden nur die Wenden ersetzt (OLD_PATCHES, einmalig: fix=1)
   - places/zones: Ortschaften und Klöster entlang der neuen Routen
+
+         python3 tools/ulm_routen.py ulm-routen.json --seen
+  - nur Seen/Weiher (lakes, Umriss vereinfacht) und Kirchen/Aussichtspunkte (pois) nahe den Routen ergänzen,
+    alles andere (Routen, Raster, Flüsse) bleibt unverändert
 Braucht numpy und Pillow; Höhenkacheln werden in ~/.cache/kalea-terrarium zwischengespeichert.
 Daten © OpenStreetMap-Mitwirkende (ODbL); Höhen: Mapzen/AWS Terrain Tiles (u. a. EU-DEM, Copernicus).
 """
@@ -889,5 +893,63 @@ def write_house_query(C=1200, R=220, CORE=650):
     print(f'{p}: {len(bb)} Kartenstücke, {len(lines)} Routen ({len(d) // 1024} KB)')
 
 
+def build_lakes(osm, U, r=1500, min_area=1500):
+    """Seen und Weiher (natural=water ohne Fluss) nahe den Routen: Umriss vereinfacht, Name; Wasserspiegel rechnet die App."""
+    pts = np.array([(rt['x'][i], rt['z'][i]) for rt in U['routes'] for i in range(0, len(rt['x']), 6)])
+    riv = np.array([(q[0], q[1], max(q[2], q[3])) for rv in U['rivers'] for q in rv['p']])
+    out = []
+    for typ, name, rings in osm.d['areas']:
+        if typ not in ('', 'pond', 'lake', 'reservoir'):
+            continue
+        for role, flat in rings:
+            if role != 'outer' or len(flat) < 8:
+                continue
+            P = Osm.flat2xz(flat)
+            if math.hypot(P[0][0] - P[-1][0], P[0][1] - P[-1][1]) < 0.5:
+                P = P[:-1]
+            A = abs(sum(P[i][0] * P[(i + 1) % len(P)][1] - P[(i + 1) % len(P)][0] * P[i][1] for i in range(len(P)))) / 2
+            if A < min_area:
+                continue
+            Q = np.array(P)
+            if np.min(np.hypot(pts[:, None, 0] - Q[None, ::max(1, len(Q) // 16), 0], pts[:, None, 1] - Q[None, ::max(1, len(Q) // 16), 1])) > r:
+                continue
+            # Teile der Flüsse (Wasserfläche ohne Fluss-Angabe) weglassen: Mehrheit der Punkte im Flussbett
+            dr = np.min(np.hypot(Q[:, None, 0] - riv[None, :, 0], Q[:, None, 1] - riv[None, :, 1]) - riv[None, :, 2], axis=1)
+            if np.mean(dr < 8) > 0.4:
+                continue
+            h = len(P) // 2               # Ring in zwei Hälften vereinfachen (dp braucht verschiedene Endpunkte)
+            S = dp(P[:h + 1], 1.5)[:-1] + dp(P[h:] + [P[0]], 1.5)[:-1]
+            if len(S) < 3:
+                continue
+            out.append({'n': name, 'p': [round(v, 1) for q in S for v in q]})
+    return out
+
+
+def build_pois(osm, U, r=900):
+    """Kirchen (für Dörfer), Aussichtspunkte und Wegkreuze nahe den Routen: [Art, Name, x, z]."""
+    pts = np.array([(rt['x'][i], rt['z'][i]) for rt in U['routes'] for i in range(0, len(rt['x']), 6)])
+    keep = {'place_of_worship': 'kirche', 'church': 'kirche', 'viewpoint': 'aussicht', 'wayside_shrine': 'kreuz', 'wayside_cross': 'kreuz'}
+    out = []
+    for typ, name, la, lo, bld, rel in osm.d['pois']:
+        if typ not in keep or (keep[typ] == 'kirche' and rel not in ('', 'christian')):
+            continue
+        x, z = ll2xz(la / 1e5, lo / 1e5)
+        if np.min(np.hypot(pts[:, 0] - x, pts[:, 1] - z)) < r:
+            out.append([keep[typ], name, round(x, 1), round(z, 1)])
+    return out
+
+
+def main_lakes():
+    osm = Osm(sys.argv[1])
+    src = open(DATA, encoding='utf-8').read()
+    head, js = src.split('const ULM_DATA=', 1)
+    U = json.loads(js.strip().rstrip(';'))
+    U['lakes'] = build_lakes(osm, U)
+    U['pois'] = build_pois(osm, U)
+    with open(DATA, 'w', encoding='utf-8') as f:
+        f.write(head + 'const ULM_DATA=' + json.dumps(U, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    print(f'{DATA}: {os.path.getsize(DATA) // 1024} KB, {len(U["lakes"])} Seen, {len(U["pois"])} Orte (Kirchen, Aussicht, Kreuze)')
+
+
 if __name__ == '__main__':
-    main()
+    main_lakes() if '--seen' in sys.argv else main()
