@@ -3221,8 +3221,10 @@ const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','K
   ['erg','ERG an/aus'],['map','Karte umschalten'],['mute','Ton an/aus'],['none','– nichts –']];
 function keymap(){if(!S.keymap){S.keymap={...KEY_DEF};const L=Z.learned||{};for(const a of ['up','down'])if(L[a]&&L[a].kind==='bit')S.keymap[L[a].bit]=a;}return S.keymap;}
 function keyAction(bit){const m=keymap();return m[bit]||'none';}
+// Click-Schalten: dieselbe Richtung innerhalb von 150 ms nur einmal (doppelte Meldungen – z. B. zwei Nachrichtenarten für einen Druck)
+function clickDup(act){const now=performance.now();if(Z.lastAct===act&&now-(Z.lastActT||0)<150){btLog('Click: doppelte Meldung ignoriert ('+act+')');return true;}Z.lastAct=act;Z.lastActT=now;return false;}
 function runAction(act,pad){
-  if(act==='up'||act==='down'){shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
+  if(act==='up'||act==='down'){if(clickDup(act))return;shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
   else if(act==='cam')S.cam=(S.cam+1)%VIEWS.length;
   else if(act==='pow'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
   else if(act==='zones')toggleZones();
@@ -3307,7 +3309,7 @@ function onClickMsg(pad,dv,src){
   Z.idle.set(hx,now);
   for(const act of ['up','down']){const m=Z.learned[act];if(m&&m.kind==='hex'&&m.v===hx){if(now-Z.latch>150){doShift(act);Z.latch=now;firstPress(pad);}return;}}
   if(type===0x37){const plus=f[1]===0,minus=f[2]===0;
-    if(plus&&!pad.prev.plus){shift(1);firstPress(pad);holdStart('up');HOLD.pad=pad;}if(minus&&!pad.prev.minus){shift(-1);firstPress(pad);holdStart('down');HOLD.pad=pad;}
+    if(plus&&!pad.prev.plus&&!clickDup('up')){shift(1);firstPress(pad);holdStart('up');HOLD.pad=pad;}if(minus&&!pad.prev.minus&&!clickDup('down')){shift(-1);firstPress(pad);holdStart('down');HOLD.pad=pad;}
     if(!plus&&!minus&&HOLD.pad===pad)holdStop();
     pad.prev.plus=plus;pad.prev.minus=minus;return;}
   if(type===0x23||type===0x07){if(f[1]===undefined)return;
@@ -3356,7 +3358,8 @@ function shift(d){if(ergActive()){ergNudge(d);if(!shift.ergHint){shift.ergHint=1
 // Dauerdruck: nach kurzer Pause weiter schalten, solange die Taste gehalten wird
 const HOLD={act:null,t1:0,t2:0};
 function holdStart(act){holdStop();if(!S.repeat)return;HOLD.act=act;HOLD.t0=performance.now();
-  HOLD.t1=setTimeout(()=>{HOLD.t2=setInterval(()=>{if(performance.now()-HOLD.t0>4000){holdStop();return;}shift(act==='up'?1:-1);},S.repeat);},380);}
+  // erst nach 0,6 s gehalten weiterschalten – kommt die Loslass-Meldung des Click etwas spät, gab es sonst einen Gang zu viel
+  HOLD.t1=setTimeout(()=>{btLog('Click: Taste gehalten – Dauerschalten');HOLD.t2=setInterval(()=>{if(performance.now()-HOLD.t0>4000){holdStop();return;}shift(act==='up'?1:-1);},S.repeat);},600);}
 function holdStop(){clearTimeout(HOLD.t1);clearInterval(HOLD.t2);HOLD.act=null;}
 function parseTeeth(str,min,max){return (String(str).match(/\d+/g)||[]).map(Number).filter(n=>n>=min&&n<=max);}
 function bikeSetup(){

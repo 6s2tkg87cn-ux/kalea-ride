@@ -188,7 +188,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
   virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
-  Dauerschalten (`HOLD.pad`/`HOLD.bit`, Abbruch nach 4 s). **Tasten frei belegen:** `S.keymap` = Bit → Aktion (`KEY_DEF`:
+  Dauerschalten (`HOLD.pad`/`HOLD.bit`, erst nach 0,6 s – sonst schaltete eine spät ankommende Loslass-Meldung einen Gang zu viel;
+  Abbruch nach 4 s). Doppelte Meldungen derselben Richtung innerhalb 150 ms zählen einmal (`clickDup`). **Tasten frei belegen:** `S.keymap` = Bit → Aktion (`KEY_DEF`:
   + Bit 12 und Y Bit 6 schwerer, − Bit 8 und B Bit 5 leichter, d. h. Schalten geht auch nur mit der rechten Hälfte;
   Aktionen `KEY_ACT`, ausgeführt in `runAction`; „Taste anlernen“ = `startMapLearn`). **Linke Hälfte wach halten**
   (`S.clickRefresh`): die linke Hälfte sendet ohne „Entsperren“ in der Hersteller-App nach ca. 1 min nichts mehr → alle 45 s
