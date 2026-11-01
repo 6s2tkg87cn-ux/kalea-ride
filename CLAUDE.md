@@ -169,6 +169,12 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `wahoo` (ältere Wahoo ohne FTMS: Steuerkanal a026e005… im Cycling-Power-Dienst; 0x20 EE FC freischalten, 0x43 Gewicht/
   Crr/Cw, 0x46 Steigung `(g+1)·32768`, 0x42 ERG), `cps` (nur Watt, ohne Steuerung; Tempo aus Radumdrehungen, `cpsParse`).
   Gewicht/Luftwiderstand laufen als `T.pendingCfg` vor der Steigung (`pumpTrainer`). Kalibrieren nur mit FTMS.
+- **Bluetooth robust:** Schreiben je Gerät in eigener Warteschlange mit 4-s-Zeitlimit (`bleSend`; früher EINE Warteschlange für
+  alle – ein hängender Click-Befehl blockierte auch den Trainer). Verbindungsaufbau je Gerät nur einmal gleichzeitig (`oneAtATime`
+  um `setupTrainerNow`/`setupClickNow`/…, Fehler mit `e.busy`), Benachrichtigungs-Empfänger über `onNotify` (ersetzt statt
+  doppelt). Automatisch verbinden: höchstens ein Versuch je Gerät, frühestens alle 4 s (Geräte funken mehrmals pro Sekunde).
+  Trainer weg: `onTrainerLost` versucht 10 min lang neu (eine Schleife, `T.reconn`), Wächter alle 5 s. Kleine Steigungsänderungen
+  gehen höchstens alle 1,2 s an den Trainer, große und Schalten sofort. Test ohne Geräte: künstliches `navigator.bluetooth` im Browser.
 - **Powermeter** (optional, Rolle `pm`, `PM`, `setupPm`, `S.pmUse`): liefert dann Watt und Kadenz (`pmActive`/`pmCad`),
   der Trainer regelt nur den Widerstand (`trPower`/`trCad` schreiben dann nicht in `S.power`/`S.cadence`).
 - **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr/pm,

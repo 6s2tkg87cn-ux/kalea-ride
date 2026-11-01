@@ -2924,8 +2924,19 @@ function wireNet(){
 function markNetCols(){document.querySelectorAll('#netCols .colchip').forEach(b=>b.classList.toggle('on',+b.dataset.c===S.netCol));}
 
 /* ================= Bluetooth ================= */
-let bleQ=Promise.resolve();
-function bleWrite(ch,data){bleQ=bleQ.then(()=>ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data)).catch(e=>console.warn('BLE write',e));return bleQ;}
+// GATT erlaubt je Gerät nur einen Vorgang gleichzeitig → Schreiben je Gerät der Reihe nach, aber mit Zeitlimit: Hängt ein Befehl
+// (Gerät gerade weg, z. B. beim Neuverbinden der linken Click-Hälfte), blockiert er nicht alle folgenden – auch nicht die anderer Geräte.
+const BLEQ=new Map(),GATT_BUSY=new Set();
+function withTimeout(p,ms,what){let t;return Promise.race([p,new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(what+': keine Antwort')),ms);})]).finally(()=>clearTimeout(t));}
+function bleSend(ch,data,noResp){const id=(ch.service&&ch.service.device&&ch.service.device.id)||'?';
+  const run=()=>withTimeout(noResp&&ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data)),4000,'Schreiben');
+  const q=(BLEQ.get(id)||Promise.resolve()).then(run,run);BLEQ.set(id,q.catch(()=>{}));return q;}
+function bleWrite(ch,data){return bleSend(ch,data).catch(e=>console.warn('BLE write',e));}
+// Verbindungsaufbau je Gerät nur einmal gleichzeitig (automatisch, von Hand und Neuverbinden kamen sich sonst in die Quere)
+async function oneAtATime(dev,fn){const id=(dev&&dev.id)||'?';if(GATT_BUSY.has(id)){const e=new Error('Verbindung läuft schon');e.busy=true;throw e;}
+  GATT_BUSY.add(id);try{return await withTimeout(fn(),25000,'Verbinden');}finally{GATT_BUSY.delete(id);}}
+// Benachrichtigungen: beim Neuverbinden den alten Empfänger ersetzen statt einen weiteren anzuhängen
+function onNotify(ch,fn){if(ch._krFn)ch.removeEventListener('characteristicvaluechanged',ch._krFn);ch._krFn=fn;ch.addEventListener('characteristicvaluechanged',fn);}
 function setDot(k,state,text){$('d'+k).className='dot '+state;$('s'+k).textContent=text;}
 function status(msg){$('status').textContent=msg||'';}
 
@@ -2940,37 +2951,38 @@ async function connectTrainer(){
   if(!navigator.bluetooth)return;
   try{setDot('Trainer','busy','Gerät auswählen …');
     T.dev=await navigator.bluetooth.requestDevice({filters:[{services:[0x1826]},{services:[0x1818]},{services:[FEC_SVC]},{namePrefix:'KICKR'},{namePrefix:'Tacx'}],optionalServices:[0x1826,0x1818,FEC_SVC]});
-    T.dev.addEventListener('gattserverdisconnected',onTrainerLost);await setupTrainer();
-  }catch(e){setDot('Trainer','off','Nicht verbunden'+(e.name==='NotFoundError'?'':' – '+e.message));T.dev=null;}
+    if(!T.dev._kl){T.dev._kl=1;T.dev.addEventListener('gattserverdisconnected',onTrainerLost);}await setupTrainer();
+  }catch(e){if(e.busy){setDot('Trainer','busy','Verbindet gerade …');return;}setDot('Trainer','off','Nicht verbunden'+(e.name==='NotFoundError'?'':' – '+e.message));T.dev=null;}
 }
 // FE-C: ANT+-Datenseite (8 Bytes) als „bestätigte Nachricht“ an Kanal 5: A4 · Länge 9 · 4F · 05 · Seite · Prüfsumme (XOR)
 function fecMsg(page){const m=[0xA4,0x09,0x4F,0x05,...page];m.push(m.reduce((a,b)=>a^b,0));return new Uint8Array(m);}
 function fecUser(){const w=Math.round(S.mass*100),bk=Math.round(PHYS.bike/0.05),d=T.circ/Math.PI,dcm=Math.floor(d*100),off=clamp(Math.round((d*100-dcm)*10),0,10);
   return [0x37,w&255,w>>8,0xFF,(off&15)|((bk&15)<<4),(bk>>4)&255,dcm,0x00];} // Gewicht, Radgewicht, Raddurchmesser (Umfang ≈ 2096 mm)
 function wahooSim(cw){const w=Math.round((S.mass+PHYS.bike)*100),r=Math.round(0.004*10000),c=Math.round((cw||0)*1000);return new Uint8Array([0x43,w&255,w>>8,r&255,r>>8,c&255,c>>8]);}
-function chWrite(ch,data){return T.mode==='fec'&&ch.properties&&ch.properties.writeWithoutResponse&&ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data));}
-async function setupTrainer(){
-  setDot('Trainer','busy','Verbinde …');
+function chWrite(ch,data){return bleSend(ch,data,T.mode==='fec'&&ch.properties&&ch.properties.writeWithoutResponse);}
+function setupTrainer(){return oneAtATime(T.dev,setupTrainerNow);}
+async function setupTrainerNow(){
+  setDot('Trainer','busy','Verbinde …');T.busy=false;T.pending=null;
   const server=await T.dev.gatt.connect(),svc=async u=>{try{return await server.getPrimaryService(u);}catch(e){return null;}};
   T.cp=null;T.mode=null;T.noSim=false;T.lastCw=null;T.pendingCfg=null;T.wheel=null;
   const ftms=await svc(0x1826);
   if(ftms){
     const ibd=await ftms.getCharacteristic(0x2AD2);await ibd.startNotifications();
-    ibd.addEventListener('characteristicvaluechanged',e=>parseIBD(e.target.value));T.mode='ftms';
+    onNotify(ibd,e=>parseIBD(e.target.value));T.mode='ftms';
     try{const cp=await ftms.getCharacteristic(0x2AD9);await cp.startNotifications();
-      cp.addEventListener('characteristicvaluechanged',e=>onCP(e.target.value));T.cp=cp;
+      onNotify(cp,e=>onCP(e.target.value));T.cp=cp;
       await bleWrite(cp,new Uint8Array([0x00]));await bleWrite(cp,new Uint8Array([0x07]));T.lastSent=null;
     }catch(e){T.cp=null;console.warn(e);}
     // Fähigkeiten (z. B. Ausrollen/Kalibrieren, Steigungssimulation) und Statusmeldungen des Trainers
     try{const fe=await ftms.getCharacteristic(0x2ACC),v=await fe.readValue();T.feat=v.getUint32(0,true);T.tfeat=v.byteLength>=8?v.getUint32(4,true):0;}catch(e){T.tfeat=null;}
     try{const rr=await ftms.getCharacteristic(0x2AD6),v=await rr.readValue();T.rmin=v.getInt16(0,true);T.rmax=v.getInt16(2,true);}catch(e){T.rmin=0;T.rmax=100;}
     if(T.tfeat&&!(T.tfeat&(1<<13))&&(T.tfeat&(1<<2)))T.noSim=true; // kann keine Steigung, nur Widerstandsstufen
-    try{const st=await ftms.getCharacteristic(0x2ADA);await st.startNotifications();st.addEventListener('characteristicvaluechanged',e=>onFtmsStatus(e.target.value));}catch(e){}
+    try{const st=await ftms.getCharacteristic(0x2ADA);await st.startNotifications();onNotify(st,e=>onFtmsStatus(e.target.value));}catch(e){}
   }else{
     const fec=await svc(FEC_SVC),cps=await svc(0x1818);
-    if(cps){try{const ch=await cps.getCharacteristic(0x2A63);await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCPS(e.target.value));T.mode='cps';}catch(e){}}
+    if(cps){try{const ch=await cps.getCharacteristic(0x2A63);await ch.startNotifications();onNotify(ch,e=>parseCPS(e.target.value));T.mode='cps';}catch(e){}}
     if(fec){try{const wr=await fec.getCharacteristic(FEC_WRITE);T.cp=wr;T.mode='fec';
-        try{const rd=await fec.getCharacteristic(FEC_NOTIFY);await rd.startNotifications();rd.addEventListener('characteristicvaluechanged',e=>parseFEC(e.target.value));}catch(e){}
+        try{const rd=await fec.getCharacteristic(FEC_NOTIFY);await rd.startNotifications();onNotify(rd,e=>parseFEC(e.target.value));}catch(e){}
         await chWrite(wr,fecMsg(fecUser()));}catch(e){T.cp=null;if(T.mode==='fec')T.mode=cps?'cps':null;console.warn('FE-C',e);}}
     else if(cps){try{const wc=await cps.getCharacteristic(WAHOO_CP);await wc.startNotifications();T.cp=wc;T.mode='wahoo';
         try{await chWrite(wc,new Uint8Array([0x20,0xEE,0xFC]));}catch(e){} // Freischalten (ältere Firmware)
@@ -2981,9 +2993,16 @@ async function setupTrainer(){
   setDot('Trainer','on',(T.dev.name||'Trainer')+' · '+(T.cp?TR_KIND[T.mode]:TR_KIND.cps)+(T.noSim?' · nur Widerstandsstufen':''));status('');
   $('calibRow').classList.toggle('hidden',!(T.cp&&T.mode==='ftms'));sendResistance(true);
 }
-async function onTrainerLost(){T.cp=null;setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
-  while(T.dev&&T.retries<5){T.retries++;await new Promise(r=>setTimeout(r,2000));try{await setupTrainer();return;}catch(e){}}
-  setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}
+// Trainer weg: bis zu 10 min immer wieder versuchen (anfangs schnell, dann alle 10 s) – nur eine Schleife gleichzeitig
+async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;T.cp=null;T.busy=false;T.pending=null;T.pendingCfg=null;
+  setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
+  const dev=T.dev,t0=Date.now();
+  for(let i=0;T.dev===dev&&Date.now()-t0<10*60000;i++){await new Promise(r=>setTimeout(r,Math.min(10000,1500+i*1500)));
+    if(T.dev!==dev)break;if(dev.gatt.connected&&T.cp)break;
+    try{await setupTrainer();T.reconn=false;if(i>0)toast('🔗 Trainer wieder verbunden');return;}catch(e){console.warn('Trainer neu verbinden',e.message);}}
+  T.reconn=false;if(T.dev===dev&&!T.cp){setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}}
+// Falls das Trenn-Ereignis einmal nicht kommt: Verbindung weg, aber keine Neuverbindung im Gang → anstoßen
+setInterval(()=>{if(T.dev&&T.mode&&!T.reconn&&!GATT_BUSY.has(T.dev.id)&&T.dev.gatt&&!T.dev.gatt.connected)onTrainerLost();},5000);
 // Raddrehzahl vom Trainer (m/s) mit geglätteter Beschleunigung (für Gang-Messung und Tritt-Erkennung)
 function trSpeed(nv){const nt=performance.now();
   if(T.speed!==null&&nt-T.speedAt>50&&nt-T.speedAt<2000){const a=(nv-T.speed)/((nt-T.speedAt)/1000);T.acc=T.acc*0.6+a*0.4;}T.speed=nv;T.speedAt=nt;}
@@ -3050,7 +3069,7 @@ function sendResistance(force){
     T.lastErg=tw;T.lastSent=null;T.lastCw=null;T.lastSendT=now;pumpTrainer();return;}
   T.lastErg=null;
   const cmd=trainerGradeCmd();
-  if(!force&&T.lastSent!==null&&Math.abs(cmd.grade-T.lastSent)<0.0008&&now-T.lastSendT<5000)return;
+  {const dg=T.lastSent===null?1:Math.abs(cmd.grade-T.lastSent);if(!force&&now-T.lastSendT<5000&&(dg<0.0008||(dg<0.004&&now-T.lastSendT<1200)))return;}
   if(M==='fec'||M==='wahoo'){ // Luftwiderstand (nur normale Kassette) und Gewicht getrennt einstellen, dann die Steigung
     if(T.lastCw===null||Math.abs(cmd.cw-T.lastCw)>0.02){T.lastCw=cmd.cw;T.pendingCfg=M==='fec'?fecMsg([0x32,0xFF,0xFF,0xFF,0xFF,Math.round(cmd.cw*100),0x7F,0x64]):wahooSim(cmd.cw);}
     if(M==='fec'){const g=clamp(Math.round((cmd.grade*100+200)*100),0,40000);T.pending=fecMsg([0x33,0xFF,0xFF,0xFF,0xFF,g&255,g>>8,clamp(Math.round(cmd.crr/0.00005),0,254)]);}
@@ -3075,10 +3094,11 @@ setInterval(()=>sendResistance(false),400);
 const CS={dev:null,crank:null};
 async function connectCad(){if(!navigator.bluetooth)return;
   try{setDot('Cad','busy','Gerät auswählen …');CS.dev=await navigator.bluetooth.requestDevice({filters:[{services:['cycling_speed_and_cadence']}]});await setupCad();
-  }catch(e){CS.dev=null;setDot('Cad','off','Nicht verbunden');}}
-async function setupCad(){
+  }catch(e){if(e.busy)return;CS.dev=null;setDot('Cad','off','Nicht verbunden');}}
+function setupCad(){return oneAtATime(CS.dev,setupCadNow);}
+async function setupCadNow(){
     const sv=await CS.dev.gatt.connect(),svc=await sv.getPrimaryService('cycling_speed_and_cadence'),ch=await svc.getCharacteristic('csc_measurement');
-    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>parseCSC(e.target.value));
+    await ch.startNotifications();onNotify(ch,e=>parseCSC(e.target.value));
     if(!CS.dev._kl){CS.dev._kl=1;CS.dev.addEventListener('gattserverdisconnected',()=>{setDot('Cad','off','Getrennt');CS.dev=null;CS.crank=null;});}
     setDot('Cad','on',CS.dev.name||'Trittfrequenz-Sensor');rememberDev('cad',CS.dev);}
 function parseCSC(dv){try{const f=dv.getUint8(0);let o=1;if(f&1)o+=6;
@@ -3095,11 +3115,12 @@ function pmActive(){return !!(PM.dev&&S.pmUse&&performance.now()-(PM.at||0)<4000
 function pmCad(){return pmActive()&&PM.crank&&performance.now()-PM.crank.at<4000;}
 async function connectPm(){if(!navigator.bluetooth)return;
   try{setDot('Pm','busy','Gerät auswählen …');PM.dev=await navigator.bluetooth.requestDevice({filters:[{services:['cycling_power']}]});await setupPm();
-  }catch(e){PM.dev=null;setDot('Pm','off','Nicht verbunden');}}
-async function setupPm(){
+  }catch(e){if(e.busy)return;PM.dev=null;setDot('Pm','off','Nicht verbunden');}}
+function setupPm(){return oneAtATime(PM.dev,setupPmNow);}
+async function setupPmNow(){
     if(T.dev&&PM.dev.id===T.dev.id){PM.dev=null;setDot('Pm','off','Das ist der Trainer – bitte den Powermeter wählen');throw new Error('same');}
     const s=await PM.dev.gatt.connect(),svc=await s.getPrimaryService('cycling_power'),ch=await svc.getCharacteristic('cycling_power_measurement');
-    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{try{PM.at=performance.now();
+    await ch.startNotifications();onNotify(ch,e=>{try{PM.at=performance.now();
       cpsParse(e.target.value,PM,w=>{PM.power=w;if(S.pmUse)S.power=w;},c=>{if(S.pmUse&&!CS.dev){S.cadence=c;T.hasCad=true;T.cadAt=performance.now();}},null);}catch(x){}});
     if(!PM.dev._kl){PM.dev._kl=1;PM.dev.addEventListener('gattserverdisconnected',()=>{setDot('Pm','off','Getrennt');PM.dev=null;PM.crank=null;$('pmUseRow').classList.add('hidden');});}
     setDot('Pm','on',PM.dev.name||'Powermeter');rememberDev('pm',PM.dev);$('pmUseRow').classList.remove('hidden');}
@@ -3108,10 +3129,11 @@ async function setupPm(){
 const HR={dev:null};
 async function connectHr(){if(!navigator.bluetooth)return;
   try{setDot('Hr','busy','Gerät auswählen …');HR.dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});await setupHr();
-  }catch(e){HR.dev=null;setDot('Hr','off','Nicht verbunden');}}
-async function setupHr(){
+  }catch(e){if(e.busy)return;HR.dev=null;setDot('Hr','off','Nicht verbunden');}}
+function setupHr(){return oneAtATime(HR.dev,setupHrNow);}
+async function setupHrNow(){
     const s=await HR.dev.gatt.connect(),svc=await s.getPrimaryService('heart_rate'),ch=await svc.getCharacteristic('heart_rate_measurement');
-    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value,f=v.getUint8(0);S.hr=f&1?v.getUint16(1,true):v.getUint8(1);});
+    await ch.startNotifications();onNotify(ch,e=>{const v=e.target.value,f=v.getUint8(0);S.hr=f&1?v.getUint16(1,true):v.getUint8(1);});
     if(!HR.dev._kl){HR.dev._kl=1;HR.dev.addEventListener('gattserverdisconnected',()=>{setDot('Hr','off','Getrennt');HR.dev=null;S.hr=0;});}
     setDot('Hr','on',HR.dev.name||'Pulsgurt');rememberDev('hr',HR.dev);}
 
@@ -3134,7 +3156,7 @@ async function connectRole(role,dev){
   else if(role==='pm'){if(PM.dev&&PM.dev!==dev)return;PM.dev=dev;try{await setupPm();}catch(e){PM.dev=null;throw e;}}
   else{let pad=Z.pads.find(p=>p.dev.id===dev.id);if(pad&&pad.connected)return;
     if(!pad){pad={dev,bits:0,prev:{plus:false,minus:false},version:null,connected:false,buttons:0};Z.pads.push(pad);dev.addEventListener('gattserverdisconnected',()=>onClickLost(pad));}
-    try{await setupClick(pad);}catch(e){Z.pads=Z.pads.filter(p=>p!==pad||p.connected);throw e;}}}
+    try{await setupClick(pad);}catch(e){if(!e.busy)Z.pads=Z.pads.filter(p=>p!==pad||p.connected);throw e;}}}
 async function autoConnect(){const want=rememberedList();
   if(!want.length||!S.autoDev){AUTO.state=want.length?'off':'';updateAutoUi();return;}
   if(!navigator.bluetooth||!navigator.bluetooth.getDevices){AUTO.state='unsupported';updateAutoUi();return;}
@@ -3144,7 +3166,9 @@ async function autoConnect(){const want=rememberedList();
 async function autoOne(role,dev){if(AUTO.busy.has(dev.id))return;AUTO.busy.add(dev.id);const k=ROLE_DOT[role];
   setDot(k,'busy','Suche '+(dev.name||ROLE_NAME[role])+' … (einschalten bzw. kurz treten)');
   const t0=Date.now();
-  const tryNow=async()=>{if(roleConnected(role,dev))return true;try{await connectRole(role,dev);return true;}catch(e){setDot(k,'busy','Suche '+(dev.name||ROLE_NAME[role])+' …');return false;}};
+  let trying=false,lastTry=0; // Geräte funken mehrmals pro Sekunde – höchstens ein Versuch gleichzeitig, frühestens alle 4 s
+  const tryNow=async()=>{if(roleConnected(role,dev))return true;if(trying||Date.now()-lastTry<4000)return false;trying=true;lastTry=Date.now();
+    try{await connectRole(role,dev);return true;}catch(e){setDot(k,'busy','Suche '+(dev.name||ROLE_NAME[role])+' …');return false;}finally{trying=false;}};
   try{
     if(dev.watchAdvertisements){ // erst verbinden, wenn das Gerät in Reichweite funkt
       await new Promise(res=>{const ac=new AbortController(),stop=()=>{try{ac.abort();}catch(e){}res();};
@@ -3198,9 +3222,7 @@ function renderKeymap(hl){const el=$('keyTable');if(!el)return;const m=keymap(),
   el.querySelectorAll('select').forEach(sel=>sel.onchange=()=>{keymap()[sel.dataset.bit]=sel.value;saveSettings();});}
 Z.pads=[];
 function hex(b){return [...b].map(x=>x.toString(16).padStart(2,'0')).join(' ');}
-function zwrite(ch,bytes){const data=new Uint8Array(bytes);
-  bleQ=bleQ.then(()=>(ch.properties&&ch.properties.writeWithoutResponse&&ch.writeValueWithoutResponse)?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data)))
-    .catch(e=>clickLog('Schreibfehler: '+e.message));return bleQ;}
+function zwrite(ch,bytes){return bleSend(ch,new Uint8Array(bytes),ch.properties&&ch.properties.writeWithoutResponse).catch(e=>clickLog('Schreibfehler: '+e.message));}
 function clickStatus(extra){const on=Z.pads.filter(p=>p.connected);
   if(!on.length){setDot('Click','off',extra||'Nicht verbunden');$('bClick').textContent='Verbinden';updateClickHud();return;}
   const v=on.map(p=>(p.side?p.side+': ':'')+(p.version||'?')+(p.batt!=null?' · Akku '+p.batt+' %':'')).join(' | ');
@@ -3215,10 +3237,11 @@ async function connectClick(){if(!navigator.bluetooth)return;
     if(!pad){pad={dev,bits:0,prev:{plus:false,minus:false},version:null,connected:false,buttons:0};Z.pads.push(pad);
       dev.addEventListener('gattserverdisconnected',()=>onClickLost(pad));}
     await setupClick(pad);
-  }catch(e){if(pad){pad.connected=false;}
+  }catch(e){if(e.busy){clickStatus('verbindet gerade …');return;}if(pad){pad.connected=false;}
     if(e.name==='NotFoundError'){clickStatus();return;}
     clickLog('Fehler: '+e.message);clickStatus(e.message);status('Click-Schalter: '+e.message);}}
-async function setupClick(pad){
+function setupClick(pad){return oneAtATime(pad.dev,()=>setupClickNow(pad));}
+async function setupClickNow(pad){
   setDot('Click','busy','Verbinde …');
   const server=await pad.dev.gatt.connect();
   let svc=null,isV2=false;
@@ -3227,14 +3250,14 @@ async function setupClick(pad){
   if(!svc){let found='';try{found=(await server.getPrimaryServices()).map(x=>x.uuid).join(', ');}catch(e){}
     clickLog('Gefundene Dienste: '+(found||'keine'));try{server.disconnect();}catch(e){}
     throw new Error('Der Schalt-Dienst ist auf diesem Click verborgen. Bitte Firmware in der Hersteller-App aktualisieren oder den Click dort einmal koppeln (siehe Hilfe unten).');}
-  const a=await svc.getCharacteristic(ZU.async);await a.startNotifications();a.addEventListener('characteristicvaluechanged',e=>onClickMsg(pad,e.target.value,'async'));
-  try{const tx=await svc.getCharacteristic(ZU.tx);await tx.startNotifications();tx.addEventListener('characteristicvaluechanged',e=>onClickMsg(pad,e.target.value,'sync'));}catch(e){clickLog('Hinweis: Sync-Kanal nicht abonnierbar ('+e.message+')');}
+  const a=await svc.getCharacteristic(ZU.async);await a.startNotifications();onNotify(a,e=>onClickMsg(pad,e.target.value,'async'));
+  try{const tx=await svc.getCharacteristic(ZU.tx);await tx.startNotifications();onNotify(tx,e=>onClickMsg(pad,e.target.value,'sync'));}catch(e){clickLog('Hinweis: Sync-Kanal nicht abonnierbar ('+e.message+')');}
   const rx=await svc.getCharacteristic(ZU.rx);pad.rx=rx;pad.isV2=isV2;pad.version=isV2?'Click v2':'Click v1';
   if(isV2){await zwrite(rx,[...HANDSHAKE,0x02,0x03]);await new Promise(r=>setTimeout(r,250));await zwrite(rx,[0xFF,0x04,0x00]);}
   else await zwrite(rx,HANDSHAKE);
   pad.connected=true;pad.retries=0;pad.lastMsg=performance.now();pad.connT=performance.now();rememberDev('click',pad.dev);clickLog('Verbunden: '+pad.version+' – Handshake gesendet');
   try{const bs=await server.getPrimaryService('battery_service'),bl=await bs.getCharacteristic('battery_level'),v=await bl.readValue();pad.batt=v.getUint8(0);clickLog('Akku: '+pad.batt+' %');
-    try{await bl.startNotifications();bl.addEventListener('characteristicvaluechanged',e=>{pad.batt=e.target.value.getUint8(0);clickStatus();});}catch(e){}}catch(e){}
+    try{await bl.startNotifications();onNotify(bl,e=>{pad.batt=e.target.value.getUint8(0);clickStatus();});}catch(e){}}catch(e){}
   clickStatus('drück + zum Testen');
   if(!S.vshift){S.vshift=true;applyShiftMode();saveSettings();}
 }
@@ -3303,7 +3326,7 @@ function updateClickHud(){const el=$('clickHud');if(!el)return;const on=Z.pads.f
 // Bekanntes Verhalten des Click v2: die linke Hälfte sendet nach ca. 1 min keine Tasten mehr, solange sie nicht über die
 // Hersteller-App „entsperrt“ wurde (die rechte läuft weiter). Neu verbinden setzt das zurück → alle 45 s, wenn gerade keine
 // Taste gedrückt ist. Die linke Hälfte wird an der −-Taste erkannt (oder: zweite Hälfte neben einer bekannten rechten).
-setInterval(()=>{if(!S.clickRefresh)return;const now=performance.now(),right=Z.pads.some(p=>p.connected&&p.side&&p.side.startsWith('rechts'));
+setInterval(()=>{if(!S.clickRefresh||GATT_BUSY.size||T.reconn)return;const now=performance.now(),right=Z.pads.some(p=>p.connected&&p.side&&p.side.startsWith('rechts'));
   for(const p of Z.pads){if(!p.connected||!p.isV2||p.refreshing)continue;const left=p.side?p.side.startsWith('links'):right&&Z.pads.filter(q=>q.connected).length>1;
     if(!left||now-(p.connT||0)<45000||p.bits||now-(p.pressT||0)<2500||(HOLD.act&&HOLD.pad===p))continue;
     p.refreshing=true;clickLog('Linke Hälfte: kurz neu verbinden (bleibt so wach)');try{p.dev.gatt.disconnect();}catch(e){p.refreshing=false;}}},1000);
