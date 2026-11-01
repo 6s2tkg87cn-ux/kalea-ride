@@ -2235,7 +2235,7 @@ function stepPhysics(dt){
   if(S.sim){const tw=ergActive()?targetWatts():null;S.power=tw!==null?tw+Math.sin(now/700)*4:S.simPower;S.cadence=S.power>0?(tw!==null?88:clamp(S.v/(GEARS[S.gear]*PHYS.circ)*60,0,130)):0;}
   stepWorkout(dt);
   {const tg=GEARS[S.gear],tau=(SHIFT_FEEL[S.shiftFeel]||SHIFT_FEEL.soft).tau;if(!S.gr)S.gr=tg;
-    if(Math.abs(S.gr/tg-1)>0.002){S.gr=Math.exp(Math.log(S.gr)+(Math.log(tg)-Math.log(S.gr))*(1-Math.exp(-dt/Math.max(0.01,tau))));if(now-(T.rampSend||0)>110){T.rampSend=now;sendResistance(false);}}else S.gr=tg;}
+    if(Math.abs(S.gr/tg-1)>0.002){S.gr=Math.exp(Math.log(S.gr)+(Math.log(tg)-Math.log(S.gr))*(1-Math.exp(-dt/Math.max(0.01,tau))));if(now-(T.rampSend||0)>250){T.rampSend=now;sendResistance(false);}}else S.gr=tg;}
   updatePedaling(dt);const Peff=T.pedaling?S.power:0;
   if(T.startSoft>0){const vw=wheelSpeed();if(!T.pedaling||vw===null||vw<=S.v*1.05+0.3||now-T.startT>12000)T.startSoft=Math.max(0,T.startSoft-dt/1.5);}
   if(NET.hold){S.v=0;S.dist=0;S.legPhase+=S.cadence/60*Math.PI*2*dt;return;}
@@ -2932,6 +2932,9 @@ function bleSend(ch,data,noResp){const id=(ch.service&&ch.service.device&&ch.ser
   const run=()=>withTimeout(noResp&&ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data)),4000,'Schreiben');
   const q=(BLEQ.get(id)||Promise.resolve()).then(run,run);BLEQ.set(id,q.catch(()=>{}));return q;}
 function bleWrite(ch,data){return bleSend(ch,data).catch(e=>console.warn('BLE write',e));}
+// Bluetooth-Protokoll (Menü → Fahrt → Geräte): was mit den Verbindungen passiert – zum Mitschicken bei Problemen
+const BTLOG=[];
+function btLog(s){BTLOG.unshift(new Date().toLocaleTimeString()+'  '+s);if(BTLOG.length>120)BTLOG.length=120;const el=$('btLog');if(el)el.textContent=BTLOG.join('\n');}
 // Verbindungsaufbau je Gerät nur einmal gleichzeitig (automatisch, von Hand und Neuverbinden kamen sich sonst in die Quere)
 async function oneAtATime(dev,fn){const id=(dev&&dev.id)||'?';if(GATT_BUSY.has(id)){const e=new Error('Verbindung läuft schon');e.busy=true;throw e;}
   GATT_BUSY.add(id);try{return await withTimeout(fn(),25000,'Verbinden');}finally{GATT_BUSY.delete(id);}}
@@ -2962,13 +2965,13 @@ function wahooSim(cw){const w=Math.round((S.mass+PHYS.bike)*100),r=Math.round(0.
 function chWrite(ch,data){return bleSend(ch,data,T.mode==='fec'&&ch.properties&&ch.properties.writeWithoutResponse);}
 function setupTrainer(){return oneAtATime(T.dev,setupTrainerNow);}
 async function setupTrainerNow(){
-  setDot('Trainer','busy','Verbinde …');T.busy=false;T.pending=null;
+  btLog('Trainer: verbinde '+(T.dev.name||''));setDot('Trainer','busy','Verbinde …');T.busy=false;T.pending=null;
   const server=await T.dev.gatt.connect(),svc=async u=>{try{return await server.getPrimaryService(u);}catch(e){return null;}};
   T.cp=null;T.mode=null;T.noSim=false;T.lastCw=null;T.pendingCfg=null;T.wheel=null;
   const ftms=await svc(0x1826);
   if(ftms){
     const ibd=await ftms.getCharacteristic(0x2AD2);await ibd.startNotifications();
-    onNotify(ibd,e=>parseIBD(e.target.value));T.mode='ftms';
+    onNotify(ibd,e=>parseIBD(e.target.value));T.dataCh=ibd;T.mode='ftms';
     try{const cp=await ftms.getCharacteristic(0x2AD9);await cp.startNotifications();
       onNotify(cp,e=>onCP(e.target.value));T.cp=cp;
       await bleWrite(cp,new Uint8Array([0x00]));await bleWrite(cp,new Uint8Array([0x07]));T.lastSent=null;
@@ -2980,27 +2983,27 @@ async function setupTrainerNow(){
     try{const st=await ftms.getCharacteristic(0x2ADA);await st.startNotifications();onNotify(st,e=>onFtmsStatus(e.target.value));}catch(e){}
   }else{
     const fec=await svc(FEC_SVC),cps=await svc(0x1818);
-    if(cps){try{const ch=await cps.getCharacteristic(0x2A63);await ch.startNotifications();onNotify(ch,e=>parseCPS(e.target.value));T.mode='cps';}catch(e){}}
+    if(cps){try{const ch=await cps.getCharacteristic(0x2A63);await ch.startNotifications();onNotify(ch,e=>parseCPS(e.target.value));T.dataCh=ch;T.mode='cps';}catch(e){}}
     if(fec){try{const wr=await fec.getCharacteristic(FEC_WRITE);T.cp=wr;T.mode='fec';
-        try{const rd=await fec.getCharacteristic(FEC_NOTIFY);await rd.startNotifications();onNotify(rd,e=>parseFEC(e.target.value));}catch(e){}
+        try{const rd=await fec.getCharacteristic(FEC_NOTIFY);await rd.startNotifications();onNotify(rd,e=>parseFEC(e.target.value));T.dataCh=rd;}catch(e){}
         await chWrite(wr,fecMsg(fecUser()));}catch(e){T.cp=null;if(T.mode==='fec')T.mode=cps?'cps':null;console.warn('FE-C',e);}}
     else if(cps){try{const wc=await cps.getCharacteristic(WAHOO_CP);await wc.startNotifications();T.cp=wc;T.mode='wahoo';
         try{await chWrite(wc,new Uint8Array([0x20,0xEE,0xFC]));}catch(e){} // Freischalten (ältere Firmware)
       }catch(e){T.cp=null;}}
     if(!T.mode){try{server.disconnect();}catch(e){}throw new Error('Kein bekannter Trainer-Dienst gefunden');}
   }
-  T.lastSent=null;T.lastErg=null;T.retries=0;T.lastData=performance.now();rememberDev('trainer',T.dev);
+  T.lastSent=null;T.lastErg=null;T.retries=0;T.lastData=performance.now();T.stale=0;rememberDev('trainer',T.dev);btLog('Trainer: verbunden ('+T.mode+(T.cp?', steuerbar':', nur Daten')+')');
   setDot('Trainer','on',(T.dev.name||'Trainer')+' · '+(T.cp?TR_KIND[T.mode]:TR_KIND.cps)+(T.noSim?' · nur Widerstandsstufen':''));status('');
   $('calibRow').classList.toggle('hidden',!(T.cp&&T.mode==='ftms'));sendResistance(true);
 }
 // Trainer weg: bis zu 10 min immer wieder versuchen (anfangs schnell, dann alle 10 s) – nur eine Schleife gleichzeitig
-async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;T.cp=null;T.busy=false;T.pending=null;T.pendingCfg=null;
+async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;btLog('Trainer: Verbindung weg'+(T.dev.gatt&&T.dev.gatt.connected?' (laut Browser noch verbunden)':''));T.cp=null;T.busy=false;T.pending=null;T.pendingCfg=null;
   setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
   const dev=T.dev,t0=Date.now();
   for(let i=0;T.dev===dev&&Date.now()-t0<10*60000;i++){await new Promise(r=>setTimeout(r,Math.min(10000,1500+i*1500)));
     if(T.dev!==dev)break;if(dev.gatt.connected&&T.cp)break;
-    try{await setupTrainer();T.reconn=false;if(i>0)toast('🔗 Trainer wieder verbunden');return;}catch(e){console.warn('Trainer neu verbinden',e.message);}}
-  T.reconn=false;if(T.dev===dev&&!T.cp){setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}}
+    try{await setupTrainer();T.reconn=false;toast('🔗 Trainer wieder verbunden');return;}catch(e){btLog('Trainer: Neuverbinden fehlgeschlagen – '+e.message);}}
+  T.reconn=false;if(T.dev===dev&&!T.cp){btLog('Trainer: aufgegeben nach 10 min');setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}}
 // Falls das Trenn-Ereignis einmal nicht kommt: Verbindung weg, aber keine Neuverbindung im Gang → anstoßen
 setInterval(()=>{if(T.dev&&T.mode&&!T.reconn&&!GATT_BUSY.has(T.dev.id)&&T.dev.gatt&&!T.dev.gatt.connected)onTrainerLost();},5000);
 // Raddrehzahl vom Trainer (m/s) mit geglätteter Beschleunigung (für Gang-Messung und Tritt-Erkennung)
@@ -3069,7 +3072,7 @@ function sendResistance(force){
     T.lastErg=tw;T.lastSent=null;T.lastCw=null;T.lastSendT=now;pumpTrainer();return;}
   T.lastErg=null;
   const cmd=trainerGradeCmd();
-  {const dg=T.lastSent===null?1:Math.abs(cmd.grade-T.lastSent);if(!force&&now-T.lastSendT<5000&&(dg<0.0008||(dg<0.004&&now-T.lastSendT<1200)))return;}
+  {const dg=T.lastSent===null?1:Math.abs(cmd.grade-T.lastSent),gap=now-T.lastSendT;if(!force&&gap<5000&&(dg<0.0008||(dg<0.004&&gap<2000)||(dg<0.02&&gap<1000)))return;}
   if(M==='fec'||M==='wahoo'){ // Luftwiderstand (nur normale Kassette) und Gewicht getrennt einstellen, dann die Steigung
     if(T.lastCw===null||Math.abs(cmd.cw-T.lastCw)>0.02){T.lastCw=cmd.cw;T.pendingCfg=M==='fec'?fecMsg([0x32,0xFF,0xFF,0xFF,0xFF,Math.round(cmd.cw*100),0x7F,0x64]):wahooSim(cmd.cw);}
     if(M==='fec'){const g=clamp(Math.round((cmd.grade*100+200)*100),0,40000);T.pending=fecMsg([0x33,0xFF,0xFF,0xFF,0xFF,g&255,g>>8,clamp(Math.round(cmd.crr/0.00005),0,254)]);}
@@ -3086,9 +3089,20 @@ function sendResistance(force){
 // Einstellungen (Gewicht, Luftwiderstand) gehen vorher raus.
 async function pumpTrainer(){
   if(T.busy||!(T.pending||T.pendingCfg)||!T.cp)return;T.busy=true;let data;if(T.pendingCfg){data=T.pendingCfg;T.pendingCfg=null;}else{data=T.pending;T.pending=null;}
-  try{await chWrite(T.cp,data);}catch(e){console.warn('Trainer',e.message);}
+  try{await chWrite(T.cp,data);T.wErr=0;}catch(e){T.wErr=(T.wErr||0)+1;if(T.wErr<=3||T.wErr%20===0)btLog('Trainer: Befehl nicht angekommen ('+T.wErr+'×) – '+e.message);}
+  await new Promise(r=>setTimeout(r,150)); // kurze Pause zwischen zwei Befehlen – manche Trainer verschlucken sich sonst
   T.busy=false;if(T.pending||T.pendingCfg)pumpTrainer();}
 setInterval(()=>sendResistance(false),400);
+// Daten-Wächter: Laut Browser verbunden, aber der Trainer schickt nichts mehr (die App zeigte dann 0 W und blieb so) →
+// erst die Datenmeldungen neu abonnieren, hilft das nicht, die Verbindung neu aufbauen. Nur während der Fahrt und wenn das
+// Schwungrad zuletzt noch lief (manche Trainer schweigen im Stand).
+setInterval(async()=>{if(!T.dev||!T.mode||T.reconn||!S.riding||S.paused||GATT_BUSY.has(T.dev.id)||!T.dev.gatt||!T.dev.gatt.connected)return;
+  const age=performance.now()-(T.lastData||0);
+  if(age<4000||!(T.speed>0.8)){T.stale=0;return;}
+  T.stale=(T.stale||0)+1;
+  if(T.stale===1&&T.dataCh){btLog('Trainer: seit '+Math.round(age/1000)+' s keine Daten – Meldungen neu abonnieren');status('Trainer schickt keine Daten – verbinde neu …');
+    try{await withTimeout((T.dataCh.stopNotifications?T.dataCh.stopNotifications().catch(()=>{}):Promise.resolve()).then(()=>T.dataCh.startNotifications()),5000,'Abonnieren');}catch(e){btLog('Trainer: '+e.message);}}
+  else if(T.stale>=3){btLog('Trainer: weiter keine Daten – Verbindung neu aufbauen');T.stale=0;try{T.dev.gatt.disconnect();}catch(e){}onTrainerLost();}},2500);
 
 // ---- Trittfrequenz-Sensor (optional, Cycling Speed & Cadence) ----
 const CS={dev:null,crank:null};
@@ -3261,7 +3275,7 @@ async function setupClickNow(pad){
   clickStatus('drück + zum Testen');
   if(!S.vshift){S.vshift=true;applyShiftMode();saveSettings();}
 }
-async function onClickLost(pad){
+async function onClickLost(pad){if(!pad.refreshing)btLog('Click: '+(pad.side||'Hälfte')+' getrennt');
   if(pad.refreshing){pad.connected=false; // geplantes Neuverbinden der linken Hälfte: leise und schnell
     for(let i=0;i<6;i++){await new Promise(r=>setTimeout(r,i?700:150));try{await setupClick(pad);pad.refreshing=false;return;}catch(e){}}
     pad.refreshing=false;}
@@ -3273,7 +3287,7 @@ function varint(b,i){let r=0,m=1;while(i<b.length){const x=b[i++];r+=(x&0x7f)*m;
 function parseProto(b){const o={};let i=0;while(i<b.length){const [key,n]=varint(b,i);if(n<0)break;i=n;const fn=Math.floor(key/8),wt=key%8;
   if(wt===0){const [v,n2]=varint(b,i);if(n2<0)break;o[fn]=v;i=n2;}else if(wt===2){const [len,n2]=varint(b,i);if(n2<0)break;i=n2+len;}
   else if(wt===5)i+=4;else if(wt===1)i+=8;else break;}return o;}
-function clickLog(s){Z.log.unshift(new Date().toLocaleTimeString()+'  '+s);Z.log.length=Math.min(Z.log.length,60);$('clickLog').textContent=Z.log.join('\n');}
+function clickLog(s){if(/Fehler|getrennt|neu verbinden|Verbunden/i.test(s))btLog('Click: '+s);Z.log.unshift(new Date().toLocaleTimeString()+'  '+s);Z.log.length=Math.min(Z.log.length,60);$('clickLog').textContent=Z.log.join('\n');}
 function lowestBit(x){for(let i=0;i<32;i++)if(x&(1<<i))return i;return -1;}
 function doShift(act){shift(act==='up'?1:-1);}
 function firstPress(pad){if(!pad.buttons++)clickStatus('Tasten funktionieren ✓');}
@@ -4105,6 +4119,8 @@ function wireUi(){
   $('iGags').value=S.gags;$('iGags').onchange=()=>{S.gags=$('iGags').value;saveSettings();if(S.started)GAG.next=Math.min(GAG.next,gagNext(0.5));};renderGags();
   $('bGagNow').onclick=()=>{if(!S.started){toast('Erst losfahren – dann kommt gleich eine Überraschung.');return;}if(!IS_ULM){toast('Überraschungen gibt es nur in Ulm.');return;}GAG.next=0;GAG.tryT=0;closeMenu();toast('🎲 Gleich passiert etwas …');};
   wireWelcome();$('iPmUse').checked=S.pmUse;$('iPmUse').onchange=()=>{S.pmUse=$('iPmUse').checked;saveSettings();};
+  $('bBtLogCopy').onclick=()=>{const t='Kalea Ride – Bluetooth-Protokoll\n'+navigator.userAgent+'\n\n'+BTLOG.join('\n')+'\n\nClick:\n'+Z.log.join('\n');
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('📋 Protokoll kopiert'),()=>toast('Kopieren ging nicht – bitte markieren und kopieren'));};
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
   $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);

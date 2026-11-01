@@ -173,8 +173,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   alle – ein hängender Click-Befehl blockierte auch den Trainer). Verbindungsaufbau je Gerät nur einmal gleichzeitig (`oneAtATime`
   um `setupTrainerNow`/`setupClickNow`/…, Fehler mit `e.busy`), Benachrichtigungs-Empfänger über `onNotify` (ersetzt statt
   doppelt). Automatisch verbinden: höchstens ein Versuch je Gerät, frühestens alle 4 s (Geräte funken mehrmals pro Sekunde).
-  Trainer weg: `onTrainerLost` versucht 10 min lang neu (eine Schleife, `T.reconn`), Wächter alle 5 s. Kleine Steigungsänderungen
-  gehen höchstens alle 1,2 s an den Trainer, große und Schalten sofort. Test ohne Geräte: künstliches `navigator.bluetooth` im Browser.
+  Trainer weg: `onTrainerLost` versucht 10 min lang neu (eine Schleife, `T.reconn`), Wächter alle 5 s. **Daten-Wächter** (alle 2,5 s):
+  laut Browser verbunden, aber > 4 s keine Daten bei laufendem Schwungrad → Meldungen von `T.dataCh` neu abonnieren, danach Verbindung
+  neu aufbauen (vorher blieb die Anzeige dauerhaft bei 0 W). Steigung: kleine Änderungen alle 2 s, mittlere jede Sekunde, große und
+  Schalten sofort, Schalt-Nachziehen alle 250 ms, 150 ms Pause zwischen Befehlen. `btLog`/`BTLOG` = Bluetooth-Protokoll im Menü
+  (Geräte → „🔧 Bluetooth-Protokoll“, Kopieren-Knopf). Test ohne Geräte: künstliches `navigator.bluetooth` im Browser.
 - **Powermeter** (optional, Rolle `pm`, `PM`, `setupPm`, `S.pmUse`): liefert dann Watt und Kadenz (`pmActive`/`pmCad`),
   der Trainer regelt nur den Widerstand (`trPower`/`trCad` schreiben dann nicht in `S.power`/`S.cadence`).
 - **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr/pm,
