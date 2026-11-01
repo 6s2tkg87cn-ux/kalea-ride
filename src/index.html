@@ -69,6 +69,7 @@ details p{color:#4a3d5c;font-size:13px}
 .mtabs button.on{background:var(--sun);box-shadow:inset 0 -4px 0 var(--acc),2px 2px 0 var(--ink)}
 #setup .card{height:min(900px,calc(100vh - 24px));height:min(900px,calc(100dvh - 24px))}/* feste Höhe: springt beim Reiterwechsel nicht */
 .mpane>h2:not(:first-child){margin-top:18px;padding-top:12px;border-top:2px dashed rgba(30,15,58,.25)}
+#btLog{max-height:160px;overflow:auto;background:#f3efe6;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:11.5px;margin:6px 0;white-space:pre-wrap}
 #clickLog{max-height:120px;overflow:auto;background:#f3efe6;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:11.5px;margin:8px 0 0;white-space:pre-wrap}
 #learnState{margin-top:6px;font-size:13px;color:#b06d00}
 .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center}
@@ -489,6 +490,7 @@ body.realshift .vonly{display:none!important}
           <div class="dev"><span class="dot" id="dPm"></span><div><b>Powermeter</b> (optional)<small id="sPm">Nicht verbunden – z. B. Pedale oder Kurbel</small></div><button id="bPm">Verbinden</button></div>
           <label class="chk hidden" id="pmUseRow"><input type="checkbox" id="iPmUse" checked> Watt und Trittfrequenz vom Powermeter nehmen (der Trainer regelt nur den Widerstand)</label>
           <div class="autodev"><label class="chk"><input type="checkbox" id="iAutoDev" checked> Zuletzt benutzte Geräte beim Start automatisch verbinden</label><small id="vAutoDev"></small><button id="bForgetDev" class="hidden">Gemerkte Geräte vergessen</button></div>
+          <details class="btlogd"><summary>🔧 Bluetooth-Protokoll (bei Verbindungsproblemen)</summary><p class="hint">Hier steht, wann sich Geräte verbunden, getrennt oder nichts geschickt haben. Bei Problemen kopieren und mitschicken.</p><pre id="btLog">Noch nichts passiert.</pre><button id="bBtLogCopy">Protokoll kopieren</button></details>
           </div>
       </section>
       </div>
