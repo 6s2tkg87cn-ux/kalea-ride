@@ -2933,8 +2933,14 @@ function bleSend(ch,data,noResp){const id=(ch.service&&ch.service.device&&ch.ser
   const q=(BLEQ.get(id)||Promise.resolve()).then(run,run);BLEQ.set(id,q.catch(()=>{}));return q;}
 function bleWrite(ch,data){return bleSend(ch,data).catch(e=>console.warn('BLE write',e));}
 // Bluetooth-Protokoll (Menü → Fahrt → Geräte): was mit den Verbindungen passiert – zum Mitschicken bei Problemen
-const BTLOG=[];
-function btLog(s){BTLOG.unshift(new Date().toLocaleTimeString()+'  '+s);if(BTLOG.length>120)BTLOG.length=120;const el=$('btLog');if(el)el.textContent=BTLOG.join('\n');}
+// Es bleibt über ein Neuladen erhalten (kalea_btlog), damit man es auch danach noch kopieren kann.
+const BTLOG=(()=>{try{const a=JSON.parse(localStorage.getItem('kalea_btlog')||'[]');return Array.isArray(a)?a.slice(0,200):[];}catch(e){return [];}})();
+if(BTLOG.length)BTLOG.unshift('——— App neu gestartet '+new Date().toLocaleString('de-DE')+' ———');
+let btSaveT=0;
+function btLog(s){BTLOG.unshift(new Date().toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})+'  '+s);if(BTLOG.length>200)BTLOG.length=200;
+  const el=$('btLog');if(el)el.textContent=BTLOG.join('\n');clearTimeout(btSaveT);btSaveT=setTimeout(()=>{try{localStorage.setItem('kalea_btlog',JSON.stringify(BTLOG));}catch(e){}},500);}
+addEventListener('offline',()=>btLog('Internet: weg'));addEventListener('online',()=>btLog('Internet: wieder da'));
+addEventListener('visibilitychange',()=>{if(document.hidden&&S&&S.riding)btLog('App im Hintergrund (Fenster/Tab gewechselt)');});
 // Verbindungsaufbau je Gerät nur einmal gleichzeitig (automatisch, von Hand und Neuverbinden kamen sich sonst in die Quere)
 async function oneAtATime(dev,fn){const id=(dev&&dev.id)||'?';if(GATT_BUSY.has(id)){const e=new Error('Verbindung läuft schon');e.busy=true;throw e;}
   GATT_BUSY.add(id);try{return await withTimeout(fn(),25000,'Verbinden');}finally{GATT_BUSY.delete(id);}}
@@ -2966,11 +2972,11 @@ function chWrite(ch,data){return bleSend(ch,data,T.mode==='fec'&&ch.properties&&
 function setupTrainer(){return oneAtATime(T.dev,setupTrainerNow);}
 async function setupTrainerNow(){
   btLog('Trainer: verbinde '+(T.dev.name||''));setDot('Trainer','busy','Verbinde …');T.busy=false;T.pending=null;
-  const server=await T.dev.gatt.connect(),svc=async u=>{try{return await server.getPrimaryService(u);}catch(e){return null;}};
+  T.step='Verbinden';const server=await T.dev.gatt.connect(),svc=async u=>{try{return await server.getPrimaryService(u);}catch(e){return null;}};T.step='Dienste suchen';
   T.cp=null;T.mode=null;T.noSim=false;T.lastCw=null;T.pendingCfg=null;T.wheel=null;
   const ftms=await svc(0x1826);
   if(ftms){
-    const ibd=await ftms.getCharacteristic(0x2AD2);await ibd.startNotifications();
+    T.step='Daten abonnieren';const ibd=await ftms.getCharacteristic(0x2AD2);await ibd.startNotifications();T.step='Steuerung übernehmen';
     onNotify(ibd,e=>parseIBD(e.target.value));T.dataCh=ibd;T.mode='ftms';
     try{const cp=await ftms.getCharacteristic(0x2AD9);await cp.startNotifications();
       onNotify(cp,e=>onCP(e.target.value));T.cp=cp;
@@ -3002,7 +3008,9 @@ async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;btLog('T
   const dev=T.dev,t0=Date.now();
   for(let i=0;T.dev===dev&&Date.now()-t0<10*60000;i++){await new Promise(r=>setTimeout(r,Math.min(10000,1500+i*1500)));
     if(T.dev!==dev)break;if(dev.gatt.connected&&T.cp)break;
-    try{await setupTrainer();T.reconn=false;toast('🔗 Trainer wieder verbunden');return;}catch(e){btLog('Trainer: Neuverbinden fehlgeschlagen – '+e.message);}}
+    if(i%3===2){btLog('Trainer: Versuch '+(i+1)+' – vorher sauber trennen');try{dev.gatt.disconnect();}catch(e){}await new Promise(r=>setTimeout(r,800));}
+    try{await setupTrainer();T.reconn=false;btLog('Trainer: wieder da nach '+Math.round((Date.now()-t0)/1000)+' s');toast('🔗 Trainer wieder verbunden');return;}
+    catch(e){btLog('Trainer: Versuch '+(i+1)+' fehlgeschlagen ('+(T.step||'?')+') – '+(e.name&&e.name!=='Error'?e.name+': ':'')+e.message);}}
   T.reconn=false;if(T.dev===dev&&!T.cp){btLog('Trainer: aufgegeben nach 10 min');setDot('Trainer','off','Getrennt – bitte neu verbinden');status('Trainer getrennt.');}}
 // Falls das Trenn-Ereignis einmal nicht kommt: Verbindung weg, aber keine Neuverbindung im Gang → anstoßen
 setInterval(()=>{if(T.dev&&T.mode&&!T.reconn&&!GATT_BUSY.has(T.dev.id)&&T.dev.gatt&&!T.dev.gatt.connected)onTrainerLost();},5000);
@@ -4122,6 +4130,7 @@ function wireUi(){
   $('iGags').value=S.gags;$('iGags').onchange=()=>{S.gags=$('iGags').value;saveSettings();if(S.started)GAG.next=Math.min(GAG.next,gagNext(0.5));};renderGags();
   $('bGagNow').onclick=()=>{if(!S.started){toast('Erst losfahren – dann kommt gleich eine Überraschung.');return;}if(!IS_ULM){toast('Überraschungen gibt es nur in Ulm.');return;}GAG.next=0;GAG.tryT=0;closeMenu();toast('🎲 Gleich passiert etwas …');};
   wireWelcome();$('iPmUse').checked=S.pmUse;$('iPmUse').onchange=()=>{S.pmUse=$('iPmUse').checked;saveSettings();};
+  if(BTLOG.length)$('btLog').textContent=BTLOG.join('\n');
   $('bBtLogCopy').onclick=()=>{const t='Kalea Ride – Bluetooth-Protokoll\n'+navigator.userAgent+'\n\n'+BTLOG.join('\n')+'\n\nClick:\n'+Z.log.join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('📋 Protokoll kopiert'),()=>toast('Kopieren ging nicht – bitte markieren und kopieren'));};
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
