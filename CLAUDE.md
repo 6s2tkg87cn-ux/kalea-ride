@@ -193,8 +193,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Abbruch nach 4 s). Doppelte Meldungen derselben Richtung innerhalb 150 ms zählen einmal (`clickDup`). **Tasten frei belegen:** `S.keymap` = Bit → Aktion (`KEY_DEF`:
   + Bit 12 und Y Bit 6 schwerer, − Bit 8 und B Bit 5 leichter, d. h. Schalten geht auch nur mit der rechten Hälfte;
   Aktionen `KEY_ACT`, ausgeführt in `runAction`; „Taste anlernen“ = `startMapLearn`). **Linke Hälfte wach halten**
-  (`S.clickRefresh`): die linke Hälfte sendet ohne „Entsperren“ in der Hersteller-App nach ca. 1 min nichts mehr → alle 45 s
-  ohne gedrückte Taste kurz trennen und still neu verbinden (`pad.refreshing`, `onClickLost`).
+  (`S.clickRefresh`, gespeichert als `clickRefresh2`, **standardmäßig aus**): alle 45 s die linke Hälfte kurz trennen und neu verbinden
+  (`pad.refreshing`, `onClickLost`). Felix' Protokoll (Mac, Chrome) zeigte: Ein hängender Neuverbindungs-Versuch fror Bluetooth für ALLE
+  Geräte ein (Trainer ohne Daten, Befehle ohne Antwort). Darum: Click-Verbinden mit eigenem Zeitlimit (`setupClick(pad,ms)`), hängende
+  Versuche werden abgebrochen (`oneAtATime` → `gatt.disconnect()`), Wachhalten nur bei frischen Trainer-Daten, bei Trainer-Problemen
+  `BT_PAUSE` 20 s (Click wartet, `btWait`) und laufende Click-Versuche abbrechen. Click-Akkuwarnung ab 30 %.
 - **Kalibrieren** (Ausrollen, `CAL`, `calibStart`/`calibAnswer`/`onFtmsStatus`): FTMS 0x13 über den Control Point, Status
   über 0x2ADA (0x14: 04 = aufhören zu treten, 02 = fertig, 03 = Fehler); solange `T.calib` wird kein Widerstand gesendet.
   Ob der KICKR CORE das per FTMS kann, ist offen – sonst Hinweis auf die Wahoo-App.
