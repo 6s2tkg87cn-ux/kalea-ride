@@ -33,7 +33,7 @@ const PHYS={g:9.81,rho:1.2,crr:0.004,cda:0.32,bike:9,circ:2.105};
 const FEELS={real:{crr:0.005,cda:0.32,extra:2,alt:true,curves:true},std:{crr:0.004,cda:0.32,extra:0,alt:false,curves:false},light:{crr:0.004,cda:0.27,extra:0,alt:false,curves:false}};
 function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f.cda;PHYS.bike=9+f.extra;if(!f.alt)PHYS.rho=1.2;}
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,zones:true,hrMax:0,hrSeen:0,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:true,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
+const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,zones:true,hrMax:0,hrSeen:0,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:false,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
   riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
@@ -41,11 +41,11 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;
   // Einstellungen von vor v2: die alte Vorgabe 50×17 auf 34×14 umstellen (festes Trainer-Ritzel hat 14 Zähne)
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
-  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh==='boolean')S.clickRefresh=o.clickRefresh;if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(o.sex==='w'||o.sex==='m')S.sex=o.sex;if(['auto','fruehling','sommer','herbst','winter','schnee'].includes(o.season))S.season=o.season;if(o.prof)S.prof=1;
+  if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh2==='boolean')S.clickRefresh=o.clickRefresh2;/* neuer Schlüssel: früher standardmäßig an – fror am Mac Bluetooth ein */if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(o.sex==='w'||o.sex==='m')S.sex=o.sex;if(['auto','fruehling','sommer','herbst','winter','schnee'].includes(o.season))S.season=o.season;if(o.prof)S.prof=1;
   try{const pr=JSON.parse(localStorage.getItem('kalea_net')||'{}');if(pr.col!==undefined)S.netCol=pr.col;}catch(e){} // Trikotfarbe (auch online)
   if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
   if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.gearReal==='boolean')S.gearReal=o.gearReal;if(typeof o.zones==='boolean')S.zones=o.zones;if(o.hrMax>0)S.hrMax=o.hrMax;if(o.hrSeen>0)S.hrSeen=o.hrSeen;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,zones:S.zones,hrMax:S.hrMax,hrSeen:S.hrSeen,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,zones:S.zones,hrMax:S.hrMax,hrSeen:S.hrSeen,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh2:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -2932,6 +2932,8 @@ function bleSend(ch,data,noResp){const id=(ch.service&&ch.service.device&&ch.ser
   const run=()=>withTimeout(noResp&&ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(data):(ch.writeValueWithResponse?ch.writeValueWithResponse(data):ch.writeValue(data)),4000,'Schreiben');
   const q=(BLEQ.get(id)||Promise.resolve()).then(run,run);BLEQ.set(id,q.catch(()=>{}));return q;}
 function bleWrite(ch,data){return bleSend(ch,data).catch(e=>console.warn('BLE write',e));}
+// Hat der Trainer Probleme, pausieren Click-Verbindungsversuche (BT_PAUSE = Zeitpunkt), damit der Trainer zuerst durchkommt
+let BT_PAUSE=0;const btWait=async()=>{while(performance.now()<BT_PAUSE)await new Promise(r=>setTimeout(r,500));};
 // Bluetooth-Protokoll (Menü → Fahrt → Geräte): was mit den Verbindungen passiert – zum Mitschicken bei Problemen
 // Es bleibt über ein Neuladen erhalten (kalea_btlog), damit man es auch danach noch kopieren kann.
 const BTLOG=(()=>{try{const a=JSON.parse(localStorage.getItem('kalea_btlog')||'[]');return Array.isArray(a)?a.slice(0,200):[];}catch(e){return [];}})();
@@ -2942,8 +2944,10 @@ function btLog(s){BTLOG.unshift(new Date().toLocaleString('de-DE',{day:'2-digit'
 addEventListener('offline',()=>btLog('Internet: weg'));addEventListener('online',()=>btLog('Internet: wieder da'));
 addEventListener('visibilitychange',()=>{if(document.hidden&&S&&S.riding)btLog('App im Hintergrund (Fenster/Tab gewechselt)');});
 // Verbindungsaufbau je Gerät nur einmal gleichzeitig (automatisch, von Hand und Neuverbinden kamen sich sonst in die Quere)
-async function oneAtATime(dev,fn){const id=(dev&&dev.id)||'?';if(GATT_BUSY.has(id)){const e=new Error('Verbindung läuft schon');e.busy=true;throw e;}
-  GATT_BUSY.add(id);try{return await withTimeout(fn(),25000,'Verbinden');}finally{GATT_BUSY.delete(id);}}
+async function oneAtATime(dev,fn,ms){const id=(dev&&dev.id)||'?';if(GATT_BUSY.has(id)){const e=new Error('Verbindung läuft schon');e.busy=true;throw e;}
+  GATT_BUSY.add(id);try{return await withTimeout(fn(),ms||25000,'Verbinden');}
+  catch(e){if(!e.busy&&/keine Antwort/.test(e.message))try{dev.gatt.disconnect();}catch(x){} throw e;} // hängenden Versuch abbrechen – er blockiert sonst Bluetooth für alle Geräte
+  finally{GATT_BUSY.delete(id);}}
 // Benachrichtigungen: beim Neuverbinden den alten Empfänger ersetzen statt einen weiteren anzuhängen
 function onNotify(ch,fn){if(ch._krFn)ch.removeEventListener('characteristicvaluechanged',ch._krFn);ch._krFn=fn;ch.addEventListener('characteristicvaluechanged',fn);}
 function setDot(k,state,text){$('d'+k).className='dot '+state;$('s'+k).textContent=text;}
@@ -3003,7 +3007,7 @@ async function setupTrainerNow(){
   $('calibRow').classList.toggle('hidden',!(T.cp&&T.mode==='ftms'));sendResistance(true);
 }
 // Trainer weg: bis zu 10 min immer wieder versuchen (anfangs schnell, dann alle 10 s) – nur eine Schleife gleichzeitig
-async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;btLog('Trainer: Verbindung weg'+(T.dev.gatt&&T.dev.gatt.connected?' (laut Browser noch verbunden)':''));T.cp=null;T.busy=false;T.pending=null;T.pendingCfg=null;
+async function onTrainerLost(){if(T.reconn||!T.dev)return;T.reconn=true;BT_PAUSE=performance.now()+20000;btLog('Trainer: Verbindung weg'+(T.dev.gatt&&T.dev.gatt.connected?' (laut Browser noch verbunden)':''));T.cp=null;T.busy=false;T.pending=null;T.pendingCfg=null;
   setDot('Trainer','busy','Verbindung verloren – verbinde neu …');status('Trainer getrennt – Neuverbindung …');
   const dev=T.dev,t0=Date.now();
   for(let i=0;T.dev===dev&&Date.now()-t0<10*60000;i++){await new Promise(r=>setTimeout(r,Math.min(10000,1500+i*1500)));
@@ -3108,6 +3112,7 @@ setInterval(async()=>{if(!T.dev||!T.mode||T.reconn||!S.riding||S.paused||GATT_BU
   const age=performance.now()-(T.lastData||0);
   if(age<4000||!(T.speed>0.8)){T.stale=0;return;}
   T.stale=(T.stale||0)+1;
+  if(T.stale===1){BT_PAUSE=performance.now()+20000;for(const p of Z.pads)if(!p.connected&&GATT_BUSY.has(p.dev.id)){btLog('Click: hängenden Verbindungsversuch abgebrochen (Trainer hat Vorrang)');try{p.dev.gatt.disconnect();}catch(e){}}}
   if(T.stale===1&&T.dataCh){btLog('Trainer: seit '+Math.round(age/1000)+' s keine Daten – Meldungen neu abonnieren');status('Trainer schickt keine Daten – verbinde neu …');
     try{await withTimeout((T.dataCh.stopNotifications?T.dataCh.stopNotifications().catch(()=>{}):Promise.resolve()).then(()=>T.dataCh.startNotifications()),5000,'Abonnieren');}catch(e){btLog('Trainer: '+e.message);}}
   else if(T.stale>=3){btLog('Trainer: weiter keine Daten – Verbindung neu aufbauen');T.stale=0;try{T.dev.gatt.disconnect();}catch(e){}onTrainerLost();}},2500);
@@ -3264,7 +3269,7 @@ async function connectClick(){if(!navigator.bluetooth)return;
   }catch(e){if(e.busy){clickStatus('verbindet gerade …');return;}if(pad){pad.connected=false;}
     if(e.name==='NotFoundError'){clickStatus();return;}
     clickLog('Fehler: '+e.message);clickStatus(e.message);status('Click-Schalter: '+e.message);}}
-function setupClick(pad){return oneAtATime(pad.dev,()=>setupClickNow(pad));}
+function setupClick(pad,ms){return oneAtATime(pad.dev,()=>setupClickNow(pad),ms||12000);}
 async function setupClickNow(pad){
   setDot('Click','busy','Verbinde …');
   const server=await pad.dev.gatt.connect();
@@ -3287,11 +3292,11 @@ async function setupClickNow(pad){
 }
 async function onClickLost(pad){if(!pad.refreshing)btLog('Click: '+(pad.side||'Hälfte')+' getrennt');
   if(pad.refreshing){pad.connected=false; // geplantes Neuverbinden der linken Hälfte: leise und schnell
-    for(let i=0;i<6;i++){await new Promise(r=>setTimeout(r,i?700:150));try{await setupClick(pad);pad.refreshing=false;return;}catch(e){}}
+    for(let i=0;i<6;i++){await new Promise(r=>setTimeout(r,i?700:150));await btWait();try{await setupClick(pad,6000);pad.refreshing=false;return;}catch(e){clickLog('Neuverbinden der linken Hälfte: '+e.message);}}
     pad.refreshing=false;}
   pad.connected=false;clickStatus('eine Hälfte getrennt – verbinde neu …');
   const nm=pad.side?'Click-Schalter ('+pad.side+')':'Click-Schalter';status(nm+' getrennt – verbinde neu …'+(pad.batt!=null&&pad.batt<25?' Akku war bei '+pad.batt+' %.':''));if(typeof toast==='function')toast('⚠️ '+nm+' getrennt');
-  for(let i=0;i<5;i++){await new Promise(r=>setTimeout(r,2000));try{await setupClick(pad);return;}catch(e){clickLog('Neuverbindung fehlgeschlagen: '+e.message);}}
+  for(let i=0;i<5;i++){await new Promise(r=>setTimeout(r,2000));await btWait();try{await setupClick(pad);return;}catch(e){clickLog('Neuverbindung fehlgeschlagen: '+e.message);}}
   Z.pads=Z.pads.filter(p=>p!==pad);clickStatus('getrennt – bitte neu verbinden');status((pad.side?'Click-Schalter ('+pad.side+')':'Click-Schalter')+' bleibt getrennt – Batterie prüfen und im Menü neu verbinden. Bis dahin: Tasten ↑/↓ oder −/+ am Bildschirm.');}
 function varint(b,i){let r=0,m=1;while(i<b.length){const x=b[i++];r+=(x&0x7f)*m;m*=128;if(!(x&0x80))return [r,i];}return [0,-1];}
 function parseProto(b){const o={};let i=0;while(i<b.length){const [key,n]=varint(b,i);if(n<0)break;i=n;const fn=Math.floor(key/8),wt=key%8;
@@ -3312,7 +3317,7 @@ function onClickMsg(pad,dv,src){
   const f=parseProto(b.subarray(1));
   if(Z.learn){finishLearn(pad,b,hx,type,f);return;}
   pad.lastMsg=now;pad.warned=false;
-  if(type===0x19){if(f[1]!==undefined&&f[1]<=100){const old=pad.batt;pad.batt=f[1];if(old!==pad.batt)clickStatus();if(pad.batt<=15&&!pad.lowWarn){pad.lowWarn=true;status('Click-Schalter'+(pad.side?' ('+pad.side+')':'')+': Akku nur noch '+pad.batt+' % – bald CR2032 tauschen.');}}return;}
+  if(type===0x19){if(f[1]!==undefined&&f[1]<=100){const old=pad.batt;pad.batt=f[1];if(old!==pad.batt)clickStatus();if(pad.batt<=30&&!pad.lowWarn){pad.lowWarn=true;btLog('Click: Akku '+pad.batt+' %');status('Click-Schalter'+(pad.side?' ('+pad.side+')':'')+': Akku nur noch '+pad.batt+' % – bald CR2032 tauschen (schwache Batterie macht die Verbindung wackelig).');}}return;}
   if(type===0x15){pad.idleSeen=true;return;} // Leerlauf
   Z.idle.set(hx,now);
   for(const act of ['up','down']){const m=Z.learned[act];if(m&&m.kind==='hex'&&m.v===hx){if(now-Z.latch>150){doShift(act);Z.latch=now;firstPress(pad);}return;}}
@@ -3350,7 +3355,7 @@ function updateClickHud(){const el=$('clickHud');if(!el)return;const on=Z.pads.f
 // Bekanntes Verhalten des Click v2: die linke Hälfte sendet nach ca. 1 min keine Tasten mehr, solange sie nicht über die
 // Hersteller-App „entsperrt“ wurde (die rechte läuft weiter). Neu verbinden setzt das zurück → alle 45 s, wenn gerade keine
 // Taste gedrückt ist. Die linke Hälfte wird an der −-Taste erkannt (oder: zweite Hälfte neben einer bekannten rechten).
-setInterval(()=>{if(!S.clickRefresh||GATT_BUSY.size||T.reconn)return;const now=performance.now(),right=Z.pads.some(p=>p.connected&&p.side&&p.side.startsWith('rechts'));
+setInterval(()=>{if(!S.clickRefresh||GATT_BUSY.size||T.reconn||performance.now()<BT_PAUSE||(T.dev&&performance.now()-T.lastData>1500))return;const now=performance.now(),right=Z.pads.some(p=>p.connected&&p.side&&p.side.startsWith('rechts'));
   for(const p of Z.pads){if(!p.connected||!p.isV2||p.refreshing)continue;const left=p.side?p.side.startsWith('links'):right&&Z.pads.filter(q=>q.connected).length>1;
     if(!left||now-(p.connT||0)<45000||p.bits||now-(p.pressT||0)<2500||(HOLD.act&&HOLD.pad===p))continue;
     p.refreshing=true;clickLog('Linke Hälfte: kurz neu verbinden (bleibt so wach)');try{p.dev.gatt.disconnect();}catch(e){p.refreshing=false;}}},1000);
