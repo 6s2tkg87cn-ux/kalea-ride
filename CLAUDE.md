@@ -177,7 +177,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   laut Browser verbunden, aber > 4 s keine Daten bei laufendem Schwungrad → Meldungen von `T.dataCh` neu abonnieren, danach Verbindung
   neu aufbauen (vorher blieb die Anzeige dauerhaft bei 0 W). Steigung: kleine Änderungen alle 2 s, mittlere jede Sekunde, große und
   Schalten sofort, Schalt-Nachziehen alle 250 ms, 150 ms Pause zwischen Befehlen. `btLog`/`BTLOG` = Bluetooth-Protokoll im Menü
-  (Geräte → „🔧 Bluetooth-Protokoll“, Kopieren-Knopf). Test ohne Geräte: künstliches `navigator.bluetooth` im Browser.
+  (Geräte → „🔧 Bluetooth-Protokoll“, Kopieren-Knopf), bleibt über Neuladen erhalten (`kalea_btlog`, 200 Zeilen), schreibt auch Internet
+  weg/da und App im Hintergrund mit; Fehlversuche nennen den Schritt (`T.step`). Neuverbinden trennt jeden 3. Versuch vorher sauber. Test ohne Geräte: künstliches `navigator.bluetooth` im Browser.
 - **Powermeter** (optional, Rolle `pm`, `PM`, `setupPm`, `S.pmUse`): liefert dann Watt und Kadenz (`pmActive`/`pmCad`),
   der Trainer regelt nur den Widerstand (`trPower`/`trCad` schreiben dann nicht in `S.power`/`S.cadence`).
 - **Geräte automatisch verbinden** (`S.autoDev`, `kalea_devs` = zuletzt benutzte Geräte je Rolle trainer/click[2]/cad/hr/pm,
@@ -200,7 +201,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Ulm-Koordinaten:** lokale Meter, Ursprung `ULM_DATA.origin` (48.3985, 9.9925), x = Ost, z = Süd,
   `ulmLL(lon,lat)`. Höhe y = Meter über NN − `UY0` (460).
 - **Speicher:** `localStorage` (`kalea` = Einstellungen, `kalea_world`, `kalea_route_<welt>`, `kalea_kom`,
-  `kalea_rides`, `kalea_rev`, `kalea_devs`, `kalea_laps`, `kalea_badges`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
+  `kalea_rides`, `kalea_rev`, `kalea_devs`, `kalea_laps`, `kalea_badges`, `kalea_btlog`, `kalea_map`, `kalea_net*`, `kalea_broker`), Gebäude-Cache in IndexedDB `kaleaRide`.
 - **Fahrer-Modell** (`makeRider`, `animRider`, `placeRider`): Fahrer + Rennrad sind EIN `SkinnedMesh` mit 16 starren
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
