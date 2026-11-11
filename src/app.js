@@ -77,6 +77,15 @@ function revKey(){return WORLD+'_'+(ROUTE&&ROUTE.id);}
 function reverseArrays(...arrs){for(const a of arrs){if(!a)continue;const c=Array.from(a);for(let i=0;i<N;i++)a[i]=c[(N-i)%N];}}
 const CELL=40,HASH=new Map();
 const hkey=(ix,iz)=>ix*100000+iz;
+// Höhenprofil entrauschen (Ulm): Das Höhenmodell (30-m-Raster) wackelt auf ebenen Strecken um 1–2 m und macht an Brückenrampen
+// Stufen – das gab Phantom-Höhenmeter und Steigungs-Zacken. Kurze Zacken immer glätten (±12 m); wo das Profil vom großräumigen
+// Verlauf (±150 m) nur wenig abweicht, gilt der großräumige (flach bleibt flach). Echte Rampen/Anstiege (> 2,5 m Abweichung) bleiben.
+function gaussCirc(a,sig){const n=a.length,w=Math.max(1,Math.round(sig*2.5)),k=[];let ks=0;for(let j=-w;j<=w;j++){const v=Math.exp(-j*j/(2*sig*sig));k.push(v);ks+=v;}
+  const o=new Float32Array(n);for(let i=0;i<n;i++){let t=0;for(let j=-w;j<=w;j++)t+=a[(i+j+n*8)%n]*k[j+w];o[i]=t/ks;}return o;}
+function denoiseHeights(H,ds){const n=H.length,a=gaussCirc(H,12/ds),b=gaussCirc(smoothCirc(H,Math.round(60/ds)),60/ds),dev=new Float32Array(n);
+  for(let i=0;i<n;i++)dev[i]=Math.abs(a[i]-b[i]);
+  const w=Math.round(40/ds),mx=new Float32Array(n);for(let i=0;i<n;i++){let m=0;for(let j=-w;j<=w;j++)m=Math.max(m,dev[(i+j+n)%n]);mx[i]=m;}
+  const wt=gaussCirc(mx,25/ds),o=new Float32Array(n);for(let i=0;i<n;i++){const t=sat((wt[i]-1.0)/1.5),f=t*t*(3-2*t);o[i]=b[i]+(a[i]-b[i])*f;}return o;}
 function smoothCirc(a,w){const n=a.length,o=new Float32Array(n);let s=0;for(let k=-w;k<=w;k++)s+=a[(k+n)%n];
   for(let i=0;i<n;i++){o[i]=s/(2*w+1);s+=a[(i+w+1)%n]-a[(i-w+n)%n];}return o;}
 function kaleaGeom(def){
@@ -112,7 +121,7 @@ function detectClimbs(){
   if(dir>0)ext.push(cand);
   const out=[],used={};
   for(let k=0;k+1<ext.length;k+=2){let si=ext[k].i,ei=ext[k+1].i;const span=(ei-si+n)%n;if(span<4)continue;
-    const gain0=ext[k+1].h-ext[k].h;if(gain0<20||gain0/(span*ds)<0.025)continue;
+    const gain0=ext[k+1].h-ext[k].h;if(gain0<20||gain0/(span*ds)<(gain0>=60?0.018:0.025))continue; /* lange Anstiege zählen auch mit knapp 2 % */
     for(let q=0;q<span-2;q++){const a=(si+1)%n;if((H[a]-H[si])/ds<0.012)si=a;else break;}
     for(let q=0;q<span-2;q++){const a=(ei-1+n)%n;if((H[ei]-H[a])/ds<0.012)ei=a;else break;}
     const len=((ei-si+n)%n)*ds,gain=H[ei]-H[si];if(gain<18)continue;let mx=0;for(let q=0;q<=(ei-si+n)%n;q++)mx=Math.max(mx,RG[(si+q)%n]);
@@ -222,7 +231,7 @@ function stepRain(dt){const R=RAIN.obj;if(!R||!R.visible)return;const p=RAIN.p,v
     const k=i*6,X=p[i*3]+ox,Z=p[i*3+2]+oz;v[k]=X;v[k+1]=y;v[k+2]=Z;v[k+3]=X+(sn?0.05:0.06);v[k+4]=y+len;v[k+5]=Z;}
   R.geometry.attributes.position.needsUpdate=true;}
 function basePR(){const q=S.quality,mx=Math.sqrt(3.7e6/Math.max(1,innerWidth*innerHeight));return Math.max(0.5,Math.min(devicePixelRatio,q==='high'?2:q==='medium'?1.25:1,q==='high'?mx:mx*0.8));}
-function applyFog(){if(!scene.fog)return;scene.fog.density=(S.quality==='low'?0.00030:0.00021)*curWx().fog;if(water&&water.material.uniforms&&water.material.uniforms.fogDensity)water.material.uniforms.fogDensity.value=scene.fog.density;}
+function applyFog(){if(!scene.fog)return;HAZE.value=sat((curWx().fog-1)/6)*0.8;scene.fog.density=(S.quality==='low'?0.00030:0.00021)*curWx().fog;if(water&&water.material.uniforms&&water.material.uniforms.fogDensity)water.material.uniforms.fogDensity.value=scene.fog.density;}
 function applyQuality(){
   const q=S.quality,hi=q==='high';
   PERF.scale=q==='low'?0.85:1;renderer.setPixelRatio(basePR()*PERF.scale);renderer.setSize(innerWidth,innerHeight);
@@ -546,12 +555,15 @@ const WIND={t:{value:0},w:{value:0.6},snow:{value:0},cam:{value:new THREE.Vector
 // Laub-Material: Attribut leaf 0 = Holz (Farbe je Baum aus iTrunk), 1 = Laub (Farbe je Baum aus instanceColor), 2 = feste Farbe (Äpfel, Nüsse);
 // Baumkronen schwanken im Wind, im Winter liegt Schnee auf allem, was nach oben zeigt.
 // lod 1 = Nah-Variante (nur Bäume näher als LOD_R), 2 = Fern-Variante (ab LOD_R bis CULL_R): entschieden je Baum auf der Grafikkarte
-function folMat(lod=0){const m=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9});m.userData.obc=true;m.customProgramCacheKey=()=>'fol2_'+lod;
+function folMat(lod=0){const m=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9});m.userData.obc=true;m.customProgramCacheKey=()=>'fol3_'+lod;
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,{uT:WIND.t,uW:WIND.w,uSnow:WIND.snow,uCam:WIND.cam,uLod:WIND.lod,uFar:WIND.far});
     sh.vertexShader='#define TREE_LOD '+lod+'\nattribute float leaf;\nattribute vec3 iTrunk;\nuniform float uT,uW,uSnow,uLod,uFar;\nuniform vec3 uCam;\n'+sh.vertexShader
       .replace('#include <color_vertex>',`#include <color_vertex>
 #ifdef USE_INSTANCING_COLOR
   vColor.xyz=color.xyz*(leaf>1.5?vec3(1.0):mix(iTrunk,instanceColor.xyz,leaf));
+#endif
+#if TREE_LOD==1
+  if(leaf>0.5&&leaf<1.5)vColor.xyz*=mix(0.70,1.10,smoothstep(-0.55,0.75,normal.y))*mix(0.88,1.06,clamp((position.y-3.0)/4.5,0.0,1.0));
 #endif
   vColor.xyz=mix(vColor.xyz,vec3(0.93,0.95,0.99),uSnow*smoothstep(0.3,0.75,normal.y));`)
       .replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -569,27 +581,30 @@ function folMat(lod=0){const m=new THREE.MeshStandardMaterial({vertexColors:true
 #endif`);};
   return m;}
 function gv(v){return new THREE.Color(v,v,v);}
+// Laubkugel unregelmäßig ausbeulen (gleiche Punkte bekommen den gleichen Versatz → keine Risse)
+function lumpy(g,amp){const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),h=Math.sin(x*12.9898+y*78.233+z*37.719)*43758.5453,f=1+amp*((h-Math.floor(h))*2-1);p.setXYZ(i,x*f,y*f,z*f);}
+  g.computeVertexNormals();return g;}
 // Stamm (leaf 0, Rindenmuster über die Helligkeit je Fläche)
 function trunkP(parts,r0,r1,h,seg,y0=0){parts.push([tr(new THREE.CylinderGeometry(r1,r0,h,seg,3),[0,y0+h/2,0]),gv(1),0.5,0]);}
 function branchP(parts,a,b,r,lo){parts.push([tube(a,b,r,lo?3:5),gv(0.88),0.35,0]);}
 // Laubbaum mit runder Krone (Linde, Ahorn, Kastanie, Buche, Eiche, Platane)
 function roundGeo(lo){const parts=[];trunkP(parts,0.38,0.22,4.4,lo?4:7);
   if(!lo){branchP(parts,[0,3.3,0],[1.15,4.7,0.4],0.12);branchP(parts,[0,3.6,0],[-1.05,4.9,-0.35],0.11);}
-  const ico=new THREE.IcosahedronGeometry(1,lo?0:1);
-  [[0,5.6,0,2.6,1],[1.3,4.9,0.5,1.9,0.86],[-1.2,5.1,-0.4,2.0,0.8],[0.2,6.6,-0.9,1.7,1.08],[-0.4,4.6,1.2,1.6,0.9]].slice(0,lo?3:5)
+  const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17);
+  [[0,5.6,0,2.6,1],[1.3,4.9,0.5,1.9,0.86],[-1.2,5.1,-0.4,2.0,0.8],[0.2,6.6,-0.9,1.7,1.08],[-0.4,4.6,1.2,1.6,0.9],[0.9,6.3,0.9,1.45,1.04],[-1.0,6.2,0.6,1.4,1.0],[0.5,4.5,-1.3,1.5,0.84]].slice(0,lo?3:8)
     .forEach(([x,y,z,s,v],k)=>parts.push([tr(ico,[x,y,z],[k,k*0.7,0],lo?[s*1.12,s*0.95,s*1.12]:[s,s*0.85,s]),gv(v),0.32,1]));
   return lo?merge(parts):withLo(merge(parts),roundGeo(true));}
 // schlanker, hoher Baum (Birke, Pappel, Erle)
 function tallGeo(lo){const parts=[];trunkP(parts,0.27,0.12,7.4,lo?4:6);
   if(!lo){branchP(parts,[0,3.6,0],[0.9,4.9,0.2],0.07);branchP(parts,[0,4.8,0],[-0.8,6.0,-0.3],0.06);}
-  const ico=new THREE.IcosahedronGeometry(1,lo?0:1);
+  const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17);
   (lo?[[0,4.9,0,1.75,0.9],[0.1,6.7,0,1.45,1],[0,8.3,0,1.0,1.06]]:[[0,4.3,0,1.5,0.84],[0.55,5.5,0.3,1.35,0.95],[-0.45,6.5,-0.25,1.3,0.9],[0.2,7.6,0.15,1.05,1.04],[-0.15,8.6,0.1,0.72,1.1]])
     .forEach(([x,y,z,s,v],k)=>parts.push([tr(ico,[x,y,z],[k*0.9,k*1.3,0],[s,s*1.3,s]),gv(v),0.36,1]));
   return lo?merge(parts):withLo(merge(parts),tallGeo(true));}
 // Trauerweide: breite Krone, darunter viele herabhängende Zweig-Vorhänge
 function weepGeo(lo){const parts=[],rg=mulberry32(9);trunkP(parts,0.5,0.3,3.5,lo?4:7);
   if(!lo)for(let k=0;k<3;k++){const a=k*2.1;branchP(parts,[0,3.1,0],[Math.cos(a)*1.7,4.9,Math.sin(a)*1.7],0.14);}
-  const ico=new THREE.IcosahedronGeometry(1,lo?0:1),ic0=new THREE.IcosahedronGeometry(1,0);
+  const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17),ic0=new THREE.IcosahedronGeometry(1,0);
   [[0,5.7,0,2.5,1.05],[1.3,5.2,0.6,1.8,0.95],[-1.2,5.3,-0.7,1.8,0.9]].slice(0,lo?1:3).forEach(([x,y,z,s,v])=>parts.push([tr(ico,[x,y,z],[0,0,0],lo?[s*1.25,s*0.65,s*1.25]:[s,s*0.6,s]),gv(v),0.3,1]));
   const n=lo?7:17;
   for(let k=0;k<n;k++){const a=k/n*6.283+rg()*0.3,r=2.0+rg()*0.9,y=3.2+rg()*0.7,h=1.7+rg()*0.6;
@@ -598,7 +613,7 @@ function weepGeo(lo){const parts=[],rg=mulberry32(9);trunkP(parts,0.5,0.3,3.5,lo
 // Obstbaum: kurzer Stamm, breite Krone, im Spätsommer/Herbst mit Äpfeln
 function fruitGeo(lo){const parts=[];trunkP(parts,0.26,0.18,2.0,lo?4:6);
   if(!lo)for(let k=0;k<3;k++){const a=k*2.1+0.5;branchP(parts,[0,1.8,0],[Math.cos(a)*1.3,3.0,Math.sin(a)*1.3],0.1);}
-  const ico=new THREE.IcosahedronGeometry(1,lo?0:1);
+  const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17);
   [[0,3.6,0,2.2,1],[1.2,3.2,0.4,1.5,0.88],[-1.1,3.3,-0.5,1.6,0.84],[0.1,4.3,-0.6,1.4,1.06]].slice(0,lo?2:4)
     .forEach(([x,y,z,s,v],k)=>parts.push([tr(ico,[x,y,z],[k,k*0.8,0],lo?[s*1.15,s*0.85,s*1.15]:[s,s*0.78,s]),gv(v),0.3,1]));
   if(!lo&&SEAS.fruit>0.3){const ap=new THREE.IcosahedronGeometry(0.15,0),rg=mulberry32(5);
@@ -611,7 +626,7 @@ function spruceGeo(lo){const parts=[];trunkP(parts,0.3,0.18,3,lo?4:6);
 // Kiefer: hoher, rötlicher Stamm mit flacher Krone oben
 function pineGeo(lo){const parts=[];trunkP(parts,0.3,0.17,8.4,lo?4:6);
   if(!lo){branchP(parts,[0,6.4,0],[1.3,7.7,0.3],0.1);branchP(parts,[0,7.0,0],[-1.1,8.3,-0.4],0.09);}
-  const ico=new THREE.IcosahedronGeometry(1,lo?0:1);
+  const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17);
   [[0,9.0,0,2.0,1],[1.4,8.0,0.4,1.4,0.88],[-1.2,8.4,-0.5,1.35,0.92],[0.3,9.7,0.2,1.2,1.05]].slice(0,lo?2:4)
     .forEach(([x,y,z,s,v],k)=>parts.push([tr(ico,[x,y,z],[k*0.7,k,0],[s,s*0.55,s]),gv(v),0.3,1]));
   return lo?merge(parts):withLo(merge(parts),pineGeo(true));}
@@ -628,7 +643,7 @@ function bareGeo(lo,tall){const parts=[],rg=mulberry32(tall?11:7);trunkP(parts,t
     for(let j=0;j<3;j++){const a2=a+(j-1)*0.75+rg()*0.3,e2=e+0.2+rg()*0.3,L2=(tall?0.7:1.1)+rg()*0.6,c=add(b,dir(a2,e2,L2));twigP(parts,b,c,0.045,0.025,3);
       for(let m=0;m<2;m++){const a3=a2+(m?0.6:-0.6),L3=0.5+rg()*0.4;twigP(parts,c,add(c,dir(a3,e2+0.25,L3)),0.022,0.01,3);}}}
   return withLo(merge(parts),bareGeo(true,tall));}
-function bushGeo(lo){const ico=new THREE.IcosahedronGeometry(1,lo?0:1);
+function bushGeo(lo){const ico=lo?new THREE.IcosahedronGeometry(1,0):lumpy(new THREE.IcosahedronGeometry(1,1),0.17);
   const g=merge([[tr(ico,[0,0.6,0],[0,0,0],[1.2,0.8,1.1]),gv(1),0.3,1],[tr(ico,[0.8,0.45,0.3],[1,0,0],[0.8,0.6,0.8]),gv(0.88),0.3,1],[tr(ico,[-0.6,0.4,-0.4],[0,1,0],[0.75,0.55,0.75]),gv(1.1),0.3,1]]);
   return lo?g:withLo(g,bushGeo(true));}
 function palmGeo(lo){const parts=[],seg=new THREE.CylinderGeometry(0.16,0.22,1.5,lo?4:7);let x=0,y=0,a=0;
@@ -698,9 +713,15 @@ function plantChunks(geo,mat,items,opts={}){const CH=opts.CH||CHUNK*1.5,buckets=
     mesh.castShadow=opts.shadow!==false;scene.add(mesh);out.push(mesh);if(!opts.grass)CULLS.push(mesh);}
   return out;}
 function rockGeo(){return merge([[tr(new THREE.DodecahedronGeometry(1,0),[0,0.4,0],[0.3,0.5,0.1],[1.5,0.9,1.2]),0x8a847c],[tr(new THREE.DodecahedronGeometry(1,0),[0.9,0.2,0.4],[1,0,0.6],[0.6,0.5,0.6]),0x7b756e]]);}
-function grassGeo(){const parts=[],blade=new THREE.ConeGeometry(0.06,0.55,3);
-  for(let k=0;k<7;k++){const a=k/7*Math.PI*2;parts.push([tr(blade,[Math.cos(a)*0.12,0.25,Math.sin(a)*0.12],[Math.sin(a)*0.35,a,Math.cos(a)*0.35],[1,0.7+((k*37)%10)/14,1]),k%2?0x7fae4c:0x6b9d3f]);}
-  return merge(parts);}
+// Grasbüschel: 13 dünne, nach außen gebogene Halme (unten dunkel, Spitze hell), Normalen nach oben → beleuchtet wie der Boden.
+// Das Material schreibt keine Tiefe (grassMat), damit die Konturen-Nachbearbeitung keine dunklen Ränder um jeden Halm zieht.
+function grassGeo(){const P=[],C=[],Nn=[],lo=new THREE.Color(0x5a9438),hi=new THREE.Color(0xa4d860),c=new THREE.Color(),rng=mulberry32(11);
+  for(let k=0;k<13;k++){const a=k/13*Math.PI*2+rng()*0.4,h=0.22+rng()*0.34,r0=0.03+rng()*0.09,bend=0.08+rng()*0.2,w=0.022+rng()*0.014,ca=Math.cos(a),sa=Math.sin(a),px=-sa,pz=ca;
+    const at=(t,ww,side)=>[ca*(r0+bend*t*t)+px*ww*side,h*t,sa*(r0+bend*t*t)+pz*ww*side];
+    const b0=at(0,w,-1),b1=at(0,w,1),m0=at(0.55,w*0.75,-1),m1=at(0.55,w*0.75,1),tp=at(1,0,0);
+    for(const [v,t] of [[b0,0],[b1,0],[m1,0.55],[b0,0],[m1,0.55],[m0,0.55],[m0,0.55],[m1,0.55],[tp,1]]){P.push(...v);c.copy(lo).lerp(hi,t*(0.75+rng()*0.25));C.push(c.r,c.g,c.b);Nn.push(0,1,0);}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(Nn,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));return g;}
+function grassMat(){return new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide,depthWrite:false});}
 // Instanzen werden in 500-m-Kacheln aufgeteilt, damit nur Sichtbares (auch im Schatten-Pass) gezeichnet wird
 let CHUNK=500;const GRASS_CHUNKS=[];
 function shareGeo(geo,ymid,radius){const g=new THREE.BufferGeometry();for(const k in geo.attributes)g.setAttribute(k,geo.attributes[k]);if(geo.index)g.setIndex(geo.index);
@@ -731,7 +752,7 @@ function scatter(geo,mat,count,pick,opts={}){
     b.items.forEach(([x,y,z,s],i)=>{dm.position.set(x-b.cx,y,z-b.cz);dm.rotation.set(opts.tilt?rnd(-0.08,0.08):0,Math.random()*6.28,opts.tilt?rnd(-0.08,0.08):0);
       dm.scale.set(s,s*rnd(0.9,1.25),s);dm.updateMatrix();mesh.setMatrixAt(i,dm.matrix);
       if(opts.tint)col.copy(opts.tint);else col.setHSL(0,0,1);col.offsetHSL(rnd(-0.02,0.02),0,rnd(-0.08,0.06));mesh.setColorAt(i,col);});
-    mesh.castShadow=opts.shadow!==false;mesh.receiveShadow=!!opts.receive;mesh.userData.cx=b.cx;mesh.userData.cz=b.cz;scene.add(mesh);meshes.push(mesh);if(!opts.grass)CULLS.push(mesh);
+    mesh.castShadow=opts.shadow!==false;mesh.receiveShadow=!!opts.receive;mesh.userData.cx=b.cx;mesh.userData.cz=b.cz;if(opts.grass)mesh.renderOrder=3;scene.add(mesh);meshes.push(mesh);if(!opts.grass)CULLS.push(mesh);
     if(lo){const ml=new THREE.InstancedMesh(shareGeo(lo,(ymin+ymax)/2+5,CH*0.72+(ymax-ymin)/2+25),mat,b.items.length);ml.position.copy(mesh.position);
       ml.instanceMatrix.copy(mesh.instanceMatrix);ml.instanceColor=mesh.instanceColor.clone();ml.castShadow=false;mesh.userData.lod='hi';ml.userData.lod='lo';scene.add(ml);CULLS.push(ml);}}
   return meshes;}
@@ -755,8 +776,8 @@ function buildVegetation(){
   plantPick(hi?700:400,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(9,40),[x,z]=lateralPoint(i,off),h=rawHeight(x,z);
     if(h<2.5||h>25||nearestRoad(x,z,9))return null;return [x,z,rnd(0.8,1.15),'palme'];});
   plantFlush();
-  GRASS_CHUNKS.push(...scatter(grassGeo(),new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}),hi?26000:9000,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(5.2,30),[x,z]=lateralPoint(i,off),h=rawHeight(x,z);
-    if(h<5.5||Math.hypot(x-VOLC.x,z-VOLC.z)<330)return null;return [x,z,rnd(0.8,1.8)];},{shadow:false,sink:0.05,grass:true}));
+  GRASS_CHUNKS.push(...scatter(grassGeo(),grassMat(),hi?40000:11000,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(5.2,30),[x,z]=lateralPoint(i,off),h=rawHeight(x,z);
+    if(h<5.5||Math.hypot(x-VOLC.x,z-VOLC.z)<330)return null;return [x,z,rnd(0.9,2.0)];},{shadow:false,receive:true,sink:0.03,grass:true}));
 }
 // Stelle für einen Torbogen: beide Füße frei von anderen Streckenteilen (Kehren, Schleife am Ziel)
 function archSpot(d){const ok=dd=>{const r=roadAt(dd),i0=Math.round((((dd%L)+L)%L)/ds)%N;for(const s of [-1,1]){const x=r.x-r.tz*s*6.4,z=r.z+r.tx*s*6.4,nr=nearestRoad(x,z,5);
@@ -955,6 +976,7 @@ function buildRouteUlm(){
     let x,z,h;if(d<=cum[n0-1]){const t=(d-cum[j])/(cum[j+1]-cum[j]||1);x=R.x[j]+(R.x[j+1]-R.x[j])*t;z=R.z[j]+(R.z[j+1]-R.z[j])*t;h=R.h[j]+(R.h[j+1]-R.h[j])*t;}
     else{const t=(d-cum[n0-1])/close;x=R.x[n0-1]+(R.x[0]-R.x[n0-1])*t;z=R.z[n0-1]+(R.z[0]-R.z[n0-1])*t;h=R.h[n0-1]+(R.h[0]-R.h[n0-1])*t;}
     RX[i]=x;RZ[i]=z;RH[i]=h-UY0;while(si<segs.length-1&&segs[si+1][0]<=j)si++;RNAME[i]=segs[si][1];}
+  RH=denoiseHeights(RH,ds);
   REV=!!revStore()[revKey()];if(REV)reverseArrays(RX,RZ,RH,RNAME);
   RG=new Float32Array(N);RTX=new Float32Array(N);RTZ=new Float32Array(N);LAPCLIMB=0;MAXH=0;
   for(let i=0;i<N;i++){const a=(i-2+N)%N,b=(i+2)%N;RG[i]=(RH[b]-RH[a])/(4*ds);const tx=RX[b]-RX[a],tz=RZ[b]-RZ[a],l=Math.hypot(tx,tz)||1;RTX[i]=tx/l;RTZ[i]=tz/l;
@@ -1147,7 +1169,9 @@ function rectPts(cx,cz,ry,sx,sz,shrink,cb){const ax=Math.cos(ry),az=-Math.sin(ry
 function occFree(cx,cz,ry,sx,sz){return rectPts(cx,cz,ry,sx,sz,0.6,(x,z)=>!OCC.has(Math.floor(x/OCCS)+'|'+Math.floor(z/OCCS)));}
 function occMark(cx,cz,ry,sx,sz){rectPts(cx,cz,ry,sx,sz,0.2,(x,z)=>{OCC.add(Math.floor(x/OCCS)+'|'+Math.floor(z/OCCS));});}
 function cornersClear(cx,cz,ry,sx,sz,clr){const ax=Math.cos(ry),az=-Math.sin(ry),bx=Math.sin(ry),bz=Math.cos(ry);
-  for(const [u,v] of [[-1,-1],[1,-1],[-1,1],[1,1],[0,0],[-1,0],[1,0],[0,-1],[0,1]]){const x=cx+ax*u*sx/2+bx*v*sz/2,z=cz+az*u*sx/2+bz*v*sz/2;
+  // Umriss alle ≤ 4 m abtasten (lange Wände ragten sonst zwischen Ecke und Mitte an die Fahrbahn), dazu die Mitte
+  const nu=Math.max(2,Math.ceil(sx/4)),nv=Math.max(2,Math.ceil(sz/4)),P=[[0,0]];for(let i=0;i<=nu;i++){const u=-1+2*i/nu;P.push([u,-1],[u,1]);}for(let j=1;j<nv;j++){const v=-1+2*j/nv;P.push([-1,v],[1,v]);}
+  for(const [u,v] of P){const x=cx+ax*u*sx/2+bx*v*sz/2,z=cz+az*u*sx/2+bz*v*sz/2;
     if(nearestRoad(x,z,clr)||nearVRoad(x,z,clr-1.2)||riverDist(x,z).d<RIVER_HW+10||!footFree(x,z,2))return false;}return true;}
 function buildCityUlm(){
   const rng=mulberry32(1234),R=(a,b)=>a+rng()*(b-a),pick=a=>a[Math.floor(rng()*a.length)];
@@ -1931,8 +1955,8 @@ function buildVegetationUlm(){
     for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let t=0;t<l;t+=low?8:5,s+=low?8:5){if(Math.sin(s*0.017+L.x0)*Math.sin(s*0.005)<0.05)continue;
       const x=a[0]+(b[0]-a[0])*t/l+rnd(-2.5,2.5),z=a[1]+(b[1]-a[1])*t/l+rnd(-2.5,2.5),k=lakeDist(x,z);if(!k||k.sd<-2.5||k.sd>1.2||nearestRoad(x,z,9)||nearVRoad(x,z,5)||houseAt(x,z,1.5))continue;plantAdd('schilf',x,z,rnd(0.8,1.3));}}}
   plantFlush();
-  if(!SEAS.snow)GRASS_CHUNKS.push(...scatter(grassGeo(),new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}),hi?16000:6000,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(5.2,24),[x,z]=lateralPoint(i,off);
-    if(ulmZone(x,z).d>0.35||nearestRoad(x,z,5)||nearVRoad(x,z,4)||riverDist(x,z).d<RIVER_HW+26)return null;return [x,z,rnd(0.8,1.6)];},{shadow:false,sink:0.05,grass:true,tint:SEAS.k==='winter'?new THREE.Color(1.15,1.0,0.72):SEAS.au?new THREE.Color(1+0.2*SEAS.au,1,1-0.3*SEAS.au):null}));
+  if(!SEAS.snow)GRASS_CHUNKS.push(...scatter(grassGeo(),grassMat(),hi?34000:8000,()=>{const i=Math.random()*N|0,off=(Math.random()<0.5?-1:1)*rnd(5.2,24),[x,z]=lateralPoint(i,off);
+    if(ulmZone(x,z).d>0.35||nearestRoad(x,z,5)||nearVRoad(x,z,4)||riverDist(x,z).d<RIVER_HW+26)return null;return [x,z,rnd(0.9,1.9)];},{shadow:false,receive:true,sink:0.03,grass:true,tint:SEAS.k==='winter'?new THREE.Color(1.15,1.0,0.72):SEAS.au?new THREE.Color(1+0.2*SEAS.au,1,1-0.3*SEAS.au):null}));
 }
 function buildSkyExtrasUlm(){ // Horizont: Schwäbische Alb im Norden/Westen, flaches Iller-/Donautal im Süden, ganz fern die Alpen
   const R=13800,n=480,pos=[],col=[],idx=[],rng=mulberry32(77);const ph=[rng()*6,rng()*6,rng()*6,rng()*6];
@@ -1950,7 +1974,25 @@ function buildSkyExtrasUlm(){ // Horizont: Schwäbische Alb im Norden/Westen, fl
     if(k<n){const b=k*2;idx.push(b,b+2,b+1,b+1,b+2,b+3);}}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.setIndex(idx);
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide}));m.frustumCulled=false;
-  m.onBeforeRender=()=>{m.position.set(camera.position.x,0,camera.position.z);};scene.add(m);}
+  m.onBeforeRender=()=>{m.position.set(camera.position.x,0,camera.position.z);};m.renderOrder=-9;scene.add(m);
+  // davor zwei Kulissen-Ringe: bewaldete Höhenzüge (ca. 5 km) und blaue Hügelketten (ca. 9 km) – sie füllen den sonst leeren Horizont,
+  // verblassen bei Dunst/Regen (HAZE) und folgen der Kamera (auch in der Höhe, damit sie vom Berg aus nicht verschwinden; Höhen überzeichnet, sonst wären es nur wenige Pixel)
+  const gr=new THREE.Color(SEAS.snow?0xdde4e8:SEAS.bare>0.6?0x6c6a52:0x3d6a3a).lerp(new THREE.Color(0x9a7a3c),SEAS.snow?0:SEAS.au*0.55);
+  const fold=(a,f,p)=>1-Math.abs(Math.sin(a*f+p)); // Bergrücken mit Graten statt weicher Wellen
+  backdropRing(5200,900,a=>{const nz=-Math.sin(a),north=sstep((nz+0.3)/1.0);
+      return 2.3*(40+north*46+38*fold(a,4.5,ph[0])*(0.5+0.5*north)+22*Math.sin(a*19+ph[1])+10*Math.sin(a*53+ph[2]))+9*Math.abs(Math.sin(a*230+ph[3]))+6*Math.abs(Math.sin(a*610));},gr,0.34,0.66,-8);
+  backdropRing(9000,600,a=>{const nz=-Math.sin(a),north=sstep((nz+0.2)/0.9);
+      return 1.7*(110+north*170+90*fold(a,3.2,ph[2])*(0.4+0.6*north)+45*Math.sin(a*11+ph[3])+20*Math.sin(a*29+ph[0]));},new THREE.Color(SEAS.snow?0xcfd9e2:0x47705f).lerp(gr,0.3),0.56,0.8,-8.5);}
+const HAZE={value:0};
+function backdropRing(R,n,hf,base,mixTop,mixBot,order){const pos=[],mx=[],idx=[];
+  for(let k=0;k<=n;k++){const a=k/n*Math.PI*2,x=Math.cos(a)*R,z=Math.sin(a)*R,h=hf(a);pos.push(x,-260,z,x,h*0.35,z,x,h,z);mx.push(mixBot,mixBot,mixTop);
+    if(k<n){const b=k*3;idx.push(b,b+3,b+1,b+1,b+3,b+4,b+1,b+4,b+2,b+2,b+4,b+5);}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('mx',new THREE.Float32BufferAttribute(mx,1));g.setIndex(idx);
+  const mat=new THREE.ShaderMaterial({fog:false,depthWrite:false,side:THREE.DoubleSide,uniforms:{hor:{value:HORIZON},haze:HAZE,base:{value:base},sunDir:{value:SUN_DIR}},
+    vertexShader:'attribute float mx;varying float vM;varying vec3 vD;void main(){vM=mx;vD=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:'uniform vec3 hor,base,sunDir;uniform float haze;varying float vM;varying vec3 vD;void main(){float s=max(dot(normalize(vec3(vD.x,0.0,vD.z)),normalize(vec3(sunDir.x,0.0,sunDir.z))),0.0);'+
+      'vec3 c=mix(base*(0.92+0.16*s),hor,clamp(vM+haze*1.3+0.10*s*s,0.0,1.0));gl_FragColor=vec4(c,1.0);}'});
+  const m=new THREE.Mesh(g,mat);m.frustumCulled=false;m.renderOrder=order;m.onBeforeRender=()=>{m.position.set(camera.position.x,camera.position.y-12,camera.position.z);};scene.add(m);return m;}
 
 /* ================= Fahrer-Modelle ================= */
 function textSprite(t){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
@@ -1992,13 +2034,14 @@ function rWheel(parts,bone,rear,rimCol,tireSide,deep){const lo=S.quality==='low'
   const tire=new THREE.TorusGeometry(0.3235,0.0125,lo?5:6,ts);tire.rotateY(Math.PI/2);
   rPart(parts,tire,(x,y,z)=>Math.abs(x)>0.007&&Math.hypot(y,z)<0.324?tireSide:0x18181a,bone);
   const hub=new THREE.CylinderGeometry(0.019,0.019,0.1,10);hub.rotateZ(Math.PI/2);rPart(parts,hub,0xa9adb3,bone);
+  if(!lo){const ro=new THREE.CylinderGeometry(0.08,0.08,0.003,22);ro.rotateZ(Math.PI/2);ro.translate(0.04,0,0);rPart(parts,ro,(x,y,z)=>Math.hypot(y,z)<0.05?0x33363b:0xc3c7cc,bone);} // Bremsscheibe
   for(let k=0;k<ns;k++){const a=k/ns*Math.PI*2,s=k%2?1:-1;rPart(parts,tube([s*0.028,Math.cos(a)*0.024,Math.sin(a)*0.024],[0,Math.cos(a+0.05)*(ri+0.001),Math.sin(a+0.05)*(ri+0.001)],0.0016,3),0x2a2c30,bone);}
   if(rear)for(let k=0;k<7;k++){const d=new THREE.CylinderGeometry(0.026+k*0.0045,0.026+k*0.0045,0.0035,18);d.rotateZ(Math.PI/2);d.translate(-0.022-k*0.0055,0,0);rPart(parts,d,0x9aa0a6,bone);}}
 function makeRider(jersey,label,frameCol,opts={}){
   const g=new THREE.Group(),parts=[],fc=frameCol||0x20232a,jc=rgHex(jersey),lum=jc.r*0.3+jc.g*0.59+jc.b*0.11;
   const acc=jc.clone().lerp(new THREE.Color(lum>0.55?0x1e0f3a:0xffffff),lum>0.55?0.45:0.6).getHex(),jer=jc.getHex();
-  const h=[...(label||'Du')].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7),skins=[0xe8b896,0xd9a27c,0xb97d55,0x7f5236,0xf0c8a8,0xe0ac88];
-  const skin=opts.skin||(label?skins[h%skins.length]:0xe0ac88),helmet=opts.helmet||(h%3===0?0xf4f4f2:h%3===1?fc:jer),shoe=h%2?0xf2f2f2:0x1d1e22,sock=h%4===1?0x1d1e22:0xf4f4f2;
+  const h=[...(label||'Du')].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7),skins=[0xd9a37e,0xc98f68,0xa9714a,0x6f462d,0xe0ad8b,0xcf9872];
+  const skin=opts.skin||(label?skins[h%skins.length]:0xcf9872),helmet=opts.helmet||(h%3===0?0xf4f4f2:h%3===1?fc:jer),shoe=h%2?0xf2f2f2:0x1d1e22,sock=h%4===1?0x1d1e22:0xf4f4f2;
   const B=RIG.BB,RA=RIG.RA,FA=RIG.FA,v=(x,y,z)=>[x,y,z];
   // ---- Rahmen & Anbauteile (Knochen bike) ----
   const SC=v(0,0.80,-0.165),HT=v(0,0.845,0.447),HB=v(0,0.705,0.48),bb=[B.x,B.y,B.z],ra=[RA.x,RA.y,RA.z],fa=[FA.x,FA.y,FA.z];
@@ -2018,6 +2061,9 @@ function makeRider(jersey,label,frameCol,opts={}){
     const hood=new THREE.BoxGeometry(0.03,0.048,0.075);hood.rotateX(-0.35);hood.translate(s*0.206,0.902,0.632);F(hood,0x18191b);
     F(rTube([s*0.207,0.885,0.655],[s*0.212,0.79,0.685],0.0065,5),0x4a4d52);}
   {const comp=new THREE.BoxGeometry(0.05,0.012,0.075);comp.translate(0,0.9,0.6);F(comp,0x1b1c1f);}
+  for(const [y,z] of [[0.335+0.075,-0.405+0.02],[0.335+0.075,0.585-0.015]]){const cal=new THREE.BoxGeometry(0.022,0.045,0.05);cal.translate(0.052,y,z);F(cal,0x1b1c1f);} // Bremssättel
+  {const rl=new THREE.BoxGeometry(0.03,0.045,0.02);rl.translate(0,0.875,-0.212);F(rl,(x,y,z)=>z<-0.215?0xff2a2a:0x1b1c1f);const fl=new THREE.CylinderGeometry(0.016,0.02,0.05,8);fl.rotateX(Math.PI/2);fl.translate(0,0.862,0.6);F(fl,(x,y,z)=>z>0.62?0xfff6d0:0x1b1c1f);}
+  if(h%5<2){const bag=new THREE.BoxGeometry(0.07,0.06,0.13,2,2,2);bag.translate(0,0.905,-0.265);F(bag,0x17181b);} // Satteltasche
   // Flaschen am Unter- und Sattelrohr
   for(const [a,b2,o,c] of [[bb,HB,[0,0.048,0.012],h%2?0xf4f4f2:jer],[bb,SC,[0,0.01,0.05],0x2a2c30]]){const A=new THREE.Vector3(...a),Bv=new THREE.Vector3(...b2),d=Bv.clone().sub(A),m=A.clone().addScaledVector(d,0.42).add(new THREE.Vector3(...o));
     const e0=m.clone().addScaledVector(d.normalize(),-0.1),e1=m.clone().addScaledVector(d,0.1);F(rTube(e0.toArray(),e1.toArray(),0.034,10),c);F(rTube(e1.toArray(),e1.clone().addScaledVector(d,0.03).toArray(),0.014,6),0x222222);}
@@ -2039,7 +2085,10 @@ function makeRider(jersey,label,frameCol,opts={}){
     // drei Rückentaschen und Reißverschluss
     for(const x of [-0.085,0,0.085]){const pk=new THREE.BoxGeometry(0.075,0.11,0.012);pk.translate(x,0.17,-0.108);rPart(parts,pk,jc.clone().multiplyScalar(0.8).getHex(),RB.torso);}
     {const zp=new THREE.BoxGeometry(0.008,0.44,0.006);zp.translate(0,0.36,0.118);rPart(parts,zp,acc,RB.torso);}
-    for(const s of [1,-1]){const sh=new THREE.SphereGeometry(0.068,10,8);sh.scale(1,0.9,1);sh.translate(s*0.17,0.515,0.0);rPart(parts,sh,jer,RB.torso);}}
+    for(const s of [1,-1]){const sh=new THREE.SphereGeometry(0.074,10,8);sh.scale(1,0.9,1);sh.translate(s*0.172,0.515,0.0);rPart(parts,sh,jer,RB.torso);}
+    {const sc=new THREE.SphereGeometry(0.1,10,6,0,Math.PI*2,0,Math.PI*0.5);sc.scale(1.5,0.45,0.75);sc.translate(0,0.52,-0.02);rPart(parts,sc,jer,RB.torso);} // Schulterpartie/Nacken
+    // gekrümmter Rücken wie auf dem Rennrad: Mitte nach hinten (−z), Hüfte und Schultern bleiben, wo sie sind
+    for(const q of parts)if(q.bone===RB.torso){const pa=q.g.attributes.position;for(let i=0;i<pa.count;i++){const y=pa.getY(i),t=clamp(y/0.596,0,1);pa.setZ(i,pa.getZ(i)-0.045*Math.sin(Math.PI*t)-0.012*Math.sin(Math.PI*t)*Math.sign(pa.getZ(i)));}q.g.computeVertexNormals();}}
   // ---- Kopf (Knochen head, aufrecht, +z = Blickrichtung) ----
   {const H=(geo,c)=>rPart(parts,geo,c,RB.head);
     const hd=new THREE.SphereGeometry(0.1,14,12);hd.scale(0.88,1.02,1.04);H(hd,skin);
@@ -2056,15 +2105,17 @@ function makeRider(jersey,label,frameCol,opts={}){
     if(opts.pony){H(rTube([0,0.0,-0.115],[0,-0.13,-0.17],0.026,7),opts.hair||0x5a3b22);}}
   // ---- Arme ----
   for(const [ua,fa] of [[RB.uaL,RB.faL],[RB.uaR,RB.faR]]){
-    rLimbBands(parts,RIG.ua,0.05,0.041,9,[[0,0.15,jer],[0.15,0.17,acc],[0.17,RIG.ua,skin]],ua);
+    rLatheBands(parts,[[0.052,0],[0.056,0.07],[0.05,0.17],[0.043,0.25],[0.04,RIG.ua]],10,[[0,0.15,jer],[0.15,0.17,acc],[0.17,RIG.ua,skin]],ua);
     {const e=new THREE.SphereGeometry(0.042,8,6);rPart(parts,e,skin,fa);}
-    rLimbBands(parts,RIG.fa,0.04,0.031,8,[[0,0.215,skin],[0.215,RIG.fa,0x1d1e22]],fa);
-    const hand=new THREE.BoxGeometry(0.05,0.085,0.04);hand.translate(0,RIG.fa+0.035,0);rPart(parts,hand,0x1d1e22,fa);}
+    rLatheBands(parts,[[0.04,0],[0.043,0.06],[0.037,0.16],[0.03,0.235],[0.029,RIG.fa]],9,[[0,0.225,skin],[0.225,RIG.fa,0x1d1e22]],fa);
+    const hand=new THREE.SphereGeometry(0.034,8,6);hand.scale(0.85,1.35,0.62);hand.translate(0,RIG.fa+0.036,0);rPart(parts,hand,0x1d1e22,fa);
+    {const th=new THREE.SphereGeometry(0.014,6,4);th.scale(1,1.9,1);th.translate(0.02,RIG.fa+0.03,0.02);rPart(parts,th,0x1d1e22,fa);}}
   // ---- Beine ----
   for(const [th,sh,ft] of [[RB.thL,RB.shL,RB.ftL],[RB.thR,RB.shR,RB.ftR]]){
-    rLimbBands(parts,RIG.thigh,0.08,0.056,10,[[0,0.33,0x141517],[0.33,0.355,acc],[0.355,RIG.thigh,skin]],th);
+    rLatheBands(parts,[[0.082,0],[0.092,0.07],[0.09,0.17],[0.078,0.28],[0.064,0.37],[0.056,RIG.thigh]],12,[[0,0.33,0x141517],[0.33,0.355,acc],[0.355,RIG.thigh,skin]],th,1,1.12);
+    {const hp=new THREE.SphereGeometry(0.094,10,8);hp.scale(1,1,1.1);rPart(parts,hp,0x141517,th);} // Gesäß/Hüfte: schließt die Lücke zum Rumpf
     const kn=new THREE.SphereGeometry(0.052,9,7);rPart(parts,kn,skin,sh);
-    rLatheBands(parts,[[0.05,0],[0.056,0.06],[0.061,0.13],[0.053,0.24],[0.041,0.33],[0.035,0.4],[0.034,0.44],[0.001,0.445]],10,[[0,0.35,skin],[0.35,0.445,sock]],sh);
+    rLatheBands(parts,[[0.052,0],[0.058,0.05],[0.066,0.12],[0.06,0.2],[0.047,0.3],[0.037,0.38],[0.034,0.44],[0.001,0.445]],11,[[0,0.33,skin],[0.33,0.445,sock]],sh,1,1.1);
     // Schuh: Ursprung = Pedalachse unter dem Fußballen
     const sh2=new THREE.BoxGeometry(0.094,0.07,0.27,2,2,4),p=sh2.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);if(z>0.05)p.setX(i,p.getX(i)*(1-(z-0.05)*2.2));if(z>0.07&&p.getY(i)>0)p.setY(i,p.getY(i)-(z-0.07)*0.25);}
     sh2.computeVertexNormals();sh2.translate(0,0.05,-0.04);rPart(parts,sh2,(x,y,z)=>y<0.02?0x1d1e22:Math.abs(x)>0.03&&y>0.06&&z>-0.08&&z<0.02?acc:shoe,ft);
@@ -3620,8 +3671,10 @@ function initPost(){
         float b=floor(a),f=fract(a),k=floor(tm*14.0),n=h1(b+k*37.1);if(n<1.0-0.5*spd)return col;
         float w=0.12+0.2*h1(b*3.7+k),l=(1.0-smoothstep(w*0.5,w*0.5+0.06,abs(f-0.5)))*smoothstep(0.30+0.2*h1(b*7.3+k*1.7),0.46+0.2*h1(b*7.3+k*1.7),r);
         return mix(col,vec3(1.0),l*0.55*spd);}
+      // etwas mehr Farbe und Kontrast, zum Bildrand leicht dunkler (lenkt den Blick auf die Straße)
+      vec3 grade(vec3 c){float l=dot(c,vec3(0.299,0.587,0.114));c=mix(vec3(l),c,1.05);c=mix(c,c*c*(3.0-2.0*c),0.16);vec2 q=vUv-0.5;return c*(1.0-0.16*smoothstep(0.45,1.0,length(q*vec2(1.0,0.82))*1.35));}
       void main(){vec4 c=texture2D(tCol,vUv);float z=Z(vUv);
-        if(z>far*0.7){gl_FragColor=vec4(speedLines(c.rgb),1.0);return;}
+        if(z>far*0.7){gl_FragColor=vec4(speedLines(grade(c.rgb)),1.0);return;}
         vec2 o=px*thick;float wc=1.0/z;
         float wl=1.0/Z(vUv-vec2(o.x,0.0)),wr=1.0/Z(vUv+vec2(o.x,0.0)),wu=1.0/Z(vUv+vec2(0.0,o.y)),wd=1.0/Z(vUv-vec2(0.0,o.y));
         float wl2=1.0/Z(vUv+o*vec2(-1.0,1.0)),wr2=1.0/Z(vUv+o),wu2=1.0/Z(vUv-o),wd2=1.0/Z(vUv+o*vec2(1.0,-1.0));
@@ -3630,7 +3683,7 @@ function initPost(){
         float sil=smoothstep(0.035,0.11,-min(lap,lap2*0.5));
         float crease=smoothstep(0.012,0.04,abs(lap))*smoothstep(0.012,0.04,abs(lap2)*0.5)*0.55;
         float e=max(sil,crease)*(1.0-smoothstep(500.0,2600.0,z));
-        gl_FragColor=vec4(speedLines(mix(c.rgb,ink,e*0.92)),1.0);}`});
+        gl_FragColor=vec4(speedLines(grade(mix(c.rgb,ink,e*0.92))),1.0);}`});
   const fxaa=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tDiffuse:{value:rtB.texture},px:{value:new THREE.Vector2(1/size.x,1/size.y)}},vertexShader:vs,
     fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 px;varying vec2 vUv;
       void main(){vec3 nw=texture2D(tDiffuse,vUv+vec2(-1.0,-1.0)*px).rgb,ne=texture2D(tDiffuse,vUv+vec2(1.0,-1.0)*px).rgb,sw=texture2D(tDiffuse,vUv+vec2(-1.0,1.0)*px).rgb,se=texture2D(tDiffuse,vUv+vec2(1.0,1.0)*px).rgb,m=texture2D(tDiffuse,vUv).rgb;
