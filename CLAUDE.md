@@ -50,6 +50,12 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   bergab max. ~58 km/h), `std` (Crr 0,004, CdA 0,32), `light` „Leichtlauf“ (CdA 0,27). Abgestimmt auf Felix' echte
   Edge-540-Fahrten: flach passt die App genau, Zwift ist 4–10 % schneller, echte Abfahrten 45–53 km/h im Rollen.
   Antriebskraft `P/max(v, …)` in `advance`: 1,5 m/s, am Berg (> 3 %) 0,7 m/s – sonst bleibt man an steilen Rampen ganz stehen.
+  Geprüft (Nov. 2026): `advance` trifft das Gleichgewichtstempo der Formel auf 0,01 km/h (200 W flach = 33,3 km/h bei 81 kg),
+  unabhängig vom Zeitschritt; Ausrollen 35 → 15 km/h in 33,5 s.
+- **Höhenprofil Ulm entrauscht** (`denoiseHeights` in `buildRouteUlm`): Das 30-m-Höhenmodell wackelt auf ebenen Strecken um 1–2 m
+  und macht an Brückenrampen Stufen (Phantom-Höhenmeter, Zacken bis 21 %). Kurze Zacken werden immer geglättet (±12 m); wo das
+  Profil vom großräumigen Verlauf (±150 m) weniger als 1 m abweicht, gilt der großräumige; echte Rampen (> 2,5 m) bleiben.
+  Ergebnis z. B. Donauauen 140 → 93 hm, Donau-Runde 58 → 37 hm. `detectClimbs`: lange Anstiege (≥ 60 hm) zählen ab 1,8 % Schnitt.
 - **Virtuelles Schalten:** Trainer bekommt eine Simulations-Steigung (FTMS 0x11), die aus Straßenkraft ×
   `curRatio()/trainerRatio()` berechnet wird. Der echte Gang am Trainer wird **einmal** gemessen
   (`measureTrainerGear`, KICKR rechnet mit 2096 mm), auf ganze Zähne gerundet (`snapGear`) und dann fest gespeichert
@@ -209,7 +215,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Knochen (`RB`, Matrizen direkt gesetzt, `matrixAutoUpdate=false`) → 1 Zeichenaufruf pro Fahrer. Teile über `rPart`
   (Farbe je Teil, harte Farbbänder via `rLatheBands`/`rLimbBands`). `animRider(o,phase,wheel,{v,w,g})` wählt Haltung:
   Wiegetritt (steil + kräftig oder Sprint), Unterlenker (schnelle Abfahrt ohne Treten); `placeRider(o,d,lat,v,dir)`
-  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`. **Wiegetritt:** das Rad wiegt (±0,13 rad) unter dem fast ruhigen
+  legt den Fahrer in Kurven schräg. `toonMat` übernimmt `skinning`. Körper: Oberschenkel/Wade/Arme als Profile mit Muskelform, Hüftkugel am
+  Oberschenkel-Knochen, gekrümmter Rücken (alle Rumpf-Teile nachträglich gebogen), Handschuhe; Rad mit Bremsscheiben, -sätteln, Rück-/Frontlicht. **Wiegetritt:** das Rad wiegt (±0,13 rad) unter dem fast ruhigen
   Oberkörper (Haltung aufrecht gerechnet, dann mit `toB` ins Rad-System gedreht, Kopf gegengedreht); Hüfte nur so hoch, dass kein Bein
   überstreckt (0,965 × Beinlänge), Oberkörper so weit vor, bis die Hände die Griffe erreichen.
 - **Gelände Ulm** (`buildTerrainUlm`): grobes Netz (24–48 m), entlang der Strecke feine Zellen (6–8 m, `TERR.FINE`),
@@ -268,6 +275,12 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Mittelholm und Laternen (`lampGlass` leuchtet abends, Lichthöfe über `HALO_PTS`). `box()` nimmt auch eine Material-Liste je Seite.
 - **Fahrer-Vielfalt:** `makeRider(…,{pattern,deep})` – Trikotmuster 0 klassisch, 1 Brust-Streifen, 2 Schärpe, 3 Seitenteile
   (Farbe als Funktion in `rLatheBands`), Hochprofilfelgen (`rWheel(…,deep)`); ohne Angabe nach dem Namen gewürfelt.
+- **Horizont** (`buildSkyExtrasUlm`, `backdropRing`): hinter der Welt zwei Kulissen-Ringe (bewaldete Höhenzüge ≈ 5 km, Hügelketten ≈ 9 km)
+  vor dem alten Alb-/Alpen-Ring; Shader mischt zur Horizontfarbe, `HAZE` (aus `applyFog`) lässt sie bei Dunst/Regen verschwinden;
+  schreiben keine Tiefe (keine Konturen), folgen der Kamera. Nachbearbeitung (`grade` im Konturen-Shader): etwas mehr Sättigung/Kontrast,
+  leichte Vignette.
+- **Gras** (`grassGeo`/`grassMat`): 13 dünne, gebogene Halme je Büschel mit Farbverlauf, Normalen nach oben, `depthWrite:false` +
+  `renderOrder` 3 → keine dunklen Konturen um die Halme; empfängt Schatten.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
@@ -286,7 +299,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Attribut `leaf` (0 Holz → Farbe aus `iTrunk`, 1 Laub → `instanceColor`, 2 feste Farbe), Wind (`WIND`, im Bild-Takt),
   Schnee auf nach oben zeigenden Flächen. **Nah/Fern je Baum auf der Grafikkarte** (`TREE_LOD` 1/2, `uLod` = `LOD_R`):
   Nah-Kacheln ≈ 0,6 × `LOD_R`, Fern-Kacheln 3 × `CHUNK` und nur wenige Formen (`LOFIT`) → wenige Zeichenaufrufe.
-  `toonMat` übernimmt eigene Shader, wenn `userData.obc` (oder `det`) gesetzt ist.
+  `toonMat` übernimmt eigene Shader, wenn `userData.obc` (oder `det`) gesetzt ist. Laubballen der Nah-Variante sind ausgebeult (`lumpy`),
+  Rundkronen haben 8 Ballen, das Laub ist unten dunkler und oben heller (im Shader, nur `TREE_LOD` 1).
 - **Jahreszeit** (`S.season` auto/fruehling/sommer/herbst/winter/schnee, `seasonCalc` → `SEAS` in `buildWorld`): nach Datum
   Herbstfärbung `au` ab Mitte Sept., kahle Bäume `bare` im November/Winter (`bareGeo`, fern graue Zweig-Wolke), Obstblüte
   im April, frisches Grün im Mai, Äpfel Aug.–Okt.; Winter manchmal mit Schnee (Boden in `buildTerrainUlm`, kein Gras/keine
