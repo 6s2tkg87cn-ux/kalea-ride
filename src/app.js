@@ -3717,6 +3717,23 @@ function toonClouds(n,y0,y1){
     for(let q=0;q<m;q++){const g=base.clone(),r=rnd(0.45,0.8)*w*(q===0||q===m-1?0.7:1);g.scale(r,r*0.82,r*0.9);g.translate((q-(m-1)/2)*w*0.62+rnd(-20,20),rnd(-10,w*0.15)+(q%2)*w*0.12,rnd(-30,30));parts.push(g);}
     const bot=base.clone();bot.scale(w*m*0.34,w*0.18,w*0.5);bot.translate(0,-w*0.25,0);parts.push(bot);
     const g=mergeGeos(parts),c=new THREE.Mesh(g,mat);c.position.set(rnd(-9000,9000),rnd(y0,y1),rnd(-9000,9000));c.rotation.y=rnd(0,6.28);scene.add(c);clouds.push(c);}}
+// Hoher Himmel: Schleierwolken (flache, halbdurchsichtige Flächen; nur gut 2 km hoch, damit sie im Blickfeld über dem Horizont liegen) und ein Flugzeug mit Kondensstreifen.
+// Hängen in der Wolken-Liste: ziehen mit, werden bei Regen grau und bei Nebel ausgeblendet.
+function skyDetails(){const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d'),rng=mulberry32(5);
+  for(let k=0;k<46;k++){const cx=rng()*256,cy=18+rng()*92,len=30+rng()*90,w=2+rng()*5,g=x.createLinearGradient(cx-len/2,0,cx+len/2,0);
+    g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(0.3+rng()*0.4,'rgba(255,255,255,'+(0.10+rng()*0.22).toFixed(2)+')');g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.save();x.translate(cx,cy);x.rotate((rng()-0.5)*0.35);x.translate(-cx,-cy);x.beginPath();x.ellipse(cx,cy,len/2,w,0,0,6.283);x.fill();x.restore();}
+  const tex=new THREE.CanvasTexture(c),n=S.quality==='low'?7:14;
+  for(let k=0;k<n;k++){const m=new THREE.Mesh(new THREE.PlaneGeometry(rnd(4200,7000),rnd(1800,3200)),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:rnd(0.5,0.85),depthWrite:false,fog:false,side:THREE.DoubleSide}));
+    m.rotation.x=-Math.PI/2;m.rotation.z=rnd(-0.5,0.5);m.position.set(rnd(-9500,9500),rnd(2100,2900),rnd(-9500,9500));m.renderOrder=-7;m.frustumCulled=false;scene.add(m);clouds.push(m);}
+  // Kondensstreifen: vorn schmal und kräftig, nach hinten breiter und blasser
+  const tc=document.createElement('canvas');tc.width=256;tc.height=16;const y=tc.getContext('2d'),tg=y.createLinearGradient(0,0,256,0);
+  tg.addColorStop(0,'rgba(255,255,255,0)');tg.addColorStop(0.75,'rgba(255,255,255,0.55)');tg.addColorStop(1,'rgba(255,255,255,0.95)');y.fillStyle=tg;
+  y.beginPath();y.moveTo(0,0);y.lineTo(256,6.5);y.lineTo(256,9.5);y.lineTo(0,16);y.closePath();y.fill();
+  const tr2=new THREE.Mesh(new THREE.PlaneGeometry(5200,90),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(tc),transparent:true,depthWrite:false,fog:false,side:THREE.DoubleSide}));
+  tr2.rotation.x=-Math.PI/2;const jet=new THREE.Group();jet.add(tr2);
+  const pl=new THREE.Mesh(new THREE.ConeGeometry(9,60,5),new THREE.MeshBasicMaterial({color:0xe9eef3,fog:false}));pl.rotation.z=-Math.PI/2;pl.position.x=2630;jet.add(pl);
+  jet.position.set(rnd(-6000,2000),3300,(Math.random()<0.5?-1:1)*rnd(5000,8500));jet.rotation.y=rnd(-0.5,0.5);jet.traverse(o=>{o.renderOrder=-7;o.frustumCulled=false;});scene.add(jet);clouds.push(jet);}
 function mergeGeos(list){let n=0;for(const g of list){const gg=g.index?g.toNonIndexed():g;g.__n=gg;n+=gg.attributes.position.count;}
   const pos=new Float32Array(n*3),nor=new Float32Array(n*3);let o=0;
   for(const g of list){const gg=g.__n;gg.computeVertexNormals();pos.set(gg.attributes.position.array,o*3);nor.set(gg.attributes.normal.array,o*3);o+=gg.attributes.position.count;}
@@ -5020,7 +5037,7 @@ function wireWelcome(){
 /* ================= Start ================= */
 function decorate(){
   buildMist();buildHalos(HALO_PTS);
-  toonClouds(IS_ULM?30:36,IS_ULM?850:750,IS_ULM?1250:1150);
+  toonClouds(IS_ULM?30:36,IS_ULM?850:750,IS_ULM?1250:1150);skyDetails();
   bunting(26);bunting(70);for(const c of CLIMBS)bunting(Math.max(10,c.end-40));
   birds(5);
   if(IS_ULM){balloons(5,0,-600,2600,520);

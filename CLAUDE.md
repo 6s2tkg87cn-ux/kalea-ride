@@ -279,6 +279,10 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   vor dem alten Alb-/Alpen-Ring; Shader mischt zur Horizontfarbe, `HAZE` (aus `applyFog`) lässt sie bei Dunst/Regen verschwinden;
   schreiben keine Tiefe (keine Konturen), folgen der Kamera. Nachbearbeitung (`grade` im Konturen-Shader): etwas mehr Sättigung/Kontrast,
   leichte Vignette.
+- **Mehr echte Gebäude** (breiterer Streifen als 220 m) wurde im Nov. 2026 versucht und verworfen: Overpass ist aus der Cloud-Umgebung
+  praktisch nicht erreichbar, Felix will es nicht weiterverfolgen.
+- **Hoher Himmel** (`skyDetails`): Schleierwolken (flache halbdurchsichtige Flächen, gut 2 km hoch) und ein Flugzeug mit Kondensstreifen;
+  hängen in `clouds` (ziehen mit, grau bei Regen, weg bei Nebel).
 - **Gras** (`grassGeo`/`grassMat`): 13 dünne, gebogene Halme je Büschel mit Farbverlauf, Normalen nach oben, `depthWrite:false` +
   `renderOrder` 3 → keine dunklen Konturen um die Halme; empfängt Schatten.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
