@@ -193,7 +193,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `setupClick`/`setupHr`/`setupCad`). Sind alle da, schließt das Geräte-Fenster von selbst. Fehlt `getDevices` (Chrome ggf.
   nur mit chrome://flags „new permissions backend for Web Bluetooth“, iOS/Bluefy je nach Version), zeigt `updateAutoUi` einen Hinweis.
 - **Export:** FIT (`fitBytes`, eigener Encoder mit CRC; sport cycling / sub_sport virtual_activity → Strava erkennt eine
-  virtuelle Fahrt) und TCX. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
+  virtuelle Fahrt) und TCX. In Ulm mit echter GPS-Spur (`localToLL` aus den gespeicherten x/z jedes Messpunkts) → Karte in
+  Strava/Garmin Connect, auch für ältere Fahrten; Kalea (erfunden) ohne GPS. Direkte Strava-/Garmin-Anbindung bräuchte einen Server (OAuth-Geheimnis bzw. Garmin-Partnerprogramm).
 - **Zwift Click v2:** Protokoll 0x23 (Tasten-Bitmaske), 0x37, 0x19 (Batterie), 0x15 (Leerlauf). Halten =
   Dauerschalten (`HOLD.pad`/`HOLD.bit`, erst nach 0,6 s – sonst schaltete eine spät ankommende Loslass-Meldung einen Gang zu viel;
   Abbruch nach 4 s). Doppelte Meldungen derselben Richtung innerhalb 150 ms zählen einmal (`clickDup`). **Tasten frei belegen:** `S.keymap` = Bit → Aktion (`KEY_DEF`:

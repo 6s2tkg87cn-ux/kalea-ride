@@ -2789,7 +2789,8 @@ function drawTrack(R){const c=$('svMap'),A=R.s,here=R.world===WORLD&&R.route===R
   x.font='600 11px Fredoka,system-ui';x.fillStyle='#1e0f3a';x.textAlign='left';x.textBaseline='bottom';x.fillText('Spur nach Tempo: blau langsam → rot schnell',8,h-6);}
 // TCX-Datei (für Strava, Garmin Connect, TrainingPeaks)
 function exportTcx(R){R=R||curRide();const A=R.s;if(!A.length)return;const t0=R.start,iso=t=>new Date(t0+t*1000).toISOString(),sum=rideSummary(R);
-  const pts=A.map(s=>`<Trackpoint><Time>${iso(s.t)}</Time><AltitudeMeters>${s.h}</AltitudeMeters><DistanceMeters>${s.d}</DistanceMeters>${s.hr?`<HeartRateBpm><Value>${s.hr}</Value></HeartRateBpm>`:''}<Cadence>${s.c}</Cadence><Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Speed>${s.v}</Speed><Watts>${s.p}</Watts></TPX></Extensions></Trackpoint>`).join('\n');
+  const gps=R.world==='ulm'&&typeof ULM_DATA!=='undefined',pos=s=>{if(!gps||!Number.isFinite(s.x)||!Number.isFinite(s.z))return '';const ll=localToLL(s.x,s.z);return `<Position><LatitudeDegrees>${ll[0].toFixed(7)}</LatitudeDegrees><LongitudeDegrees>${ll[1].toFixed(7)}</LongitudeDegrees></Position>`;};
+  const pts=A.map(s=>`<Trackpoint><Time>${iso(s.t)}</Time>${pos(s)}<AltitudeMeters>${s.h}</AltitudeMeters><DistanceMeters>${s.d}</DistanceMeters>${s.hr?`<HeartRateBpm><Value>${s.hr}</Value></HeartRateBpm>`:''}<Cadence>${s.c}</Cadence><Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Speed>${s.v}</Speed><Watts>${s.p}</Watts></TPX></Extensions></Trackpoint>`).join('\n');
   const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Biking"><Id>${iso(0)}</Id><Lap StartTime="${iso(0)}"><TotalTimeSeconds>${sum.time}</TotalTimeSeconds><DistanceMeters>${sum.dist}</DistanceMeters><Calories>${Math.round(sum.kcal)}</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>\n${pts}\n</Track></Lap><Notes>Kalea Ride – ${R.name} (virtuell)</Notes></Activity></Activities></TrainingCenterDatabase>`;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([xml],{type:'application/vnd.garmin.tcx+xml'}));a.download=`KaleaRide_${new Date(t0).toISOString().slice(0,10)}_${R.route}.tcx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 
@@ -2797,14 +2798,16 @@ function exportTcx(R){R=R||curRide();const A=R.s;if(!A.length)return;const t0=R.
 // Garmin Connect übernimmt Leistung, Puls, Trittfrequenz und Höhenmeter
 function fitBytes(R){R=R||curRide();const A=R.s;if(!A.length)return null;const sum=rideSummary(R),T0=Math.round(R.start/1000)-631065600,out=[],u8=v=>out.push(v&255),
     u16=v=>{u8(v);u8(v>>8);},u32=v=>{u16(v&0xffff);u16(Math.floor(v/65536)&0xffff);};
-  const defs={},wr={0:u8,2:u8,0x84:u16,0x86:u32,0x8c:u32},inv={0:255,2:255,0x84:0xffff,0x86:0xffffffff,0x8c:0};
+  const defs={},wr={0:u8,2:u8,0x84:u16,0x85:u32,0x86:u32,0x8c:u32},inv={0:255,2:255,0x84:0xffff,0x85:0x7fffffff,0x86:0xffffffff,0x8c:0};
   const def=(loc,glob,fields)=>{defs[loc]=fields;u8(0x40|loc);u8(0);u8(0);u16(glob);u8(fields.length);for(const [n,t] of fields){u8(n);u8(t===0||t===2?1:t===0x84?2:4);u8(t);}};
   const msg=(loc,vals)=>{u8(loc);defs[loc].forEach(([n,t],i)=>{let v=vals[i];if(v===null||v===undefined||Number.isNaN(v))v=inv[t];wr[t](Math.round(v));});};
   const r=(v,mx)=>v===null?null:Math.max(0,Math.min(mx,v));
   def(0,0,[[0,0],[1,0x84],[2,0x84],[3,0x8c],[4,0x86]]);msg(0,[4,255,1,(Date.now()%2147483647)||1,T0]);         // file_id: Aktivität
   def(1,21,[[253,0x86],[0,0],[1,0]]);msg(1,[T0,0,0]);                                                            // Timer Start
-  def(2,20,[[253,0x86],[2,0x84],[3,2],[4,2],[5,0x86],[6,0x84],[7,0x84]]);                                        // record
-  for(const p of A)msg(2,[T0+p.t,r((p.h+500)*5,65534),p.hr?r(p.hr,254):null,r(p.c,254),r(p.d*100,4294967294),r(p.v*1000,65534),r(p.p,65534)]);
+  const gps=R.world==='ulm'&&typeof ULM_DATA!=='undefined',sc=2147483648/180;                                   // Ulm: echte GPS-Spur (Karte in Strava/Garmin)
+  def(2,20,[[253,0x86],[0,0x85],[1,0x85],[2,0x84],[3,2],[4,2],[5,0x86],[6,0x84],[7,0x84]]);                        // record
+  for(const p of A){const ll=gps&&Number.isFinite(p.x)&&Number.isFinite(p.z)?localToLL(p.x,p.z):null;
+    msg(2,[T0+p.t,ll?ll[0]*sc:null,ll?ll[1]*sc:null,r((p.h+500)*5,65534),p.hr?r(p.hr,254):null,r(p.c,254),r(p.d*100,4294967294),r(p.v*1000,65534),r(p.p,65534)]);}
   const T1=T0+A[A.length-1].t,maxP=Math.max(...A.map(p=>p.p)),maxHr=Math.max(...A.map(p=>p.hr||0));
   msg(1,[T1,0,4]);                                                                                                 // Timer Stopp
   const lapF=[[253,0x86],[0,0],[1,0],[2,0x86],[7,0x86],[8,0x86],[9,0x86],[11,0x84],[19,0x84],[20,0x84],[21,0x84],[25,0],[39,0]];
