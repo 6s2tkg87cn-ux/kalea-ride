@@ -293,6 +293,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Schatten zeigt so den ganzen Fahrer. Eigene Arme/Handschuhe (`fpvArms`; Armlinge und Vollfinger im Winter) und Radcomputer (`fpvDevice`,
   Canvas `fpvDraw` 4×/s: Tempo, Watt, Trittfrequenz, Puls, Steigung, Zeit, Gang) hängen am Rad-Knochen (wiegen mit). Höhenprofil ist dann
   ausgeblendet (`body.fpv`), Mitfahrer werden erst unter 1,6 m ausgeblendet.
+  Hände bewegen sich: Schalten = rechte Finger schwenken den Hebel nach innen (`FPV.shf`, aus `S.shiftT`/`S.upT`), Bremsen in Kurven = Finger
+  greifen um den Hebel, Kopf nickt leicht vor (`FPV.brk`, aus `S.brakeT`; `fpvHands`). **Ohne Anzeigen** (`S.fpClean`, Taste H, Click-Aktion
+  `hud`, Menü → 🎨 Grafik): blendet in der Ich-Sicht das ganze HUD und die Ortsschilder-Beschriftungen aus (`body.fpclean`), Menü-/Kamera-Knopf
+  bleiben schwach sichtbar; der Radcomputer zeigt dann bei ERG/Workout das Ziel. Halter = dünnes Rohr unter dem Gerät (ein Klotz davor sah wie
+  ein zweiter Computer aus). Rubbeln in der Ich-Sicht bewusst schwach (Pflaster ≈ 4 mm).
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
@@ -332,7 +337,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera (auch Ich-Sicht), M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera (auch Ich-Sicht), H Ich-Sicht ohne Anzeigen, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
   Workout-Intervall, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
