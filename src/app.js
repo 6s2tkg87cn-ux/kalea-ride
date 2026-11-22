@@ -43,9 +43,9 @@ function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{
   const oldDef=!o.sv&&(!o.chain||o.chain===50)&&(!o.cog||o.cog===17);if(oldDef){S.chain=34;S.cog=14;}
   if(o.diff)S.diff=o.diff;if(o.quality&&!(IS_MOBILE&&!o.qualitySetOnMobile))S.quality=o.quality;S.qualitySetOnMobile=!!o.qualitySetOnMobile;if(o.rings)S.rings=o.rings;if(o.cassette)S.cassette=o.cassette;if(o.gearMode)S.gearMode=o.gearMode==='zwift'?'std':o.gearMode;if(o.repeat!==undefined)S.repeat=o.repeat;if(o.smooth!==undefined)S.smooth=o.smooth;if(o.ftp)S.ftp=o.ftp;if(o.ergW)S.ergW=o.ergW;if(['ask','auto','off'].includes(o.ftpAuto))S.ftpAuto=o.ftpAuto;if(o.ftpNo)S.ftpNo=o.ftpNo;if(typeof o.autoDev==='boolean')S.autoDev=o.autoDev;if(o.keymap&&typeof o.keymap==='object')S.keymap=o.keymap;if(typeof o.clickRefresh2==='boolean')S.clickRefresh=o.clickRefresh2;/* neuer Schlüssel: früher standardmäßig an – fror am Mac Bluetooth ein */if(typeof o.pmUse==='boolean')S.pmUse=o.pmUse;if(['selten','manchmal','oft','aus'].includes(o.gags))S.gags=o.gags;if(o.sex==='w'||o.sex==='m')S.sex=o.sex;if(['auto','fruehling','sommer','herbst','winter','schnee'].includes(o.season))S.season=o.season;if(o.prof)S.prof=1;
   try{const pr=JSON.parse(localStorage.getItem('kalea_net')||'{}');if(pr.col!==undefined)S.netCol=pr.col;}catch(e){} // Trikotfarbe (auch online)
-  if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
+  if(typeof o.ghost==='boolean')S.ghost=o.ghost;if(Number.isInteger(o.cam)&&o.cam>=0&&o.cam<5)S.cam=o.cam;if(o.tod&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.tod=o.tod;if(o.wx&&!((o.sv||0)<3&&o.tod==='mittag'&&o.wx==='sonnig'))S.wx=o.wx; // alte Vorgabe → Zufall
   if(typeof o.vshift==='boolean')S.vshift=o.vshift;if(typeof o.toon==='boolean')S.toon=o.toon;if(o.shiftFeel)S.shiftFeel=o.shiftFeel;if(o.fps)S.fps=o.fps;if(o.tire)S.tire=o.tire;if(['me','solo','fixed','off'].includes(o.botMode))S.botMode=o.botMode;if(o.botWkg)S.botWkg=o.botWkg;if(typeof o.life==='boolean')S.life=o.life;if(typeof o.hidePow==='boolean')S.hidePow=o.hidePow;if(typeof o.gearReal==='boolean')S.gearReal=o.gearReal;if(typeof o.zones==='boolean')S.zones=o.zones;if(o.hrMax>0)S.hrMax=o.hrMax;if(o.hrSeen>0)S.hrSeen=o.hrSeen;if(typeof o.sndBike==='number')S.sndBike=o.sndBike;if(typeof o.sndAmb==='number')S.sndAmb=o.sndAmb;if(typeof o.mute==='boolean')S.mute=o.mute;if(o.trMeas&&o.trGear&&!(oldDef&&o.trGear!=='34×14')){S.trMeas=o.trMeas;S.trGear=o.trGear;}if(oldDef&&Object.keys(o).length)setTimeout(saveSettings,0);if(o.feel==='zwift')o.feel='light';if(o.feel&&FEELS[o.feel])S.feel=o.feel;applyFeel();PHYS.circ=S.tire;if(o.learned)Z.learned=o.learned;}catch(e){}}
-function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,zones:S.zones,hrMax:S.hrMax,hrSeen:S.hrSeen,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh2:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,learned:Z.learned}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('kalea',JSON.stringify({sv:3,botMode:S.botMode,botWkg:S.botWkg,life:S.life,hidePow:S.hidePow,gearReal:S.gearReal,zones:S.zones,hrMax:S.hrMax,hrSeen:S.hrSeen,sndBike:S.sndBike,sndAmb:S.sndAmb,mute:S.mute,feel:S.feel,trMeas:S.trMeas,trGear:S.trGear,tire:S.tire,fps:S.fps,shiftFeel:S.shiftFeel,qualitySetOnMobile:S.qualitySetOnMobile,toon:S.toon,mass:S.mass,chain:S.chain,cog:S.cog,diff:S.diff,vshift:S.vshift,quality:S.quality,rings:S.rings,cassette:S.cassette,gearMode:S.gearMode,repeat:S.repeat,smooth:S.smooth,ftp:S.ftp,ergW:S.ergW,ftpAuto:S.ftpAuto,ftpNo:S.ftpNo,autoDev:S.autoDev,keymap:S.keymap,clickRefresh2:S.clickRefresh,pmUse:S.pmUse,gags:S.gags,sex:S.sex,prof:S.prof,ghost:S.ghost,tod:S.tod,wx:S.wx,season:S.season,cam:S.cam,learned:Z.learned}));}catch(e){}}
 
 /* ================= Welt: Gelände ================= */
 const VOLC={x:700,z:-500,h:330,r:1300};
@@ -2180,7 +2180,7 @@ function animRider(o,phase,wheelAng,st){const u=o.userData,b=u.bones,now=perform
 // Fahrer auf die Straße setzen; in Kurven legt er sich je nach Tempo hinein (dir=−1: Gegenverkehr)
 // Fahrer ganz nah an der Kamera ausblenden (2–4 m), damit nichts angeschnitten durchs Bild fährt; false = gar nicht zeichnen
 function camFade(o){const u=o.userData,sk=u.sk||(u.sk=o.children.find(c=>c.isSkinnedMesh));if(!sk)return true;
-  const d=Math.hypot(o.position.x-camera.position.x,o.position.y+0.9-camera.position.y,o.position.z-camera.position.z),a=clamp((d-2)/2,0,1),m=sk.material;
+  const d=Math.hypot(o.position.x-camera.position.x,o.position.y+0.9-camera.position.y,o.position.z-camera.position.z),a=VIEWS[S.cam]&&VIEWS[S.cam].fp?clamp((d-0.9)/0.7,0,1):clamp((d-2)/2,0,1),m=sk.material;
   if(a>=1){if(m.transparent){m.transparent=false;m.opacity=1;m.depthWrite=true;}return true;}
   m.transparent=true;m.opacity=a;m.depthWrite=a>0.6;return a>0.04;}
 function placeRider(o,dist,lat,v,dir=1){const r=roadAt(dist),a=roadAt(dist+2*dir),rx=-r.tz,rz=r.tx; // dir −1: Gegenverkehr, schaut rückwärts
@@ -3292,7 +3292,7 @@ function keyAction(bit){const m=keymap();return m[bit]||'none';}
 function clickDup(act){const now=performance.now();if(Z.lastAct===act&&now-(Z.lastActT||0)<150){btLog('Click: doppelte Meldung ignoriert ('+act+')');return true;}Z.lastAct=act;Z.lastActT=now;return false;}
 function runAction(act,pad){
   if(act==='up'||act==='down'){if(clickDup(act))return;shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
-  else if(act==='cam')S.cam=(S.cam+1)%VIEWS.length;
+  else if(act==='cam')camNext();
   else if(act==='pow'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
   else if(act==='zones')toggleZones();
   else if(act==='skip')skipWorkoutSeg();
@@ -4064,10 +4064,98 @@ function wireOsm(){if(!IS_ULM){$('osmBox').classList.add('hidden');return;}
   $('bOsm').textContent=on?'Aktualisieren':'Echte Häuser laden';$('bOsm').disabled=false;$('bOsm').onclick=osmDownload;$('bOsmDel').classList.toggle('hidden',!on||OSM.embedded);$('bOsmDel').onclick=osmClear;}
 
 /* ================= Kamera & Loop ================= */
-const VIEWS=[{back:5.2,up:1.9,look:7,lat:0.8},{back:2.6,up:1.45,look:10,lat:0.95},{back:18,up:9,look:4,lat:0.8},{back:-4,up:1.3,look:-1,lat:2.4}];
+const VIEWS=[{back:5.2,up:1.9,look:7,lat:0.8},{back:2.6,up:1.45,look:10,lat:0.95},{back:18,up:9,look:4,lat:0.8},{back:-4,up:1.3,look:-1,lat:2.4},{fp:1,back:0,up:0,look:16,lat:0.8}];
+const VIEW_NAMES=['Hinter dir','Nah dahinter','Von oben','Von vorn','Ich-Sicht'];
+function camNext(){S.cam=(S.cam+1)%VIEWS.length;toast('🎥 '+VIEW_NAMES[S.cam]+(VIEWS[S.cam].fp?' – Lenker und Radcomputer':''));saveSettings();}
+// ---- Ich-Sicht: Kamera in den Augen des eigenen Fahrers. Kopf ausgeblendet, man sieht Arme, Lenker, Vorderrad, Knie und einen
+// Radcomputer mit echten Werten. Alles hängt am Rad-Knochen (wiegt im Wiegetritt mit), der Kopf bleibt ruhiger: Kurvenlage halb,
+// leichtes Atmen und Kopfnicken, Rubbeln auf Pflaster. Blick etwas nach unten wie beim echten Fahren.
+const FPV={dev:null,cv:null,tex:null,t:0,dir:new THREE.Vector3(),eye:new THREE.Vector3(),on:false,pitch:0.24};
+const _fpL=new THREE.Matrix4(),_fpV=new THREE.Vector3(),_fpU=new THREE.Vector3();
+function fpvDevice(){if(FPV.dev)return FPV.dev;
+  const cv=document.createElement('canvas');cv.width=240;cv.height=352;FPV.cv=cv;FPV.tex=new THREE.CanvasTexture(cv);FPV.tex.anisotropy=4;
+  const g=new THREE.Group(),dark=new THREE.MeshToonMaterial({color:0x2b2d33,gradientMap:toonGrad()}),blk=new THREE.MeshToonMaterial({color:0x141518,gradientMap:toonGrad()});
+  const W=0.066,L=0.096,H=0.017,body=new THREE.Mesh(new THREE.BoxGeometry(W,H,L),dark);g.add(body);
+  for(const s of [-1,1]){const b=new THREE.Mesh(new THREE.BoxGeometry(0.004,0.007,0.014),blk);b.position.set(s*(W/2+0.001),0,-0.02);g.add(b);}
+  const scr=new THREE.Mesh(new THREE.PlaneGeometry(W-0.008,L-0.012),new THREE.MeshBasicMaterial({map:FPV.tex,toneMapped:false}));
+  scr.rotation.x=-Math.PI/2;scr.rotation.z=Math.PI;scr.position.set(0,H/2+0.0006,0.002);g.add(scr);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.01,0.05),blk);arm.position.set(0,-0.02,-0.035);g.add(arm);
+  const dev=new THREE.Group();dev.add(g);dev.userData.dev=g;dev.matrixAutoUpdate=false;FPV.dev=dev;
+  // eigene Arme: Oberarm (Trikot), Unterarm (Haut bzw. Armlinge im Winter), Ellbogen-Kugel, Handschuh mit Fingern um den Griff
+  const cyl=(r0,r1)=>{const c=new THREE.CylinderGeometry(r1,r0,1,12,1,true);c.translate(0,0.5,0);return c;},tm=c=>new THREE.MeshToonMaterial({color:c,gradientMap:toonGrad()});
+  FPV.mat={sl:tm(0xffffff),sk:tm(0xcf9872),gl:tm(0x1d1e22),fi:tm(0xcf9872)};FPV.arms=[];
+  for(const sd of [1,-1]){const ua=new THREE.Mesh(cyl(0.052,0.043),FPV.mat.sl),fa=new THREE.Mesh(cyl(0.041,0.031),FPV.mat.sk),el=new THREE.Mesh(new THREE.SphereGeometry(0.042,12,8),FPV.mat.sk);
+    const hand=new THREE.Group(),palm=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),FPV.mat.gl);palm.scale.set(0.036,0.03,0.058);palm.position.set(0,0.026,-0.005);hand.add(palm);
+    palm.scale.set(0.044,0.033,0.07);palm.position.set(0,0.03,-0.01);
+    const fing=new THREE.Mesh(new THREE.TorusGeometry(0.03,0.014,8,14,Math.PI*1.1),FPV.mat.fi);fing.rotation.set(0,Math.PI/2,0);fing.rotation.z=-0.2;fing.scale.set(1,1,2.2);fing.position.set(0,0.0,0.035);hand.add(fing);
+    const th=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.014,0.06,8),FPV.mat.fi);th.rotation.set(1.2,0,sd*0.5);th.position.set(-sd*0.03,0.01,0.01);hand.add(th);
+    const cuff=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.034,0.03,12),FPV.mat.gl);cuff.rotation.x=Math.PI/2-0.5;cuff.position.set(0,0.03,-0.055);hand.add(cuff);
+    hand.position.set(sd*0.206,0.912,0.62);hand.rotation.set(-0.3,0,0);
+    for(const m of [ua,fa,el,hand])dev.add(m);FPV.arms.push({sd,ua,fa,el,hand});}
+  return dev;}
+const _fpA=new THREE.Vector3(),_fpB=new THREE.Vector3(),_fpY=new THREE.Vector3(0,1,0),_fpI=new THREE.Matrix4();
+function fpvLimb(m,a,b){_fpB.copy(b).sub(a);const L=_fpB.length();m.position.copy(a);m.quaternion.setFromUnitVectors(_fpY,_fpB.multiplyScalar(1/L));m.scale.set(1,L,1);}
+// Schulter sitzt knapp neben/unter der Kamera (außerhalb des Bilds), Handgelenk am Griff, Ellbogen leicht gebeugt nach außen
+function fpvArms(eyeW,stand){const dev=FPV.dev;dev.updateMatrixWorld(true);_fpI.copy(dev.matrixWorld).invert();const eL=_fpA.copy(eyeW).applyMatrix4(_fpI),cold=['winter','schnee'].includes(SEAS.k)||SEAS.bare>0.5;
+  FPV.mat.sl.color.set(player.userData.col||0xeb567b);FPV.mat.sk.color.set(cold?0x1d1e22:0xc07f62);FPV.mat.fi.color.set(cold?0x2a2c30:0xc07f62);
+  for(const A of FPV.arms){const sh=new THREE.Vector3(eL.x+A.sd*0.2,eL.y-0.24,eL.z-0.06),wr=new THREE.Vector3(A.sd*0.205,0.95,0.565);
+    const el=sh.clone().lerp(wr,0.5).add(new THREE.Vector3(A.sd*(0.07+0.05*stand),-0.07,0));
+    fpvLimb(A.ua,sh,el);fpvLimb(A.fa,el,wr);A.el.position.copy(el);}}
+function fpvDraw(){const c=FPV.cv,x=c.getContext('2d'),w=c.width,h=c.height,gr=gradeAt(S.dist)*100,el=Math.round(S.elapsed||0),hp=S.hidePow;
+  x.fillStyle='#d9dfd6';x.fillRect(0,0,w,h);x.fillStyle='#16181c';x.fillRect(0,0,w,34);
+  const d=new Date(),f=(t,sz,X,Y,al,col)=>{x.font=`700 ${sz}px Arial,Helvetica,sans-serif`;x.textAlign=al||'center';x.fillStyle=col||'#111';x.fillText(t,X,Y);};
+  f((el>=3600?Math.floor(el/3600)+':':'')+String(Math.floor(el/60)%60).padStart(el>=3600?2:1,'0')+':'+String(el%60).padStart(2,'0'),22,10,25,'left','#eee');
+  if(S.vshift||S.sim)f('Gang '+(S.gear+1),22,w-10,25,'right','#f8d74e');
+  x.fillStyle='#16181c';x.fillRect(0,140,w,3);x.fillRect(0,246,w,3);x.fillRect(w/2-1.5,143,3,h-143);
+  const lab=(t,X,Y)=>f(t,17,X,Y,'center','#3d424a');
+  lab('km/h',w/2,58);f((S.v*3.6).toFixed(1).replace('.',','),84,w/2,130);
+  lab('WATT',w/4,166);f(hp?'–':String(Math.round(T.pedaling?S.power:0)),58,w/4,230);
+  lab('TRITT',w*3/4,166);f(String(Math.round(S.cadence||0)),58,w*3/4,230);
+  lab('PULS',w/4,272);f(S.hr?String(S.hr):'–',58,w/4,336);
+  lab('STEIGUNG %',w*3/4,272);f((Math.abs(gr)<0.05?0:gr).toFixed(1).replace('.',','),52,w*3/4,336);
+  FPV.tex.needsUpdate=true;}
+// erst direkt vor dem Zeichnen fürs Bild ausblenden: der Schatten (vorher berechnet) zeigt den ganzen Fahrer
+const FPV_HIDE=[RB.head,RB.torso,RB.uaL,RB.uaR,RB.faL,RB.faR],_fpZ=new THREE.Matrix4().makeScale(0.001,0.001,0.001);
+function fpvHide(){if(!FPV.on||!this.skeleton)return;const bs=this.skeleton.bones;
+  for(const k of FPV_HIDE){const bn=bs[k];bn.matrix.multiply(_fpZ);bn.matrixWorld.multiplyMatrices(bn.parent.matrixWorld,bn.matrix);}this.skeleton.update();}
+function fpvSet(on){if(FPV.on===on||!player)return;FPV.on=on;const dev=fpvDevice();document.body.classList.toggle('fpv',on);
+  if(on){if(dev.parent!==player)player.add(dev);FPV.dir.set(0,0,0);}else if(dev.parent)dev.parent.remove(dev);
+  camera.near=on?0.08:0.3;camera.up.set(0,1,0);camera.updateProjectionMatrix();}
+function fpvCamera(dt,r,V){const u=player.userData,b=u.bones,now=performance.now()/1000;
+  player.updateMatrixWorld(true);
+  // Radcomputer auf dem Vorbau-Halter (Rad-Koordinaten: +z vorn, y oben), wiegt mit dem Rad
+  const dev=FPV.dev,g=dev.userData.dev;g.position.set(0,0.945,0.68);g.rotation.set(-0.9,0,0);g.scale.setScalar(1.75);g.updateMatrix();
+  dev.matrix.copy(b[RB.bike].matrix);dev.matrixWorldNeedsUpdate=true;
+  if(now-FPV.t>0.25){FPV.t=now;fpvDraw();}
+  // Augen: vor der Kopfmitte; danach den Kopf verstecken (Knochen auf null skaliert)
+  // Augen: ein Stück hinter und unter dem echten Kopf (der Kopf ragt beim Rennrad fast über den Lenker – von dort sähe man ihn
+  // nur beim Hinunterschauen). Kopf, Rumpf und Arme des Modells werden ausgeblendet (Knochen auf null; ihre Formen wären aus der Nähe spitz und
+  // klobig), dafür eigene Arme mit Handschuhen auf den Griffen (fpvArms). Beine bleiben sichtbar.
+  // Kopfbewegung (Wiegetritt, Nicken) nur zu gut einem Drittel übernehmen, sonst rutscht der Lenker aus dem Bild
+  const hb=b[RB.head];_fpU.set(0,0.035,0.105).applyMatrix4(hb.matrixWorld);player.worldToLocal(_fpU);
+  FPV.eye.set(0.6*_fpU.x,1.424+0.35*(_fpU.y-1.494),-0.015+0.35*(_fpU.z-0.455));player.localToWorld(FPV.eye);
+  if(u.mesh.onBeforeRender!==fpvHide)u.mesh.onBeforeRender=fpvHide;if(FPV.dev.parent!==player)player.add(FPV.dev);
+  const P=T.pedaling?S.power:0,inten=sat(P/Math.max(120,S.ftp||200)),kmh=S.v*3.6,stand=u.stand||0;
+  const eye=FPV.eye.clone();
+  // Atmen (schneller und tiefer bei hoher Leistung) und leichtes Kopfnicken im Tritt-Takt
+  const br=now*(1.6+2.2*inten);eye.y+=(0.003+0.007*inten)*Math.sin(br);eye.y+=0.004*(1-stand)*inten*Math.sin(S.legPhase*2);
+  // Straße rubbelt (auf Pflaster deutlich)
+  {const a=(0.006*sat((kmh-12)/30)+0.011*SND.cobble*sat(kmh/12))*(S.paused?0:1);if(a>0.0003){eye.y+=a*(Math.sin(now*71)+0.6*Math.sin(now*113+1.3));eye.x+=a*0.5*Math.sin(now*89+0.7);eye.z+=a*0.5*Math.sin(now*97+2.1);}}
+  camera.position.copy(eye);fpvArms(eye,stand);
+  // Blick: die Straße voraus (in Kurven schaut man hinein), leicht nach unten geneigt; Steigungen hebt/senkt die Straße selbst
+  const la=roadAt(S.dist+V.look),la2=roadAt(S.dist+V.look*0.45),rx=-r.tz,rz=r.tx;
+  _fpV.set((la.x+la2.x)/2+rx*V.lat-eye.x,0,(la.z+la2.z)/2+rz*V.lat-eye.z);const hd=Math.hypot(_fpV.x,_fpV.z)||1;
+  _fpV.y=0.6*((la.h+la2.h)/2-r.h)-hd*Math.tan(FPV.pitch);_fpV.normalize(); // Steigung nur zu 60 % mitschauen
+  if(FPV.dir.lengthSq()<0.5)FPV.dir.copy(_fpV);else FPV.dir.lerp(_fpV,1-Math.exp(-dt*7)).normalize();
+  // Kopf neigt sich halb mit dem Rad in die Kurve
+  _fpU.set(0,1,0).applyQuaternion(player.quaternion);camera.up.set(0,1,0).lerp(_fpU,0.5).normalize();
+  camera.lookAt(_fpV.copy(eye).add(FPV.dir));
+  const fov=72+clamp(kmh-20,0,45)*0.12;if(Math.abs(camera.fov-fov)>0.05){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*4));camera.updateProjectionMatrix();}
+  camPos.copy(eye);camLook.copy(eye).add(FPV.dir);}
 function updateCamera(dt){
-  if(!S.started){const t=performance.now()/1000*0.035;if(IS_ULM){camera.position.set(Math.cos(t)*1500,420,Math.sin(t)*1500);camera.lookAt(0,60,0);}else{camera.position.set(Math.cos(t)*3300+300,900,Math.sin(t)*3300-200);camera.lookAt(500,120,-300);}return;}
-  const r=roadAt(S.dist),V=VIEWS[S.cam],rb=roadAt(S.dist-V.back),la=roadAt(S.dist+V.look);
+  if(!S.started){fpvSet(false);const t=performance.now()/1000*0.035;if(IS_ULM){camera.position.set(Math.cos(t)*1500,420,Math.sin(t)*1500);camera.lookAt(0,60,0);}else{camera.position.set(Math.cos(t)*3300+300,900,Math.sin(t)*3300-200);camera.lookAt(500,120,-300);}return;}
+  const r=roadAt(S.dist),V=VIEWS[S.cam]||VIEWS[0];fpvSet(!!V.fp);if(V.fp){fpvCamera(dt,r,V);return;}
+  const rb=roadAt(S.dist-V.back),la=roadAt(S.dist+V.look);
   const rx=-r.tz,rz=r.tx,lat=V.lat;
   const tp=new THREE.Vector3(rb.x+rx*lat,Math.max(rb.h,r.h)+V.up,rb.z+rz*lat);
   const tl=new THREE.Vector3(la.x+rx*0.8,la.h+1.0,la.z+rz*0.8);
@@ -4214,7 +4302,7 @@ function wireUi(){
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
   $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
-  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('sndBtn').onclick=toggleMute;
+  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('camBtn').onclick=e=>{camNext();e.currentTarget.blur();};$('sndBtn').onclick=toggleMute;
   $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;$('iGhost').checked=S.ghost;$('iTod').value=S.tod;$('iWx').value=S.wx;
   $('iTod').onchange=()=>{S.tod=$('iTod').value;saveSettings();if(S.tod==='zufall')wxRandomize();else applyWeather();};$('iWx').onchange=()=>{S.wx=$('iWx').value;saveSettings();if(S.wx==='zufall')wxRandomize();else applyWeather();};$('iGhost').onchange=()=>{S.ghost=$('iGhost').checked;saveSettings();};
   $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'||was==='solo')placeBotsStart();};
@@ -4266,7 +4354,7 @@ function wireUi(){
     else if(k==='ArrowDown'||k==='-'){shift(-1);e.preventDefault();}
     else if((k==='w'||k==='W')&&S.sim){S.simPower=clamp(S.simPower+10,0,600);$('simPow').value=S.simPower;$('simPowV').textContent=S.simPower;}
     else if((k==='s'||k==='S')&&S.sim){S.simPower=clamp(S.simPower-10,0,600);$('simPow').value=S.simPower;$('simPowV').textContent=S.simPower;}
-    else if(k==='c'||k==='C')S.cam=(S.cam+1)%VIEWS.length;
+    else if(k==='c'||k==='C')camNext();
     else if(k==='m'||k==='M')cycleMap();
     else if(k==='f'||k==='F')toggleFullscreen();
     else if(k==='t'||k==='T')toggleMute();
@@ -5008,7 +5096,7 @@ function closeDevices(){$('devHome').after($('devSec'));$('devDlg').classList.ad
    Name, Figur (Fahrer/Fahrerin), Trikotfarbe, Gewicht, FTP (oder vorsichtig geschätzt) und Art des Schaltens.
    S.prof merkt sich, dass es erledigt ist; im Menü öffnet „Fahrer einrichten“ es wieder. Name und Farbe gelten auch online. */
 const WEL={step:0,sex:'m',col:0,shift:'click',back:null};
-function makePlayer(tn=true){if(player){scene.remove(player);disposeTree(player);}player=makeRider(netCol(),null,0x1b1d22,{pony:S.sex==='w'});player.userData.col=netCol();if(tn)toonify(player);}
+function makePlayer(tn=true){if(player){if(FPV.dev&&FPV.dev.parent===player)player.remove(FPV.dev);scene.remove(player);disposeTree(player);}player=makeRider(netCol(),null,0x1b1d22,{pony:S.sex==='w'});player.userData.col=netCol();if(tn)toonify(player);}
 function ftpGuess(m,sex){return Math.round(m*(sex==='w'?2.1:2.4)/5)*5;} // eher vorsichtig – die Erkennung erhöht nur
 function openWelcome(back){WEL.back=back||null;WEL.step=0;WEL.sex=S.sex||'m';WEL.col=netCol();WEL.shift=S.vshift?'click':'real';
   $('wName').value=$('iNetName').value||'';$('wMass').value=S.mass;$('wFtp').value=S.ftp;$('wFtpUnknown').checked=false;
