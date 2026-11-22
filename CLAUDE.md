@@ -286,6 +286,13 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   hängen in `clouds` (ziehen mit, grau bei Regen, weg bei Nebel).
 - **Gras** (`grassGeo`/`grassMat`): 13 dünne, gebogene Halme je Büschel mit Farbverlauf, Normalen nach oben, `depthWrite:false` +
   `renderOrder` 3 → keine dunklen Konturen um die Halme; empfängt Schatten.
+- **Ich-Sicht** (`VIEWS[4]` mit `fp`, `fpvCamera`, `S.cam` wird gespeichert; Taste C, Knopf `#camBtn`, Click-Aktion `cam`, `camNext` zeigt den
+  Namen): Kamera etwas hinter/unter den Augen des eigenen Fahrers (Kopfbewegung nur zu 35 % übernommen, sonst rutscht der Lenker im Wiegetritt
+  aus dem Bild), Blick 0,24 rad nach unten, Steigung zu 60 % mitschauen, Kopf halb in der Kurvenlage, Atmen/Nicken/Pflaster-Rubbeln, `near` 0,08.
+  Kopf, Rumpf und Arme des Modells werden erst direkt vor dem Bild-Zeichnen ausgeblendet (`fpvHide` in `onBeforeRender`, Knochen auf null) – der
+  Schatten zeigt so den ganzen Fahrer. Eigene Arme/Handschuhe (`fpvArms`; Armlinge und Vollfinger im Winter) und Radcomputer (`fpvDevice`,
+  Canvas `fpvDraw` 4×/s: Tempo, Watt, Trittfrequenz, Puls, Steigung, Zeit, Gang) hängen am Rad-Knochen (wiegen mit). Höhenprofil ist dann
+  ausgeblendet (`body.fpv`), Mitfahrer werden erst unter 1,6 m ausgeblendet.
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
@@ -325,7 +332,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera (auch Ich-Sicht), M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
   Workout-Intervall, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
