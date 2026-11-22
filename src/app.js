@@ -3327,10 +3327,11 @@ const HANDSHAKE=[0x52,0x69,0x64,0x65,0x4f,0x6e];
 // Standardbelegung v2: + (0x1000) oder Y (0x40) = schwerer · − (0x100) oder B (0x20) = leichter
 const V2_UP=0x1000|0x40,V2_DOWN=0x100|0x20;
 // Frei belegbare Tasten (Click v2, Bit-Nummer → Aktion). Standard: + und Y schwerer, − und B leichter.
-const KEY_DEF={12:'up',8:'down',6:'up',5:'down'},KEY_NAME={12:'+ (rechte Hälfte)',8:'− (linke Hälfte)',6:'Y (rechte Hälfte)',5:'B (rechte Hälfte)'};
-const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','Kamera wechseln'],['hud','Ich-Sicht: Anzeigen ein/aus'],['pow','Wattanzeige ein/aus'],['zones','Zonen ein/aus'],['skip','Workout: nächstes Intervall'],
+const KEY_DEF={12:'up',8:'down',6:'up',5:'down',4:'page'},KEY_NAME={12:'+ (rechte Hälfte)',8:'− (linke Hälfte)',6:'Y (rechte Hälfte)',5:'B (rechte Hälfte)',4:'A (rechte Hälfte)'};
+const KEY_ACT=[['up','Schwerer schalten'],['down','Leichter schalten'],['cam','Kamera wechseln'],['page','Radcomputer: nächste Seite'],['hud','Ich-Sicht: Anzeigen ein/aus'],['pow','Wattanzeige ein/aus'],['zones','Zonen ein/aus'],['skip','Workout: nächstes Intervall'],
   ['erg','ERG an/aus'],['map','Karte umschalten'],['mute','Ton an/aus'],['none','– nichts –']];
-function keymap(){if(!S.keymap){S.keymap={...KEY_DEF};const L=Z.learned||{};for(const a of ['up','down'])if(L[a]&&L[a].kind==='bit')S.keymap[L[a].bit]=a;}return S.keymap;}
+function keymap(){if(S.keymap&&!S.keymap._pg){if(!S.keymap[4])S.keymap[4]='page';S.keymap._pg=1;} /* einmalig: A = Radcomputer-Seite */
+  if(!S.keymap){S.keymap={...KEY_DEF,_pg:1};const L=Z.learned||{};for(const a of ['up','down'])if(L[a]&&L[a].kind==='bit')S.keymap[L[a].bit]=a;}return S.keymap;}
 function keyAction(bit){const m=keymap();return m[bit]||'none';}
 // Click-Schalten: dieselbe Richtung innerhalb von 150 ms nur einmal (doppelte Meldungen – z. B. zwei Nachrichtenarten für einen Druck)
 function clickDup(act){const now=performance.now();if(Z.lastAct===act&&now-(Z.lastActT||0)<150){btLog('Click: doppelte Meldung ignoriert ('+act+')');return true;}Z.lastAct=act;Z.lastActT=now;return false;}
@@ -3338,6 +3339,7 @@ function runAction(act,pad){
   if(act==='up'||act==='down'){if(clickDup(act))return;shift(act==='up'?1:-1);holdStart(act);HOLD.pad=pad;}
   else if(act==='cam')camNext();
   else if(act==='hud')toggleFpClean();
+  else if(act==='page')fpvPage(1);
   else if(act==='pow'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
   else if(act==='zones')toggleZones();
   else if(act==='skip')skipWorkoutSeg();
@@ -3345,7 +3347,7 @@ function runAction(act,pad){
   else if(act==='map')cycleMap();
   else if(act==='mute')toggleMute();}
 function keyName(bit){return KEY_NAME[bit]||('Taste '+bit+(Z.bitSide&&Z.bitSide[bit]?' ('+Z.bitSide[bit]+')':''));}
-function renderKeymap(hl){const el=$('keyTable');if(!el)return;const m=keymap(),bits=Object.keys(m).map(Number).sort((a,b)=>b-a);
+function renderKeymap(hl){const el=$('keyTable');if(!el)return;const m=keymap(),bits=Object.keys(m).map(Number).filter(Number.isFinite).sort((a,b)=>b-a);
   el.innerHTML='<table class="kt"><tr><th>Taste am Click</th><th>macht</th></tr>'+bits.map(b=>`<tr${b===hl?' class="hl"':''}><td>${keyName(b)}</td><td><select data-bit="${b}">${KEY_ACT.map(([k,t])=>`<option value="${k}"${m[b]===k?' selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')+'</table>';
   el.querySelectorAll('select').forEach(sel=>sel.onchange=()=>{keymap()[sel.dataset.bit]=sel.value;saveSettings();});}
 Z.pads=[];
@@ -3932,7 +3934,7 @@ function buildMapBg(){
   MAP.climbs=CLIMBS.map(cl=>{const pts=[];for(let d=cl.start;d<=cl.end;d+=ds*3){const r=roadAt(d);pts.push([r.x,r.z]);}return pts;});
 }
 function drawMap(c,opts){
-  if(!MAP.bg)return;const dpr=Math.min(devicePixelRatio,2),w=c.clientWidth,h=c.clientHeight;if(!w)return;
+  if(!MAP.bg)return;const dpr=opts.w?1:Math.min(devicePixelRatio,2),w=opts.w||c.clientWidth,h=opts.h||c.clientHeight;if(!w)return;
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
   const me=player?player.position:{x:RX[0],z:RZ[0]};let cx,cz,span,rot=0;
@@ -4165,7 +4167,7 @@ function camNext(){S.cam=(S.cam+1)%VIEWS.length;toast('🎥 '+VIEW_NAMES[S.cam]+
 // ---- Ich-Sicht: Kamera in den Augen des eigenen Fahrers. Kopf ausgeblendet, man sieht Arme, Lenker, Vorderrad, Knie und einen
 // Radcomputer mit echten Werten. Alles hängt am Rad-Knochen (wiegt im Wiegetritt mit), der Kopf bleibt ruhiger: Kurvenlage halb,
 // leichtes Atmen und Kopfnicken, Rubbeln auf Pflaster. Blick etwas nach unten wie beim echten Fahren.
-const FPV={dev:null,cv:null,tex:null,t:0,dir:new THREE.Vector3(),eye:new THREE.Vector3(),on:false,pitch:0.24};
+const FPV={dev:null,cv:null,tex:null,t:0,page:0,auto:null,autoDone:false,dir:new THREE.Vector3(),eye:new THREE.Vector3(),on:false,pitch:0.24};
 const _fpL=new THREE.Matrix4(),_fpV=new THREE.Vector3(),_fpU=new THREE.Vector3();
 function fpvDevice(){if(FPV.dev)return FPV.dev;
   const cv=document.createElement('canvas');cv.width=240;cv.height=352;FPV.cv=cv;FPV.tex=new THREE.CanvasTexture(cv);FPV.tex.anisotropy=4;
@@ -4205,18 +4207,69 @@ function fpvArms(eyeW,stand,dt){const dev=FPV.dev;dev.updateMatrixWorld(true);_f
     A.th.rotation.x=1.2-0.25*bk;A.hand.rotation.set(-0.3-0.22*bk,0,-A.sd*0.12*sf);A.hand.position.set(A.sd*0.206,0.912-0.008*bk,0.62+0.012*bk);}}
 function fpvHands(dt){const now=performance.now(),ts=(now-(S.shiftT||-1e9))/380;FPV.shf=ts<1?Math.sin(Math.PI*Math.min(1,ts*1.15)):0;FPV.shUp=S.upT===S.shiftT;
   const tb=now-(S.brakeT||-1e9)<350?1:0;FPV.brk=(FPV.brk||0)+(tb-(FPV.brk||0))*Math.min(1,dt*(tb?12:5));}
-function fpvDraw(){const c=FPV.cv,x=c.getContext('2d'),w=c.width,h=c.height,gr=gradeAt(S.dist)*100,el=Math.round(S.elapsed||0),hp=S.hidePow;
+// Radcomputer-Seiten wie am echten Gerät: Taste D, Click-Aktion „page“ (Standard: A rechts), Tippen aufs Bild in der Ich-Sicht.
+// Vor und in einem Anstieg geht die Anstiegs-Seite von selbst auf und danach wieder zu (außer man hat selbst umgeschaltet).
+const FPV_PAGES=[['daten','Daten'],['karte','Karte'],['anstieg','Anstieg'],['leistung','Leistung'],['fahrt','Fahrt']];
+function fpvPage(d){FPV.page=((FPV.page||0)+d+FPV_PAGES.length)%FPV_PAGES.length;FPV.auto=null;FPV.autoDone=true;FPV.t=0;
+  if(!(VIEWS[S.cam]&&VIEWS[S.cam].fp))toast('🖥️ Radcomputer: '+FPV_PAGES[FPV.page][1]+' (in der Ich-Sicht, Taste C)');}
+function fmtT(sec){sec=Math.max(0,Math.round(sec));return (sec>=3600?Math.floor(sec/3600)+':':'')+String(Math.floor(sec/60)%60).padStart(sec>=3600?2:1,'0')+':'+String(sec%60).padStart(2,'0');}
+const fmtK=(v,n)=>v.toFixed(n).replace('.',',');
+// Anstieg vor/unter mir: {c, in (m im Anstieg) | dd (m bis zum Fuß)}
+function climbNow(){const d=((S.dist%L)+L)%L;let best=null;for(const c of CLIMBS){const q=((d-c.start)%L+L)%L;if(q<=c.len)return {c,in:q};const dd=((c.start-d)%L+L)%L;if(!best||dd<best.dd)best={c,dd};}return best;}
+function fpvAutoPage(){const cn=climbNow(),near=cn&&(cn.in!==undefined||cn.dd<300);
+  if(near&&FPV.page!==2&&FPV.auto===null&&!FPV.autoDone){FPV.auto=FPV.page||0;FPV.page=2;}
+  if(!near){FPV.autoDone=false;if(FPV.auto!==null&&FPV.page===2){FPV.page=FPV.auto;}FPV.auto=null;}
+  else if(FPV.page!==2&&FPV.auto!==null){FPV.auto=null;FPV.autoDone=true;}} // selbst weggeschaltet: bis zum nächsten Anstieg in Ruhe lassen
+const GRC=g=>g<3?'#5aa65a':g<6?'#e6c13a':g<9?'#e8862e':g<12?'#d9442f':'#8e1f3a';
+function fpvDraw(){const c=FPV.cv,x=c.getContext('2d'),w=c.width,h=c.height,gr=gradeAt(S.dist)*100,el=S.elapsed||0,hp=S.hidePow,pg=FPV.page||0;
   x.fillStyle='#d9dfd6';x.fillRect(0,0,w,h);x.fillStyle='#16181c';x.fillRect(0,0,w,34);
-  const d=new Date(),f=(t,sz,X,Y,al,col)=>{x.font=`700 ${sz}px Arial,Helvetica,sans-serif`;x.textAlign=al||'center';x.fillStyle=col||'#111';x.fillText(t,X,Y);};
-  f((el>=3600?Math.floor(el/3600)+':':'')+String(Math.floor(el/60)%60).padStart(el>=3600?2:1,'0')+':'+String(el%60).padStart(2,'0'),22,10,25,'left','#eee');
+  const f=(t,sz,X,Y,al,col)=>{x.font=`700 ${sz}px Arial,Helvetica,sans-serif`;x.textAlign=al||'center';x.fillStyle=col||'#111';x.fillText(t,X,Y);};
+  const lab=(t,X,Y)=>f(t,17,X,Y,'center','#3d424a'),P=Math.round(T.pedaling?S.power:0);
+  f(fmtT(el),22,10,25,'left','#eee');
   {const tw=ergActive()?targetWatts():null;if(tw!==null)f('Ziel '+Math.round(tw)+' W',22,w-10,25,'right','#7ee0a0');else if(S.vshift||S.sim)f('Gang '+(S.gear+1),22,w-10,25,'right','#f8d74e');}
-  x.fillStyle='#16181c';x.fillRect(0,140,w,3);x.fillRect(0,246,w,3);x.fillRect(w/2-1.5,143,3,h-143);
-  const lab=(t,X,Y)=>f(t,17,X,Y,'center','#3d424a');
-  lab('km/h',w/2,58);f((S.v*3.6).toFixed(1).replace('.',','),84,w/2,130);
-  lab('WATT',w/4,166);f(hp?'–':String(Math.round(T.pedaling?S.power:0)),58,w/4,230);
-  lab('TRITT',w*3/4,166);f(String(Math.round(S.cadence||0)),58,w*3/4,230);
-  lab('PULS',w/4,272);f(S.hr?String(S.hr):'–',58,w/4,336);
-  lab('STEIGUNG %',w*3/4,272);f((Math.abs(gr)<0.05?0:gr).toFixed(1).replace('.',','),52,w*3/4,336);
+    const grid=(rows)=>{/* rows: [[label,wert,größe],…] je zwei pro Zeile */const rh=(h-34)/Math.ceil(rows.length/2);x.fillStyle='#16181c';
+    for(let r=1;r<Math.ceil(rows.length/2);r++)x.fillRect(0,34+r*rh-1.5,w,3);x.fillRect(w/2-1.5,34,3,h-34);
+    rows.forEach(([l,v,sz],i)=>{const X=i%2?w*3/4:w/4,Y=34+Math.floor(i/2)*rh;lab(l,X,Y+24);f(v,sz||44,X,Y+rh-14);});};
+  if(pg===0){x.fillStyle='#16181c';x.fillRect(0,140,w,3);x.fillRect(0,246,w,3);x.fillRect(w/2-1.5,143,3,h-143);
+    lab('km/h',w/2,58);f(fmtK(S.v*3.6,1),84,w/2,130);
+    lab('WATT',w/4,166);f(hp?'–':String(P),58,w/4,230);
+    lab('TRITT',w*3/4,166);f(String(Math.round(S.cadence||0)),58,w*3/4,230);
+    lab('PULS',w/4,272);f(S.hr?String(S.hr):'–',58,w/4,336);
+    lab('STEIGUNG %',w*3/4,272);f(fmtK(Math.abs(gr)<0.05?0:gr,1),52,w*3/4,336);}
+  else if(pg===1){/* Karte: mitdrehend, Fahrtrichtung oben, darunter Tempo und nächster Anstieg */
+    if(!FPV.mc){FPV.mc=document.createElement('canvas');FPV.mc.width=w;FPV.mc.height=h-34-46;}
+    drawMap(FPV.mc,{mode:'follow',span:650,w:FPV.mc.width,h:FPV.mc.height});x.drawImage(FPV.mc,0,34);
+    x.fillStyle='#16181c';x.fillRect(0,h-46,w,46);const cn=climbNow();
+    f(fmtK(S.v*3.6,1)+' km/h',22,10,h-16,'left','#fff');
+    f(cn?(cn.in!==undefined?'▲ noch '+fmtK((cn.c.len-cn.in)/1000,1)+' km':'▲ in '+fmtK(cn.dd/1000,1)+' km'):(IS_ULM?String(RNAME[Math.floor((((S.dist%L)+L)%L)/ds)%N]||'').slice(0,14):''),18,w-10,h-16,'right','#f8d74e');}
+  else if(pg===2){/* Anstieg: Profil farbig nach Steigung, Rest-km und -hm; ohne Anstieg die nächsten 3 km */
+    const cn=climbNow(),inC=cn&&cn.in!==undefined,soon=cn&&!inC&&cn.dd<2500;let d0,len,name;
+    if(inC||soon){d0=S.dist-(inC?cn.in:-cn.dd);len=cn.c.len;name=cn.c.name;}else{d0=S.dist;len=3000;name='Profil voraus';}
+    const pos=S.dist-d0,n=60,hs=[];for(let i=0;i<=n;i++)hs.push(roadAt(d0+len*i/n).h);
+    const mn=Math.min(...hs),mx=Math.max(...hs,mn+15),X0=10,X1=w-10,Y0=176,Y1=h-20,X=i=>X0+(X1-X0)*i/n,Y=v=>Y1-(v-mn)/(mx-mn)*(Y1-Y0);
+    for(let i=0;i<n;i++){const g=(hs[i+1]-hs[i])/(len/n)*100;x.fillStyle=GRC(g);x.beginPath();x.moveTo(X(i),Y1);x.lineTo(X(i),Y(hs[i]));x.lineTo(X(i+1),Y(hs[i+1]));x.lineTo(X(i+1),Y1);x.closePath();x.fill();}
+    x.strokeStyle='#16181c';x.lineWidth=2;x.beginPath();hs.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();
+    if(pos>=0&&pos<=len){const px=X0+(X1-X0)*pos/len,py=Y(roadAt(S.dist).h);x.fillStyle='#eb567b';x.strokeStyle='#16181c';x.beginPath();x.arc(px,py,7,0,7);x.fill();x.stroke();}
+    f(name.slice(0,18),20,w/2,60,'center','#16181c');
+    const rest=inC?cn.c.len-cn.in:len,hm=Math.max(0,(inC?hs[n]-roadAt(S.dist).h:hs[n]-hs[0])),avg=rest>20?hm/rest*100:0;
+    lab(inC?'NOCH km':soon?'FUSS IN km':'km',w/4,88);f(fmtK((inC?rest:soon?cn.dd:len)/1000,2),38,w/4,126);
+    lab(inC?'NOCH hm':'hm',w*3/4,88);f(String(Math.round(hm)),38,w*3/4,126);
+    f('jetzt '+fmtK(Math.abs(gr)<0.05?0:gr,1)+' %  ·  Ø '+fmtK(inC?avg:(cn&&soon?+cn.c.avg:avg),1)+' %',19,w/2,156,'center','#3d424a');}
+  else if(pg===3){/* Leistung: 3-s-Schnitt, W/kg, Zone (Balken), Puls-Zone, ggf. Ziel */
+    const A=REC.s,n3=Math.min(3,A.length),p3=n3?Math.round(A.slice(-n3).reduce((a,b)=>a+b.p,0)/n3):P,zi=zoneOf(p3),z=ZONES[Math.max(0,zi)];
+    lab('WATT (3 s)',w/2,58);f(hp?'–':String(p3),80,w/2,132);
+    x.fillStyle=z.c;x.fillRect(12,146,w-24,30);f(z.n,18,w/2,167,'center','#fff');
+    const hz=S.hr?hrZoneOf(S.hr):-1,tw=ergActive()?targetWatts():null;
+    x.fillStyle='#16181c';x.fillRect(0,186,w,3);x.fillRect(w/2-1.5,189,3,h-189);x.fillRect(0,270,w,3);
+    lab('W/kg',w/4,210);f(hp?'–':fmtK(p3/S.mass,1),40,w/4,256);
+    lab(tw!==null?'ZIEL W':'FTP %',w*3/4,210);f(tw!==null?String(Math.round(tw)):(hp?'–':String(Math.round(p3/S.ftp*100))),40,w*3/4,256);
+    lab('PULS',w/4,294);f(S.hr?String(S.hr):'–',40,w/4,338);lab('PULSZONE',w*3/4,294);f(hz>=0?'Z'+(hz+1):'–',40,w*3/4,338,'center',hz>=0?HRZONES[hz].c:'#111');}
+  else{/* Fahrt: Summen und Schnitte, aktuelle Runde */
+    const A=REC.s,sp=A.reduce((a,b)=>a+b.p,0),avgP=A.length?Math.round(sp/A.length):0,avgV=el>0?(S.odo||0)/el*3.6:0;
+    grid([['STRECKE km',fmtK((S.odo||0)/1000,2),36],['ZEIT',fmtT(el),36],['Ø km/h',fmtK(avgV,1),36],['Ø WATT',hp?'–':String(avgP),36],
+      ['HÖHENMETER',String(Math.round(+($('hElev').textContent.replace(/[^0-9]/g,''))||0)),36],['ARBEIT kJ',String(Math.round(sp/1000)),36],
+      ['RUNDE',LAP.act?fmtT(LAP.act.t):'–',32],['Ø PULS',(()=>{const hh=A.filter(q=>q.hr>0);return hh.length?String(Math.round(hh.reduce((a,b)=>a+b.hr,0)/hh.length)):'–';})(),32]]);}
+  /* Seiten-Punkte unten */x.fillStyle='rgba(22,24,28,.18)';x.fillRect(w/2-36,h-11,72,9);for(let i=0;i<FPV_PAGES.length;i++){x.fillStyle=i===pg?'#16181c':'#9aa09a';x.beginPath();x.arc(w/2-24+i*12,h-6.5,i===pg?3.5:2.5,0,7);x.fill();}
   FPV.tex.needsUpdate=true;}
 // erst direkt vor dem Zeichnen fürs Bild ausblenden: der Schatten (vorher berechnet) zeigt den ganzen Fahrer
 const FPV_HIDE=[RB.head,RB.torso,RB.uaL,RB.uaR,RB.faL,RB.faR],_fpZ=new THREE.Matrix4().makeScale(0.001,0.001,0.001);
@@ -4230,7 +4283,7 @@ function fpvCamera(dt,r,V){const u=player.userData,b=u.bones,now=performance.now
   // Radcomputer auf dem Vorbau-Halter (Rad-Koordinaten: +z vorn, y oben), wiegt mit dem Rad
   const dev=FPV.dev,g=dev.userData.dev;g.position.set(0,0.935,0.685);g.rotation.set(-0.5,0,0);g.scale.setScalar(1.75);g.updateMatrix();
   dev.matrix.copy(b[RB.bike].matrix);dev.matrixWorldNeedsUpdate=true;
-  if(now-FPV.t>0.25){FPV.t=now;fpvDraw();}
+  fpvAutoPage();if(now-FPV.t>(FPV.page===1&&S.quality==='low'?0.5:0.25)){FPV.t=now;fpvDraw();}
   // Augen: vor der Kopfmitte; danach den Kopf verstecken (Knochen auf null skaliert)
   // Augen: ein Stück hinter und unter dem echten Kopf (der Kopf ragt beim Rennrad fast über den Lenker – von dort sähe man ihn
   // nur beim Hinunterschauen). Kopf, Rumpf und Arme des Modells werden ausgeblendet (Knochen auf null; ihre Formen wären aus der Nähe spitz und
@@ -4406,7 +4459,7 @@ function wireUi(){
   $('iAutoDev').checked=S.autoDev;$('iAutoDev').onchange=()=>{S.autoDev=$('iAutoDev').checked;saveSettings();if(S.autoDev)autoConnect();else{AUTO.state='off';updateAutoUi();}};
   $('bForgetDev').onclick=()=>{try{localStorage.removeItem('kalea_devs');}catch(e){}AUTO.state='';updateAutoUi();toast('Gemerkte Geräte vergessen');};
   $('bStart').onclick=()=>startRide(false);$('bSim').onclick=()=>startRide(true);
-  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('camBtn').onclick=e=>{camNext();e.currentTarget.blur();};$('sndBtn').onclick=toggleMute;
+  $('menuBtn').onclick=openMenu;$('fsBtn').onclick=toggleFullscreen;$('c').addEventListener('click',()=>{if(FPV.on&&S.started&&!S.paused)fpvPage(1);}); /* Ich-Sicht: Tippen = nächste Radcomputer-Seite */$('camBtn').onclick=e=>{camNext();e.currentTarget.blur();};$('sndBtn').onclick=toggleMute;
   $('iBotMode').value=S.botMode;$('iBotWkg').value=S.botWkg;$('iLife').checked=S.life;$('iGhost').checked=S.ghost;$('iTod').value=S.tod;$('iWx').value=S.wx;
   $('iTod').onchange=()=>{S.tod=$('iTod').value;saveSettings();if(S.tod==='zufall')wxRandomize();else applyWeather();};$('iWx').onchange=()=>{S.wx=$('iWx').value;saveSettings();if(S.wx==='zufall')wxRandomize();else applyWeather();};$('iGhost').onchange=()=>{S.ghost=$('iGhost').checked;saveSettings();};
   $('iBotMode').onchange=()=>{const was=S.botMode;S.botMode=$('iBotMode').value;saveSettings();applyBotVis();if(was==='off'||was==='solo')placeBotsStart();};
@@ -4465,6 +4518,7 @@ function wireUi(){
     else if(k==='p'||k==='P'){S.hidePow=!S.hidePow;$('iHidePow').checked=S.hidePow;saveSettings();applyHidePow();toast(S.hidePow?'Wattanzeige aus':'Wattanzeige an');}
     else if(k==='z'||k==='Z')toggleZones();
     else if(k==='h'||k==='H')toggleFpClean();
+    else if(k==='d'||k==='D')fpvPage(1);
     else if(k==='n'||k==='N')skipWorkoutSeg();
     else if(k==='i'||k==='I'){if($('statsView').classList.contains('hidden'))showStats(REC.ended);else closeStats();}
     else if(k==='e'||k==='E'){$('ergToggle').click();}

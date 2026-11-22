@@ -300,6 +300,11 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `hud`, Menü → 🎨 Grafik): blendet in der Ich-Sicht das ganze HUD und die Ortsschilder-Beschriftungen aus (`body.fpclean`), Menü-/Kamera-Knopf
   bleiben schwach sichtbar; der Radcomputer zeigt dann bei ERG/Workout das Ziel. Halter = dünnes Rohr unter dem Gerät (ein Klotz davor sah wie
   ein zweiter Computer aus). Rubbeln in der Ich-Sicht bewusst schwach (Pflaster ≈ 4 mm).
+  **Radcomputer-Seiten** (`FPV_PAGES`, `FPV.page`, `fpvPage`; Taste D, Click-Aktion `page` = Standard **A** rechts – alte Belegungen bekommen A einmalig
+  über `keymap()`/`_pg`, Tippen aufs Bild in der Ich-Sicht): Daten, Karte (`drawMap` mit `opts.w/h`, mitdrehend), Anstieg (Profil nach Steigung
+  gefärbt `GRC`, Rest-km/-hm; ohne Anstieg die nächsten 3 km), Leistung (3-s-Watt, Zone, W/kg, FTP %/Ziel, Pulszone), Fahrt (Summen/Schnitte,
+  Runde, Ø Puls). `fpvAutoPage`: 300 m vor und im Anstieg (`climbNow`) geht die Anstiegs-Seite auf, danach zurück; wer selbst umschaltet,
+  wird bis zum nächsten Anstieg in Ruhe gelassen (`FPV.autoDone`).
 - **Bild-Stil** (`S.look`, `LOOKS`, Menü → 🎨 Grafik „Bild-Stil“, Standard **warm**; `klassisch` = alter Comic): Nachbearbeitung im Konturen-Shader
   (`initPost`/`lookUniforms`): feine Konturen in dunklerer Objektfarbe (`inkMix`), die in der Ferne verschwinden (`fade`), Tiefen-Schattierung aus
   dem Tiefenpuffer (`aoK`, 8 Proben, nicht auf `low`), farbiger Dunst (`hazeK`/`hazeCol` aus `HORIZON`), Bloom auf ¼ Größe (`rtH1/rtH2`, nicht
@@ -351,7 +356,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - UI-Texte und Kommentare auf Deutsch, kurz, mit Emojis sparsam wie bisher.
 - three.js bleibt auf **r128** (CDN cdnjs). Keine weiteren Abhängigkeiten ohne Not; alles muss sich für die
   Offline-Fassung einbetten lassen.
-- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera (auch Ich-Sicht), H Ich-Sicht ohne Anzeigen, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
+- Tastatur: ↑/+ hoch, ↓/− runter, C Kamera (auch Ich-Sicht), H Ich-Sicht ohne Anzeigen, D Radcomputer-Seite, M Karte, I Statistik, E ERG, F Vollbild, T Ton, P Watt ein/aus, Z Zonen ein/aus, N nächstes
   Workout-Intervall, W/S Testleistung, Esc Menü.
 - **Handy-Layout:** eigene CSS-Blöcke am Ende von `index.html` für Hochformat (`max-width:520px`) und Querformat
   (`max-height:500px`). Neue HUD-Elemente dort mit anpassen. Vollbild über `toggleFullscreen` (iPhone kann es nicht).
