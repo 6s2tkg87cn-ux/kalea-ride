@@ -2037,11 +2037,14 @@ function rWheel(parts,bone,rear,rimCol,tireSide,deep){const lo=S.quality==='low'
   if(!lo){const ro=new THREE.CylinderGeometry(0.08,0.08,0.003,22);ro.rotateZ(Math.PI/2);ro.translate(0.04,0,0);rPart(parts,ro,(x,y,z)=>Math.hypot(y,z)<0.05?0x33363b:0xc3c7cc,bone);} // Bremsscheibe
   for(let k=0;k<ns;k++){const a=k/ns*Math.PI*2,s=k%2?1:-1;rPart(parts,tube([s*0.028,Math.cos(a)*0.024,Math.sin(a)*0.024],[0,Math.cos(a+0.05)*(ri+0.001),Math.sin(a+0.05)*(ri+0.001)],0.0016,3),0x2a2c30,bone);}
   if(rear)for(let k=0;k<7;k++){const d=new THREE.CylinderGeometry(0.026+k*0.0045,0.026+k*0.0045,0.0035,18);d.rotateZ(Math.PI/2);d.translate(-0.022-k*0.0055,0,0);rPart(parts,d,0x9aa0a6,bone);}}
+// Winter (oder kahle Bäume im Spätherbst): alle Fahrer in langer Kleidung – langes Trikot, lange Hose, Vollfinger-Handschuhe, Überschuhe
+function riderCold(){return IS_ULM&&(['winter','schnee'].includes(SEAS.k)||SEAS.bare>0.5);}
 function makeRider(jersey,label,frameCol,opts={}){
   const g=new THREE.Group(),parts=[],fc=frameCol||0x20232a,jc=rgHex(jersey),lum=jc.r*0.3+jc.g*0.59+jc.b*0.11;
   const acc=jc.clone().lerp(new THREE.Color(lum>0.55?0x1e0f3a:0xffffff),lum>0.55?0.45:0.6).getHex(),jer=jc.getHex();
   const h=[...(label||'Du')].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7),skins=[0xd9a37e,0xc98f68,0xa9714a,0x6f462d,0xe0ad8b,0xcf9872];
-  const skin=opts.skin||(label?skins[h%skins.length]:0xcf9872),helmet=opts.helmet||(h%3===0?0xf4f4f2:h%3===1?fc:jer),shoe=h%2?0xf2f2f2:0x1d1e22,sock=h%4===1?0x1d1e22:0xf4f4f2;
+  const skin=opts.skin||(label?skins[h%skins.length]:0xcf9872),helmet=opts.helmet||(h%3===0?0xf4f4f2:h%3===1?fc:jer),shoe=h%2&&!riderCold()?0xf2f2f2:0x1d1e22,sock=h%4===1?0x1d1e22:0xf4f4f2;
+  const cold=opts.cold!==undefined?opts.cold:riderCold();
   const B=RIG.BB,RA=RIG.RA,FA=RIG.FA,v=(x,y,z)=>[x,y,z];
   // ---- Rahmen & Anbauteile (Knochen bike) ----
   const SC=v(0,0.80,-0.165),HT=v(0,0.845,0.447),HB=v(0,0.705,0.48),bb=[B.x,B.y,B.z],ra=[RA.x,RA.y,RA.z],fa=[FA.x,FA.y,FA.z];
@@ -2105,17 +2108,17 @@ function makeRider(jersey,label,frameCol,opts={}){
     if(opts.pony){H(rTube([0,0.0,-0.115],[0,-0.13,-0.17],0.026,7),opts.hair||0x5a3b22);}}
   // ---- Arme ----
   for(const [ua,fa] of [[RB.uaL,RB.faL],[RB.uaR,RB.faR]]){
-    rLatheBands(parts,[[0.052,0],[0.056,0.07],[0.05,0.17],[0.043,0.25],[0.04,RIG.ua]],10,[[0,0.15,jer],[0.15,0.17,acc],[0.17,RIG.ua,skin]],ua);
-    {const e=new THREE.SphereGeometry(0.042,8,6);rPart(parts,e,skin,fa);}
-    rLatheBands(parts,[[0.04,0],[0.043,0.06],[0.037,0.16],[0.03,0.235],[0.029,RIG.fa]],9,[[0,0.225,skin],[0.225,RIG.fa,0x1d1e22]],fa);
+    rLatheBands(parts,[[0.052,0],[0.056,0.07],[0.05,0.17],[0.043,0.25],[0.04,RIG.ua]],10,cold?[[0,RIG.ua,jer]]:[[0,0.15,jer],[0.15,0.17,acc],[0.17,RIG.ua,skin]],ua);
+    {const e=new THREE.SphereGeometry(0.042,8,6);rPart(parts,e,cold?jer:skin,fa);}
+    rLatheBands(parts,[[0.04,0],[0.043,0.06],[0.037,0.16],[0.03,0.235],[0.029,RIG.fa]],9,cold?[[0,0.205,jer],[0.205,0.225,acc],[0.225,RIG.fa,0x1d1e22]]:[[0,0.225,skin],[0.225,RIG.fa,0x1d1e22]],fa);
     const hand=new THREE.SphereGeometry(0.034,8,6);hand.scale(0.85,1.35,0.62);hand.translate(0,RIG.fa+0.036,0);rPart(parts,hand,0x1d1e22,fa);
     {const th=new THREE.SphereGeometry(0.014,6,4);th.scale(1,1.9,1);th.translate(0.02,RIG.fa+0.03,0.02);rPart(parts,th,0x1d1e22,fa);}}
   // ---- Beine ----
   for(const [th,sh,ft] of [[RB.thL,RB.shL,RB.ftL],[RB.thR,RB.shR,RB.ftR]]){
-    rLatheBands(parts,[[0.082,0],[0.092,0.07],[0.09,0.17],[0.078,0.28],[0.064,0.37],[0.056,RIG.thigh]],12,[[0,0.33,0x141517],[0.33,0.355,acc],[0.355,RIG.thigh,skin]],th,1,1.12);
+    rLatheBands(parts,[[0.082,0],[0.092,0.07],[0.09,0.17],[0.078,0.28],[0.064,0.37],[0.056,RIG.thigh]],12,cold?[[0,RIG.thigh,0x141517]]:[[0,0.33,0x141517],[0.33,0.355,acc],[0.355,RIG.thigh,skin]],th,1,1.12);
     {const hp=new THREE.SphereGeometry(0.094,10,8);hp.scale(1,1,1.1);rPart(parts,hp,0x141517,th);} // Gesäß/Hüfte: schließt die Lücke zum Rumpf
-    const kn=new THREE.SphereGeometry(0.052,9,7);rPart(parts,kn,skin,sh);
-    rLatheBands(parts,[[0.052,0],[0.058,0.05],[0.066,0.12],[0.06,0.2],[0.047,0.3],[0.037,0.38],[0.034,0.44],[0.001,0.445]],11,[[0,0.33,skin],[0.33,0.445,sock]],sh,1,1.1);
+    const kn=new THREE.SphereGeometry(0.052,9,7);rPart(parts,kn,cold?0x141517:skin,sh);
+    rLatheBands(parts,[[0.052,0],[0.058,0.05],[0.066,0.12],[0.06,0.2],[0.047,0.3],[0.037,0.38],[0.034,0.44],[0.001,0.445]],11,cold?[[0,0.36,0x141517],[0.36,0.445,0x1d1e22]]:[[0,0.33,skin],[0.33,0.445,sock]],sh,1,1.1);
     // Schuh: Ursprung = Pedalachse unter dem Fußballen
     const sh2=new THREE.BoxGeometry(0.094,0.07,0.27,2,2,4),p=sh2.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);if(z>0.05)p.setX(i,p.getX(i)*(1-(z-0.05)*2.2));if(z>0.07&&p.getY(i)>0)p.setY(i,p.getY(i)-(z-0.07)*0.25);}
     sh2.computeVertexNormals();sh2.translate(0,0.05,-0.04);rPart(parts,sh2,(x,y,z)=>y<0.02?0x1d1e22:Math.abs(x)>0.03&&y>0.06&&z>-0.08&&z<0.02?acc:shoe,ft);
@@ -4084,7 +4087,7 @@ function fpvDevice(){if(FPV.dev)return FPV.dev;
   const scr=new THREE.Mesh(new THREE.PlaneGeometry(W-0.008,L-0.012),new THREE.MeshBasicMaterial({map:FPV.tex,toneMapped:false}));
   scr.rotation.x=-Math.PI/2;scr.rotation.z=Math.PI;scr.position.set(0,H/2+0.0006,0.002);g.add(scr);
   const dev=new THREE.Group();dev.add(g);dev.userData.dev=g;dev.matrixAutoUpdate=false;FPV.dev=dev;
-  // eigene Arme: Oberarm (Trikot), Unterarm (Haut bzw. Armlinge im Winter), Ellbogen-Kugel, Handschuh mit Fingern um den Griff
+  // eigene Arme: Oberarm (Trikot), Unterarm (Haut bzw. langes Trikot im Winter), Ellbogen-Kugel, Handschuh mit Fingern um den Griff
   const cyl=(r0,r1)=>{const c=new THREE.CylinderGeometry(r1,r0,1,12,1,true);c.translate(0,0.5,0);return c;},tm=c=>new THREE.MeshToonMaterial({color:c,gradientMap:toonGrad()});
   {const mt=new THREE.Mesh(cyl(0.007,0.007),new THREE.MeshToonMaterial({color:0x141518,gradientMap:toonGrad()}));fpvLimb(mt,new THREE.Vector3(0,0.906,0.6),new THREE.Vector3(0,0.918,0.69));dev.add(mt);} // Vorbau-Halter, liegt unter dem Gerät
   FPV.mat={sl:tm(0xffffff),sk:tm(0xcf9872),gl:tm(0x1d1e22),fi:tm(0xcf9872)};FPV.arms=[];
@@ -4100,8 +4103,8 @@ function fpvDevice(){if(FPV.dev)return FPV.dev;
 const _fpA=new THREE.Vector3(),_fpB=new THREE.Vector3(),_fpY=new THREE.Vector3(0,1,0),_fpI=new THREE.Matrix4();
 function fpvLimb(m,a,b){_fpB.copy(b).sub(a);const L=_fpB.length();m.position.copy(a);m.quaternion.setFromUnitVectors(_fpY,_fpB.multiplyScalar(1/L));m.scale.set(1,L,1);}
 // Schulter sitzt knapp neben/unter der Kamera (außerhalb des Bilds), Handgelenk am Griff, Ellbogen leicht gebeugt nach außen
-function fpvArms(eyeW,stand,dt){const dev=FPV.dev;dev.updateMatrixWorld(true);_fpI.copy(dev.matrixWorld).invert();const eL=_fpA.copy(eyeW).applyMatrix4(_fpI),cold=['winter','schnee'].includes(SEAS.k)||SEAS.bare>0.5;
-  FPV.mat.sl.color.set(player.userData.col||0xeb567b);FPV.mat.sk.color.set(cold?0x1d1e22:0xc07f62);FPV.mat.fi.color.set(cold?0x2a2c30:0xc07f62);
+function fpvArms(eyeW,stand,dt){const dev=FPV.dev;dev.updateMatrixWorld(true);_fpI.copy(dev.matrixWorld).invert();const eL=_fpA.copy(eyeW).applyMatrix4(_fpI),cold=riderCold();
+  FPV.mat.sl.color.set(player.userData.col||0xeb567b);FPV.mat.sk.color.set(cold?(player.userData.col||0xeb567b):0xc07f62);FPV.mat.fi.color.set(cold?0x2a2c30:0xc07f62);
   for(const A of FPV.arms){const sh=new THREE.Vector3(eL.x+A.sd*0.2,eL.y-0.24,eL.z-0.06),wr=new THREE.Vector3(A.sd*0.205,0.95,0.565);
     const el=sh.clone().lerp(wr,0.5).add(new THREE.Vector3(A.sd*(0.07+0.05*stand),-0.07,0));
     fpvLimb(A.ua,sh,el);fpvLimb(A.fa,el,wr);A.el.position.copy(el);
