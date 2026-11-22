@@ -250,6 +250,8 @@ body.realshift .vonly{display:none!important}
 #fsBtn{position:absolute;top:12px;left:128px;pointer-events:auto;padding:5px 11px;line-height:0}
 #menuBtn,#statBtn,#fsBtn,#sndBtn,#camBtn{height:40px}
 body.fpv #profileWrap{display:none}
+body.fpv.fpclean #hud>*:not(#menuBtn):not(#camBtn):not(#komBanner):not(#netBanner):not(#status):not(#badgePop):not(#statsView):not(#toast){display:none!important}
+body.fpv.fpclean #menuBtn,body.fpv.fpclean #camBtn{opacity:.35}body.fpv.fpclean #menuBtn:hover,body.fpv.fpclean #camBtn:hover{opacity:1}
 #camBtn{position:absolute;top:12px;left:232px;pointer-events:auto;font-size:18px;padding:5px 9px}
 #sndBtn{position:absolute;top:12px;left:182px;pointer-events:auto;font-size:18px;padding:5px 9px}
 #fsBtn svg{display:block}.fs-out,body.fs .fs-in{display:none!important}body.fs .fs-out{display:block!important}
@@ -501,6 +503,7 @@ body.fpv #profileWrap{display:none}
         <div class="grid">
           <label class="wide">Grafikqualität<select id="iQual"><option value="high">Hoch – alle Details, Schatten (MacBook, PC)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad / Handy (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
+          <label class="chk wide"><input type="checkbox" id="iFpClean"> 🎥 Ich-Sicht ohne Anzeigen – nur Lenker und Radcomputer, wie draußen (Taste H; Kamera mit C bzw. 🎥 wechseln)</label>
           <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
         <h2>🌦️ Tageszeit, Wetter &amp; Jahreszeit</h2>
@@ -611,7 +614,7 @@ body.fpv #profileWrap{display:none}
     </div>
     <footer class="cfoot">
       <button id="bStart" class="primary">Losfahren</button><button id="bSim">Ohne Trainer testen</button><button id="bStats" class="hidden">📊 Statistik</button><button id="bEnd" class="hidden">🏁 Fahrt beenden</button><button id="bFs" title="Vollbild (F)">Vollbild</button>
-      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera (auch Ich-Sicht) · M Karte · E ERG · F Vollbild · T Ton · P Watt ein/aus · Z Zonen · N nächstes Intervall · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
+      <p class="hint">↑/+ schwerer · ↓/− leichter · W/S Sim-Leistung · C Kamera (auch Ich-Sicht) · H Ich-Sicht ohne Anzeigen · M Karte · E ERG · F Vollbild · T Ton · P Watt ein/aus · Z Zonen · N nächstes Intervall · Esc Menü. Trainer und Click nicht gleichzeitig mit einer anderen Trainings-App verbinden.</p>
     </footer>
   </div>
 </div>
