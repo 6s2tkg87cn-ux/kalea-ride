@@ -274,6 +274,8 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
 - **Wahrzeichen-Details:** Rathaus mit bemalter Fassade (`rathausFacadeTex`, Laubengang) und astronomischer Uhr am Ostgiebel
   (`astroClockTex`), Erker; Metzgerturm mit Tordurchgang und Uhr; Schwörhaus mit Schwörbalkon und Dachreiter; Brücken mit
   Mittelholm und Laternen (`lampGlass` leuchtet abends, Lichthöfe über `HALO_PTS`). `box()` nimmt auch eine Material-Liste je Seite.
+- **Winterkleidung** (`riderCold`: Ulm im Winter/Schnee oder bei kahlen Bäumen): `makeRider` zieht allen Fahrern langes Trikot,
+  lange schwarze Hose, Vollfinger-Handschuhe und dunkle Überschuhe an (`opts.cold` überschreibt); in der Ich-Sicht Unterarme in Trikotfarbe.
 - **Fahrer-Vielfalt:** `makeRider(…,{pattern,deep})` – Trikotmuster 0 klassisch, 1 Brust-Streifen, 2 Schärpe, 3 Seitenteile
   (Farbe als Funktion in `rLatheBands`), Hochprofilfelgen (`rWheel(…,deep)`); ohne Angabe nach dem Namen gewürfelt.
 - **Horizont** (`buildSkyExtrasUlm`, `backdropRing`): hinter der Welt zwei Kulissen-Ringe (bewaldete Höhenzüge ≈ 5 km, Hügelketten ≈ 9 km)
@@ -290,7 +292,7 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   Namen): Kamera etwas hinter/unter den Augen des eigenen Fahrers (Kopfbewegung nur zu 35 % übernommen, sonst rutscht der Lenker im Wiegetritt
   aus dem Bild), Blick 0,24 rad nach unten, Steigung zu 60 % mitschauen, Kopf halb in der Kurvenlage, Atmen/Nicken/Pflaster-Rubbeln, `near` 0,08.
   Kopf, Rumpf und Arme des Modells werden erst direkt vor dem Bild-Zeichnen ausgeblendet (`fpvHide` in `onBeforeRender`, Knochen auf null) – der
-  Schatten zeigt so den ganzen Fahrer. Eigene Arme/Handschuhe (`fpvArms`; Armlinge und Vollfinger im Winter) und Radcomputer (`fpvDevice`,
+  Schatten zeigt so den ganzen Fahrer. Eigene Arme/Handschuhe (`fpvArms`; im Winter lange Ärmel und Vollfinger) und Radcomputer (`fpvDevice`,
   Canvas `fpvDraw` 4×/s: Tempo, Watt, Trittfrequenz, Puls, Steigung, Zeit, Gang) hängen am Rad-Knochen (wiegen mit). Höhenprofil ist dann
   ausgeblendet (`body.fpv`), Mitfahrer werden erst unter 1,6 m ausgeblendet.
   Hände bewegen sich: Schalten = rechte Finger schwenken den Hebel nach innen (`FPV.shf`, aus `S.shiftT`/`S.upT`), Bremsen in Kurven = Finger
