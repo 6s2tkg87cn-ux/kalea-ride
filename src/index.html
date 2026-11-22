@@ -112,7 +112,7 @@ table.kt small{display:block;color:var(--mut);font-size:11px}
 #draftBox{padding:4px 8px 5px;text-align:center;background:#dff1ff;border:2.5px solid var(--ink);border-radius:var(--r);box-shadow:var(--shadow);pointer-events:none}
 #draftBox b{display:block;font-size:24px;line-height:1.05;font-variant-numeric:tabular-nums;color:#1f6fb8}
 #draftBox small{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:600}
-#grade{position:absolute;top:96px;right:16px;padding:4px 14px;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;min-width:110px;transition:background .3s}
+#grade{position:absolute;top:96px;right:16px;padding:4px 14px;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;min-width:110px;transition:background .3s;background:var(--gc,var(--paper))}
 #grade small{display:block;font-size:11.5px;font-weight:600;color:#4a3d5c;text-align:center}
 #gearBox{position:absolute;right:16px;top:172px;width:176px;padding:8px 10px 10px;text-align:center;pointer-events:auto}
 #gearBox label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:600}
@@ -254,9 +254,63 @@ body.fpv.fpclean #hud>*:not(#menuBtn):not(#camBtn):not(#komBanner):not(#netBanne
 body.fpv.fpclean #menuBtn,body.fpv.fpclean #camBtn{opacity:.35}body.fpv.fpclean #menuBtn:hover,body.fpv.fpclean #camBtn:hover{opacity:1}
 #camBtn{position:absolute;top:12px;left:232px;pointer-events:auto;font-size:18px;padding:5px 9px}
 #sndBtn{position:absolute;top:12px;left:182px;pointer-events:auto;font-size:18px;padding:5px 9px}
-#fsBtn svg{display:block}.fs-out,body.fs .fs-in{display:none!important}body.fs .fs-out{display:block!important}
+#fsBtn svg,#menuBtn svg,#statBtn svg,#sndBtn svg,#camBtn svg{display:block}#sndBtn .snd-off,#sndBtn.muted .snd-on{display:none}#sndBtn.muted .snd-off{display:block}
+#menuBtn,#statBtn,#sndBtn,#camBtn{line-height:0}.fs-out,body.fs .fs-in{display:none!important}body.fs .fs-out{display:block!important}
 #hud{inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 @media (max-height:640px){#riders{display:none}#gearRatio{display:none}.ch .logo{display:none}.ch{padding:8px 14px}.sub{display:none}}
+
+/* ---------- Neues HUD („Glas“, bei Look modern/warm: body.ui2) – nur Farben/Rahmen/Schrift, Größen und Lagen bleiben ---------- */
+body.ui2{--g-bg:rgba(14,13,26,.56);--g-bd:rgba(255,255,255,.13);--g-tx:#fff;--g-mut:rgba(236,236,248,.62);--g-sep:rgba(255,255,255,.1);--g-acc:#ff7396;--g-font:system-ui,-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+body.ui2.lk-warm{--g-bg:rgba(32,20,14,.52);--g-bd:rgba(255,236,214,.16);--g-mut:rgba(255,236,218,.66);--g-sep:rgba(255,236,214,.12);--g-acc:#ffa06b}
+body.ui2 #hud .top,body.ui2 #grade,body.ui2 #gearBox,body.ui2 #riders,body.ui2 #profileWrap,body.ui2 #simBox,body.ui2 #ergBox,body.ui2 #woBox,body.ui2 #komBox,body.ui2 #draftBox,body.ui2 #mapBox{
+  background:var(--g-bg);border:1px solid var(--g-bd);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.28);color:var(--g-tx);font-family:var(--g-font)}
+body.ui2:not(.lowq) #hud .top,body.ui2:not(.lowq) #grade,body.ui2:not(.lowq) #gearBox,body.ui2:not(.lowq) #riders,body.ui2:not(.lowq) #profileWrap,body.ui2:not(.lowq) #simBox,body.ui2:not(.lowq) #ergBox,body.ui2:not(.lowq) #woBox,body.ui2:not(.lowq) #komBox,body.ui2:not(.lowq) #draftBox{backdrop-filter:blur(12px) saturate(1.25);-webkit-backdrop-filter:blur(12px) saturate(1.25)}
+body.ui2 .m{border-right:1px solid var(--g-sep)}body.ui2 .m span{font-weight:600;letter-spacing:-.3px}body.ui2 .m.big span{color:var(--g-acc);-webkit-text-stroke:0}
+body.ui2 .m label,body.ui2 .m small,body.ui2 #gearBox label,body.ui2 #ergBox label,body.ui2 #woBox label,body.ui2 #draftBox small,body.ui2 #grade small,body.ui2 #gearRatio,body.ui2 #ergBox .ev small,body.ui2 #woBox .wt span,body.ui2 #komBox .ks,body.ui2 #ergSub,body.ui2 #profileInfo{color:var(--g-mut);font-weight:500;letter-spacing:.9px}
+body.ui2 #grade{border-left:4px solid var(--gc,rgba(255,255,255,.25));font-weight:600}
+body.ui2 #gearNum{font-weight:600}body.ui2 #gearNum.flash{color:var(--g-acc);transform:scale(1.18)}
+body.ui2 #ringsViz i,body.ui2 #casViz i{background:rgba(255,255,255,.18)}body.ui2 #ringsViz i.a,body.ui2 #casViz i.a{background:var(--g-acc)}
+body.ui2 #draftBox b{color:#8fd0ff;font-weight:600}body.ui2 #gearHint{color:#ffd36b}
+body.ui2 #riders .r{border-bottom:1px solid var(--g-sep)}body.ui2 #riders .g{color:var(--g-mut)}body.ui2 #riders .me{color:var(--g-acc)}
+body.ui2 #ergBox .eh b{border:1px solid var(--g-bd);background:rgba(255,255,255,.1);color:var(--g-tx)}body.ui2 #ergBox.on .eh b{background:#2fbf62;border-color:#2fbf62}
+body.ui2 #komBox .kd{border:1px solid var(--g-bd);color:#111}body.ui2 #komBox .kbar{border:1px solid var(--g-bd);background:rgba(255,255,255,.12)}
+body.ui2 #hud button,body.ui2 #mapMode{font-family:var(--g-font);background:var(--g-bg);color:var(--g-tx);border:1px solid var(--g-bd);box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:12px;font-weight:600}
+body.ui2:not(.lowq) #hud button{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+body.ui2 #hud button:hover{background:rgba(40,38,64,.75)}body.ui2 #hud button:active{transform:scale(.95);box-shadow:none}
+body.ui2 #status{text-shadow:0 1px 3px rgba(0,0,0,.8);font-family:var(--g-font);font-weight:500}
+body.ui2 #toast{background:var(--g-bg);border:1px solid var(--g-bd);box-shadow:0 8px 30px rgba(0,0,0,.3);font-family:var(--g-font);font-weight:600;font-size:15px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+body.ui2 #komBanner,body.ui2 #badgePop{background:var(--g-bg);border:1px solid var(--g-bd);box-shadow:0 10px 40px rgba(0,0,0,.35);color:var(--g-tx);font-family:var(--g-font);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+body.ui2 .kb-time{color:#fff;-webkit-text-stroke:0;text-shadow:none;font-weight:600}body.ui2 #badgePop small{color:var(--g-acc)}body.ui2 #badgePop span{color:var(--g-mut)}
+body.ui2 #hud .top .m span,body.ui2 #gearNum,body.ui2 #grade,body.ui2 #draftBox b,body.ui2 #ergBox .ev span{transition:color .3s}
+
+/* ---------- Menüs & Fenster im neuen Stil (body.ui2): hell, ruhig, feine Rahmen, weiche Schatten, Systemschrift ---------- */
+body.ui2{--font:system-ui,-apple-system,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--paper:#f7f4ef;--paper2:#efeae2;--mut:#6f6878;--line-s:rgba(30,15,58,.13)}
+body.ui2 #setup,body.ui2 #devDlg,body.ui2 #welDlg,body.ui2 #statsView{background:rgba(12,10,20,.46);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body.ui2 .card{border:0;border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.06)}
+body.ui2 .ch{background:linear-gradient(180deg,#2a1f19,#1d1612);color:#fff;border-bottom:0}
+body.ui2 .ch .logo{border:0;box-shadow:none;background:rgba(255,255,255,.1)}
+body.ui2 .card h1{font-weight:650;letter-spacing:-.3px}body.ui2 .card h1 span{color:#ff9a6b;-webkit-text-stroke:0}
+body.ui2 .ch .sub{color:rgba(255,240,228,.7)}
+body.ui2 .cfoot{border-top:1px solid var(--line-s)}
+body.ui2 .mtabs{border-bottom:1px solid var(--line-s);gap:4px}
+body.ui2 .mtabs button{box-shadow:none;border:0;background:transparent;color:#4d4558;font-weight:550}
+body.ui2 .mtabs button:hover{background:rgba(30,15,58,.06)}
+body.ui2 .mtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12),inset 0 -3px 0 #e0784a}
+body.ui2 button{border:1px solid rgba(30,15,58,.18);box-shadow:0 1px 2px rgba(0,0,0,.07);font-weight:550}
+body.ui2 button:active{transform:translateY(1px);box-shadow:none}
+body.ui2 button.primary{background:#e0784a;border-color:#c9643a;text-shadow:none;color:#fff}body.ui2 button.primary:hover{background:#e88a5f}
+body.ui2 input[type=number],body.ui2 input[type=text],body.ui2 select{border:1px solid rgba(30,15,58,.22);border-radius:9px}
+body.ui2 input[type=range],body.ui2 input[type=checkbox]{accent-color:#e0784a}
+body.ui2 details,body.ui2 .dev,body.ui2 .bdg{border:1px solid var(--line-s);box-shadow:none}
+body.ui2 .bdg.on{background:#fff3df;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+body.ui2 .route.on{background:#fbefe6;outline:2px solid #e0784a}body.ui2 .route.on::after{background:#e0784a;border:0}
+body.ui2 h2 b{background:#2a1f19;color:#ffcf9a}
+body.ui2 .mpane>h2:not(:first-child){border-top:1px solid var(--line-s)}
+body.ui2 table.kt th{border-bottom:1px solid var(--line-s)}body.ui2 table.kt td{border-bottom:1px solid rgba(30,15,58,.07)}
+body.ui2 #btLog,body.ui2 #clickLog{border:1px solid var(--line-s)}
+body.ui2 #loading{font-family:var(--font)}
+body.ui2 .chip{border:1px solid var(--line-s);background:#fff;font-weight:550}body.ui2 .world.on{background:#fbefe6;outline:2px solid #e0784a}body.ui2 .warn{border:1px solid #f0b8ad}
+body.ui2 .route canvas{opacity:.9}
 /* ---------- iPhone & kleine Handys: Hochformat ---------- */
 @media (max-width:520px){
  #hud .top,#grade,#gearBox,#profileWrap,#simBox,#ergBox,#woBox,#komBox,#mapBox{border-width:2px;box-shadow:2px 3px 0 var(--ink);border-radius:12px}
@@ -381,7 +435,7 @@ body.fpv.fpclean #menuBtn,body.fpv.fpclean #camBtn{opacity:.35}body.fpv.fpclean 
 <div id="loading">Welt wird gebaut …</div>
 
 <div id="hud" class="hidden">
-  <button id="menuBtn" title="Menü (Esc)">☰</button><span id="clickHud" class="hidden"></span><button id="statBtn" title="Statistik (I)">📊</button><button id="fsBtn" title="Vollbild (F)"><svg class="fs-in" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="fs-out" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><button id="sndBtn" title="Ton aus (T)">🔊</button><button id="camBtn" title="Kamera wechseln (C) – auch Ich-Sicht mit Lenker">🎥</button>
+  <button id="menuBtn" title="Menü (Esc)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><span id="clickHud" class="hidden"></span><button id="statBtn" title="Statistik (I)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button><button id="fsBtn" title="Vollbild (F)"><svg class="fs-in" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="fs-out" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><button id="sndBtn" title="Ton aus (T)"><svg class="snd-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg><svg class="snd-off" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button><button id="camBtn" title="Kamera wechseln (C) – auch Ich-Sicht mit Lenker"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h3l1.5-2.5h8l1.5 2.5h3v10h-17z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
   <div class="top">
     <div class="m big" id="powTile"><span id="hPow">0</span><small>W</small><label>Leistung</label><i class="zb" id="pZone"></i></div>
     <div class="m"><span id="hCad">0</span><small>rpm</small><label>Kadenz</label></div>
@@ -504,7 +558,8 @@ body.fpv.fpclean #menuBtn,body.fpv.fpclean #camBtn{opacity:.35}body.fpv.fpclean 
           <label class="wide">Grafikqualität<select id="iQual"><option value="high">Hoch – alle Details, Schatten (MacBook, PC)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad / Handy (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
           <label class="chk wide"><input type="checkbox" id="iFpClean"> 🎥 Ich-Sicht ohne Anzeigen – nur Lenker und Radcomputer, wie draußen (Taste H; Kamera mit C bzw. 🎥 wechseln)</label>
-          <label>Zeichenstil<select id="iToon"><option value="1">Comic mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
+          <label>Bild-Stil<select id="iLook"><option value="warm">Warm &amp; illustriert</option><option value="modern">Modern &amp; klar</option><option value="klassisch">Klassisch (Comic)</option></select></label>
+          <label>Zeichenstil<select id="iToon"><option value="1">Mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
         <h2>🌦️ Tageszeit, Wetter &amp; Jahreszeit</h2>
         <div class="grid">

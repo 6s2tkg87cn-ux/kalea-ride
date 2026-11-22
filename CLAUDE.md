@@ -300,6 +300,18 @@ Kamera & Loop · UI-Verdrahtung (`wireUi`) · Start.
   `hud`, Menü → 🎨 Grafik): blendet in der Ich-Sicht das ganze HUD und die Ortsschilder-Beschriftungen aus (`body.fpclean`), Menü-/Kamera-Knopf
   bleiben schwach sichtbar; der Radcomputer zeigt dann bei ERG/Workout das Ziel. Halter = dünnes Rohr unter dem Gerät (ein Klotz davor sah wie
   ein zweiter Computer aus). Rubbeln in der Ich-Sicht bewusst schwach (Pflaster ≈ 4 mm).
+- **Bild-Stil** (`S.look`, `LOOKS`, Menü → 🎨 Grafik „Bild-Stil“, Standard **warm**; `klassisch` = alter Comic): Nachbearbeitung im Konturen-Shader
+  (`initPost`/`lookUniforms`): feine Konturen in dunklerer Objektfarbe (`inkMix`), die in der Ferne verschwinden (`fade`), Tiefen-Schattierung aus
+  dem Tiefenpuffer (`aoK`, 8 Proben, nicht auf `low`), farbiger Dunst (`hazeK`/`hazeCol` aus `HORIZON`), Bloom auf ¼ Größe (`rtH1/rtH2`, nicht
+  auf `low`), Farbstimmung (`grade`: `gain`, `satK`, `conK`, `lift`, `vig`), Randunschärfe ab ~28 km/h statt Comic-Strichen (`blurK`). Warm auf
+  Felix' Wunsch nicht zu warm, eher düster: wenig Sättigung (0,93), viel Kontrast (0,28). Licht je Stil (`light` in `applyWeather`), Sonnenschein
+  im Himmel (`glow`). **Spiegelungen** (`REFL`): Fenster spiegeln den Himmel (stärker bei flachem Blick, `facadeMat`), Asphalt glänzt zum
+  Horizont hin, nass deutlich (`wetRoad`). Laub weich schattiert (`folMat` ohne `flatShading`, außer klassisch/Fern-LOD). **Neues HUD/Menüs**
+  (`body.ui2`, `lk-warm`, `lowq` = ohne Unschärfe-Glas): Glas-Leisten, Systemschrift, SVG-Symbole, Menüs hell mit dunklem Kopf; nur Farben/Rahmen
+  im CSS-Block „Neues HUD“ bzw. „Menüs & Fenster im neuen Stil“, Größen/Lagen bleiben bei den alten Regeln (Handy-Blöcke). Ortsnamen als dunkle
+  Pille (`bubbleSprite`/`textSprite` nach `lookUi2()`), Höhenprofil-Farben in `drawProfile`. Stilwechsel baut die Welt neu. **Mitfahrer-Liste nur
+  online** (`updateRiders`). **Laufrad-Unschärfe** (`WB`, `stepWheelBlur`): eine InstancedMesh-Wischscheibe je Laufrad ab 18 km/h (Fahrer-Matrix ×
+  Rad-Knochen). Kamera dahinter: Blickpunkt träger (3,4/s), Rubbeln halbiert. Straße mit Flicken, vergossenen Rissen, Ölflecken (`asphaltTex`).
 - **Kamera:** Grundrisse mit Dachhöhe in `CAMOCC` (`camOccAdd`); steht ein Haus zwischen Kamera und Fahrer, rückt sie heran.
 - **Texturen** werden im Browser gezeichnet: `asphaltTex`, `grassDetailTex` (+ `detailBlend` = zweite, gröbere Ebene im
   Shader), `roofTileTex` (Dachziegel). Laub: Flächen-Helligkeit in `merge` (3. Wert).
