@@ -35,7 +35,7 @@ function applyFeel(){const f=FEELS[S.feel]||FEELS.real;PHYS.crr=f.crr;PHYS.cda=f
 const IS_MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const S={feel:'real',trMeas:0,tire:2.105,fps:60,shiftFeel:'soft',toon:true,mass:75,chain:34,cog:14,diff:1,vshift:true,gear:12,quality:IS_MOBILE?'low':'high',rings:'50/34',cassette:'11,12,13,14,15,17,19,21,24,27,30,34',gearMode:'std',repeat:220,smooth:0.6,erg:false,ergW:200,ftp:250,sndBike:0.6,sndAmb:0.5,mute:false,botMode:'me',botWkg:2.5,life:true,hidePow:false,gearReal:true,zones:true,hrMax:0,hrSeen:0,ftpAuto:'ask',ftpNo:0,autoDev:true,keymap:null,clickRefresh:false,pmUse:true,gags:'manchmal',sex:'m',prof:0,ghost:true,tod:'zufall',wx:'zufall',season:'auto',p30:0,odo:0,
   power:0,cadence:0,hr:0,v:0,dist:0,elapsed:0,climb:0,lastH:null,
-  riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,look:'modern',legPhase:0,wheel:0};
+  riding:false,started:false,paused:false,sim:false,simPower:150,cam:0,look:'warm',legPhase:0,wheel:0};
 const Z={learn:null,learnTimer:0,learned:{up:null,down:null},idle:new Map(),latch:0,log:[]};
 function loadSettings(){try{const o=JSON.parse(localStorage.getItem('kalea')||'{}');
   if(o.mass)S.mass=o.mass;if(o.chain)S.chain=o.chain;if(o.cog)S.cog=o.cog;
@@ -307,6 +307,13 @@ function asphaltTex(w,h,o){return canvasTex(w,h,(x)=>{const im=x.createImageData
     x.fillStyle=Math.random()<0.5?'rgba(28,28,32,.08)':'rgba(140,140,146,.06)';wrapDraw(w,h,px,py,ph,(X,Y)=>x.fillRect(X,Y,pw,ph));}
   x.strokeStyle='rgba(22,22,25,.32)';for(let k=0;k<h/220;k++){let cx=w*(0.1+Math.random()*0.8),cy=Math.random()*h;x.lineWidth=0.6+Math.random()*0.6;x.beginPath();x.moveTo(cx,cy);
     for(let q=0;q<10;q++){cx+=(Math.random()-0.5)*w*0.05;cy+=Math.random()*h*0.01;x.lineTo(cx,cy);}x.stroke();}
+  // Flicken (dunkler, mit heller Kante), mit Bitumen vergossene Risse, Ölflecken in der Spurmitte
+  for(let k=0;k<h/380;k++){const pw=w*(0.1+Math.random()*0.25),ph=h*(0.01+Math.random()*0.03),px=w*0.1+Math.random()*(w*0.8-pw),py=Math.random()*h;
+    wrapDraw(w,h,px,py,ph,(X,Y)=>{x.fillStyle='rgba(26,26,30,.2)';x.fillRect(X,Y,pw,ph);x.strokeStyle='rgba(150,150,155,.12)';x.lineWidth=1.5;x.strokeRect(X,Y,pw,ph);});}
+  x.strokeStyle='rgba(14,14,17,.42)';for(let k=0;k<h/300;k++){let cx=w*(0.12+Math.random()*0.76),cy=Math.random()*h;x.lineWidth=1.6+Math.random()*1.6;x.beginPath();x.moveTo(cx,cy);
+    for(let q=0;q<14;q++){cx+=(Math.random()-0.5)*w*0.035;cy+=Math.random()*h*0.006;x.lineTo(cx,cy);}x.stroke();}
+  for(let k=0;k<h/260;k++){const c=Math.random()<0.5?0.27:0.73,cx=w*c+(Math.random()-0.5)*w*0.03,cy=Math.random()*h,r=w*(0.01+Math.random()*0.02);
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,'rgba(18,18,22,.16)');g.addColorStop(1,'rgba(18,18,22,0)');x.fillStyle=g;x.fillRect(cx-r,cy-r*3,2*r,6*r);}
   for(const c of [0.27,0.73]){const g=x.createLinearGradient(w*(c-0.07),0,w*(c+0.07),0);g.addColorStop(0,'rgba(30,30,34,0)');g.addColorStop(0.5,'rgba(30,30,34,.22)');g.addColorStop(1,'rgba(30,30,34,0)');x.fillStyle=g;x.fillRect(w*(c-0.07),0,w*0.14,h);}
   const gut=o.gutter||0.035;x.fillStyle='#a19d96';x.fillRect(0,0,w*gut,h);x.fillRect(w*(1-gut),0,w*gut,h);
   for(let k=0;k<h/3;k++){const v=130+Math.random()*60|0;x.fillStyle=`rgb(${v},${v-3},${v-8})`;x.fillRect(Math.random()<0.5?Math.random()*w*gut:w*(1-gut)+Math.random()*w*gut,Math.random()*h,2,2);}
@@ -389,15 +396,16 @@ const NIGHT={value:0};
 // box: ausgedachte Häuser als Instanzen eines Einheitswürfels – UV dann aus der Instanz-Größe (Fensterachsen/Etagen in Metern),
 // Stil je Instanz (fst ≥ 8: Laden im Erdgeschoss), Dachfläche grau
 let FACATLAS=null;
+const REFL={value:1}; // Stärke der Spiegelungen (je nach Look)
 function facadeMat(box){const m=new THREE.MeshStandardMaterial({map:FACATLAS||(FACATLAS=facadeAtlas()),vertexColors:!box,roughness:0.9,side:box?THREE.FrontSide:THREE.DoubleSide});m.userData.obc=true;m.customProgramCacheKey=()=>box?'fac1b':'fac1';
-  m.onBeforeCompile=sh=>{sh.uniforms.uNight=NIGHT;
+  m.onBeforeCompile=sh=>{sh.uniforms.uNight=NIGHT;sh.uniforms.uRefl=REFL;sh.uniforms.uHor={value:HORIZON};sh.uniforms.uSkyT={value:SKYTOP};
     sh.vertexShader=(box?'#define FAC_BOX\n':'')+'attribute float fst;\nvarying float vFst;\nvarying float vTop;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   vFst=fst;vTop=0.0;
 #if defined(FAC_BOX)&&defined(USE_INSTANCING)
   {vec3 sc=vec3(length(instanceMatrix[0].xyz),length(instanceMatrix[1].xyz),length(instanceMatrix[2].xyz));float fw=abs(normal.x)>0.5?sc.z:sc.x;
    vUv=vec2(uv.x*fw/3.4+floor(instanceMatrix[3].x*0.37+instanceMatrix[3].z*0.23),(uv.y*sc.y-0.6)/3.1);vTop=step(0.5,abs(normal.y));}
 #endif`);
-    sh.fragmentShader=(box?'#define FAC_BOX\n':'')+'uniform float uNight;\nvarying float vFst;\nvarying float vTop;\n'+sh.fragmentShader.replace('#include <map_fragment>',`vec3 winGlow=vec3(0.0);
+    sh.fragmentShader=(box?'#define FAC_BOX\n':'')+'uniform float uNight,uRefl;\nuniform vec3 uHor,uSkyT;\nvarying float vFst;\nvarying float vTop;\n'+sh.fragmentShader.replace('#include <map_fragment>',`vec3 winGlow=vec3(0.0);float winGl=0.0;float winY=0.5;
 #ifdef USE_MAP
   {float fi=floor(vFst+0.5);vec2 uu=vUv;if(fi>7.5){fi-=8.0;if(uu.y<1.0){fi=7.0;uu.y=(uu.y+0.1935)/1.1935;}}
   vec2 fu=fract(uu),ce=vec2(mod(fi,4.0),floor(fi/4.0+0.01)),au=(ce+0.03+fu*0.94)/vec2(4.0,2.0);
@@ -410,10 +418,13 @@ function facadeMat(box){const m=new THREE.MeshStandardMaterial({map:FACATLAS||(F
 #ifdef FAC_BOX
   if(vTop>0.5){texelColor=vec4(0.62,0.6,0.57,1.0);gl=0.0;}else if(uu.y<0.3&&fi<6.5)texelColor.rgb*=0.85;
 #endif
-  diffuseColor.rgb*=texelColor.rgb;
+  diffuseColor.rgb*=texelColor.rgb;winGl=gl;winY=fu.y;
   float hh=fract(sin(dot(floor(vUv),vec2(12.9898,78.233)))*43758.5453);
   winGlow=vec3(1.0,0.76,0.4)*gl*step(hh,vFst>6.5?0.8:0.36)*uNight*(0.65+0.7*fract(hh*7.31));}
-#endif`).replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance+=winGlow;');};
+#endif`).replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+ totalEmissiveRadiance+=winGlow;
+ if(uRefl>0.0&&winGl>0.01){float fr=pow(1.0-abs(dot(normalize(vViewPosition),normal)),2.5);vec3 rc=mix(uHor,uSkyT,smoothstep(0.1,1.0,winY));
+   totalEmissiveRadiance+=rc*winGl*uRefl*(0.1+0.45*fr)*(1.0-uNight*0.7);}`);};
   return m;}
 // Dachziegel (Biberschwanz-artig), 16 Reihen × 12 Spalten je Kachel
 function roofTileTex(){return canvasTex(256,256,(x,w,h)=>{x.fillStyle='#d9d9d9';x.fillRect(0,0,w,h);const R=16,C=12,rh=h/R,cw=w/C;
@@ -562,7 +573,7 @@ const WIND={t:{value:0},w:{value:0.6},snow:{value:0},cam:{value:new THREE.Vector
 // Laub-Material: Attribut leaf 0 = Holz (Farbe je Baum aus iTrunk), 1 = Laub (Farbe je Baum aus instanceColor), 2 = feste Farbe (Äpfel, Nüsse);
 // Baumkronen schwanken im Wind, im Winter liegt Schnee auf allem, was nach oben zeigt.
 // lod 1 = Nah-Variante (nur Bäume näher als LOD_R), 2 = Fern-Variante (ab LOD_R bis CULL_R): entschieden je Baum auf der Grafikkarte
-function folMat(lod=0){const m=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9});m.userData.obc=true;m.customProgramCacheKey=()=>'fol3_'+lod;
+function folMat(lod=0){const fl=S.look==='klassisch'||lod===2;const m=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:fl,roughness:0.9});m.userData.obc=true;m.customProgramCacheKey=()=>'fol3_'+lod+(fl?'f':'s');
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,{uT:WIND.t,uW:WIND.w,uSnow:WIND.snow,uCam:WIND.cam,uLod:WIND.lod,uFar:WIND.far});
     sh.vertexShader='#define TREE_LOD '+lod+'\nattribute float leaf;\nattribute vec3 iTrunk;\nuniform float uT,uW,uSnow,uLod,uFar;\nuniform vec3 uCam;\n'+sh.vertexShader
       .replace('#include <color_vertex>',`#include <color_vertex>
@@ -1538,14 +1549,15 @@ function buildHalos(pts){HALO=null;if(!pts.length)return;const base=new THREE.Pl
 // Nasse Straße: dunkler, Pfützen mit Himmelsfarbe (WET 0…1 folgt dem Regen: schnell nass, langsam trocken)
 const WET={value:0};
 function wetRoad(m,key){m.userData.obc=true;m.customProgramCacheKey=()=>'wet_'+key;
-  m.onBeforeCompile=sh=>{sh.uniforms.uWet=WET;sh.uniforms.uSky={value:HORIZON};sh.fragmentShader='uniform float uWet;\nuniform vec3 uSky;\nfloat hn(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hn(i),hn(i+vec2(1,0)),f.x),mix(hn(i+vec2(0,1)),hn(i+vec2(1,1)),f.x),f.y);}\n'+
+  m.onBeforeCompile=sh=>{sh.uniforms.uWet=WET;sh.uniforms.uSky={value:HORIZON};sh.uniforms.uRefl=REFL;sh.fragmentShader='uniform float uWet,uRefl;\nuniform vec3 uSky;\nfloat hn(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hn(i),hn(i+vec2(1,0)),f.x),mix(hn(i+vec2(0,1)),hn(i+vec2(1,1)),f.x),f.y);}\n'+
     sh.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
   if(uWet>0.01){diffuseColor.rgb*=1.0-0.3*uWet;
 #ifdef USE_MAP
     float e=1.0-smoothstep(0.0,0.2,min(vUv.x,1.0-vUv.x)),pn=vn(vec2(vUv.x*7.0,vUv.y*5.0))*0.7+vn(vec2(vUv.x*19.0,vUv.y*13.0))*0.3,pud=smoothstep(0.66,0.72,pn+e*0.22)*smoothstep(0.3,0.8,uWet);
     diffuseColor.rgb=mix(diffuseColor.rgb,uSky*0.62,pud*0.8);
 #endif
-  }`);};return m;}
+  }`).replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+  {float fr=pow(1.0-abs(dot(normalize(vViewPosition),normal)),5.0);totalEmissiveRadiance+=uSky*fr*(0.16*uRefl+0.45*uWet);}`);};return m;} // Asphalt glänzt bei flachem Blick (nass deutlich)
 function stepWet(dt){const r=+curWx().rain||0,tg=SEAS.snow?0:r;WET.value+=(tg-WET.value)*Math.min(1,dt/(tg>WET.value?50:240));}
 // Bodennebel am Morgen: zwei, drei halbdurchsichtige Schichten im Tal, die mit der Kamera wandern (nur sichtbar, wenn man von oben schaut)
 const MIST={layers:[],a:0};
@@ -2199,6 +2211,22 @@ function camFade(o){const u=o.userData,sk=u.sk||(u.sk=o.children.find(c=>c.isSki
   const d=Math.hypot(o.position.x-camera.position.x,o.position.y+0.9-camera.position.y,o.position.z-camera.position.z),a=VIEWS[S.cam]&&VIEWS[S.cam].fp?clamp((d-0.9)/0.7,0,1):clamp((d-2)/2,0,1),m=sk.material;
   if(a>=1){if(m.transparent){m.transparent=false;m.opacity=1;m.depthWrite=true;}return true;}
   m.transparent=true;m.opacity=a;m.depthWrite=a>0.6;return a>0.04;}
+// Unscharf drehende Laufräder: ab ~18 km/h legt sich über jedes Laufrad eine halbdurchsichtige „Wischscheibe“ (ein InstancedMesh
+// für alle Fahrer = 1 Zeichenaufruf). Lage = Fahrer-Matrix × Rad-Knochen (aktuell, nicht die vom letzten Bild).
+const WB={mesh:null,max:96};const _wbM=new THREE.Matrix4(),_wbZ=new THREE.Matrix4().makeScale(0,0,0);
+function wheelBlurMesh(){if(WB.mesh)return WB.mesh;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  for(let i=0;i<220;i++){const a=Math.random()*6.283,r0=10+Math.random()*20,r1=r0+20+Math.random()*30;x.strokeStyle=`rgba(40,40,46,${0.05+Math.random()*0.08})`;x.lineWidth=1+Math.random()*2;x.beginPath();x.arc(64,64,(r0+r1)/2,a,a+0.4+Math.random()*1.2);x.stroke();}
+  const g=x.createRadialGradient(64,64,6,64,64,62);g.addColorStop(0,'rgba(30,30,34,0.55)');g.addColorStop(0.18,'rgba(60,60,66,0.38)');g.addColorStop(0.85,'rgba(70,70,76,0.45)');g.addColorStop(1,'rgba(40,40,44,0.5)');
+  x.fillStyle=g;x.beginPath();x.arc(64,64,62,0,7);x.fill();
+  const geo=new THREE.CircleGeometry(0.29,28);geo.rotateY(Math.PI/2);
+  const m=new THREE.InstancedMesh(geo,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,side:THREE.DoubleSide}),WB.max);
+  m.frustumCulled=false;m.renderOrder=4;m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);WB.mesh=m;return m;}
+function stepWheelBlur(){if(S.look==='klassisch'){if(WB.mesh)WB.mesh.visible=false;return;}const m=wheelBlurMesh();if(m.parent!==scene)scene.add(m);m.visible=true;let n=0;
+  const put=(o,v)=>{if(!o||!o.visible||v<5||n>WB.max-2)return;const b=o.userData.bones;if(!b)return;if(o.position.distanceToSquared(camera.position)>70*70)return;o.updateMatrix();
+    for(const k of [RB.wR,RB.wF]){_wbM.multiplyMatrices(o.matrix,b[k].matrix);m.setMatrixAt(n++,_wbM);}};
+  if(!(VIEWS[S.cam]&&VIEWS[S.cam].fp))put(player,S.v);for(const bt of BOTS)if(bt.active)put(bt.obj,bt.v);
+  if(NET.state==='on')for(const q of NET.peers.values())if(q.obj)put(q.obj,q.v||0);
+  for(let i=n;i<(WB.n||0);i++)m.setMatrixAt(i,_wbZ);WB.n=n;m.count=Math.max(n,1);if(!n)m.setMatrixAt(0,_wbZ);m.instanceMatrix.needsUpdate=true;}
 function placeRider(o,dist,lat,v,dir=1){const r=roadAt(dist),a=roadAt(dist+2*dir),rx=-r.tz,rz=r.tx; // dir −1: Gegenverkehr, schaut rückwärts
   o.position.set(r.x+rx*lat,r.h+0.25,r.z+rz*lat);o.lookAt(a.x+rx*lat,a.h+0.25,a.z+rz*lat);
   if(v){const p=roadAt(dist-3),q=roadAt(dist+3);let da=Math.atan2(q.tx,q.tz)-Math.atan2(p.tx,p.tz);da=Math.atan2(Math.sin(da),Math.cos(da));
@@ -3678,11 +3706,11 @@ let POST=null;
 // dunklerer Objektfarbe, die in der Ferne verschwinden, Tiefen-Schattierung in Ecken/unter Dingen (AO aus dem Tiefenpuffer),
 // farbiger Dunst in die Ferne, Leuchten heller Stellen (Bloom, nicht auf „niedrig“), Farbstimmung, Unschärfe am Bildrand bei Tempo.
 const LOOKS={
-  klassisch:{n:'Klassisch (Comic)',line:0.92,thick:1,fade:[500,2600],inkMix:0,ao:0,haze:0,hazeK:1/2000,bloom:0,sat:1.05,con:0.16,gain:[1,1,1],lift:0,vig:0.16,comic:1,blur:0,glow:1,light:null},
-  modern:{n:'Modern & klar',line:0.7,thick:0.72,fade:[35,320],inkMix:1,ao:0.5,haze:0.5,hazeK:1/1400,hazeTint:[0.82,0.9,1.0],bloom:0.3,sat:1.08,con:0.15,gain:[1.02,1.02,1.04],lift:0.0,vig:0.2,comic:0,blur:1,glow:1.35,light:{sun:0.92,hemi:1.08,cool:0.06}},
-  warm:{n:'Warm & illustriert',line:0.8,thick:0.85,fade:[55,480],inkMix:1,ao:0.5,haze:0.5,hazeK:1/1300,hazeTint:[1.0,0.9,0.76],bloom:0.45,sat:1.12,con:0.13,gain:[1.07,1.0,0.88],lift:0.018,vig:0.3,comic:0,blur:1,glow:1.9,light:{sun:1.0,hemi:1.0,warm:0.12}}};
-function curLook(){return LOOKS[S.look]||LOOKS.modern;}
-function applyLook(){const k=LOOKS[S.look]?S.look:'modern';document.body.classList.toggle('ui2',k!=='klassisch');document.body.classList.toggle('lk-warm',k==='warm');document.body.classList.toggle('lowq',S.quality==='low');
+  klassisch:{n:'Klassisch (Comic)',refl:0,line:0.92,thick:1,fade:[500,2600],inkMix:0,ao:0,haze:0,hazeK:1/2000,bloom:0,sat:1.05,con:0.16,gain:[1,1,1],lift:0,vig:0.16,comic:1,blur:0,glow:1,light:null},
+  modern:{n:'Modern & klar',refl:1,line:0.7,thick:0.72,fade:[35,320],inkMix:1,ao:0.5,haze:0.5,hazeK:1/1400,hazeTint:[0.82,0.9,1.0],bloom:0.3,sat:1.08,con:0.15,gain:[1.02,1.02,1.04],lift:0.0,vig:0.2,comic:0,blur:1,glow:1.35,light:{sun:0.92,hemi:1.08,cool:0.06}},
+  warm:{n:'Warm & illustriert',line:0.8,thick:0.85,fade:[55,480],inkMix:1,ao:0.6,haze:0.42,hazeK:1/1300,hazeTint:[0.98,0.92,0.84],bloom:0.32,sat:0.93,con:0.28,gain:[0.99,0.955,0.9],lift:0.0,vig:0.34,comic:0,blur:1,glow:1.5,refl:1,light:{sun:1.0,hemi:0.92,warm:0.05}}};
+function curLook(){return LOOKS[S.look]||LOOKS.warm;}
+function applyLook(){const k=LOOKS[S.look]?S.look:'warm';document.body.classList.toggle('ui2',k!=='klassisch');document.body.classList.toggle('lk-warm',k==='warm');document.body.classList.toggle('lowq',S.quality==='low');
   if(scene)applyWeather();if(POST)resizePost();const e=$('iLook');if(e)e.value=k;}
 function initPost(){
   const size=renderer.getDrawingBufferSize(new THREE.Vector2());
@@ -3756,7 +3784,7 @@ function resizePost(){if(!POST)return;const s=renderer.getDrawingBufferSize(new 
   const qx=Math.max(8,Math.round(s.x/4)),qy=Math.max(8,Math.round(s.y/4));POST.rtH1.setSize(qx,qy);POST.rtH2.setSize(qx,qy);POST.bright.uniforms.px.value.set(1/s.x,1/s.y);POST.qx=qx;POST.qy=qy;
   POST.edge.uniforms.thick.value=Math.max(1.4,renderer.getPixelRatio()*1.1)*curLook().thick;POST.look=S.look;}
 // Look-Werte in die Shader-Uniforms; Dunstfarbe folgt dem Horizont (Tageszeit/Wetter)
-function lookUniforms(){const L=curLook(),u=POST.edge.uniforms,low=S.quality==='low';
+function lookUniforms(){const L=curLook(),u=POST.edge.uniforms,low=S.quality==='low';REFL.value=L.refl||0;
   if(POST.look!==S.look)resizePost();
   u.line.value=S.toon?L.line:0;u.fade.value.set(L.fade[0],L.fade[1]);u.inkMix.value=L.inkMix;u.aoK.value=low?0:L.ao;u.hazeK.value=L.haze*(1-HAZE.value);u.hazeD.value=L.hazeK;
   if(L.hazeTint)u.hazeCol.value.copy(HORIZON).lerp(SKYTOP,0.18).multiply(_lkC.setRGB(L.hazeTint[0],L.hazeTint[1],L.hazeTint[2]));
@@ -4239,11 +4267,11 @@ function updateCamera(dt){
   if(CAMOCC.size&&V.back>0){const px=r.x+rx*0.8,pz=r.z+rz*0.8,py=r.h+1.4,dx=tp.x-px,dy=tp.y-py,dz=tp.z-pz,Ld=Math.hypot(dx,dz);
     for(let t=1.2;t<=Ld+0.6;t+=0.8){const q=Math.min(1,t/Ld);if(camBlocked(px+dx*q,pz+dz*q,py+dy*q)){const f=Math.max(0.2,(t-1.4)/Ld);tp.set(px+dx*f,py+dy*f+(1-f)*1.2,pz+dz*f);break;}}}
   if(S.cam===3){tl.set(r.x+rx*0.8,r.h+1.0,r.z+rz*0.8);}
-  const k=1-Math.exp(-dt*5);camPos.lerp(tp,k);camLook.lerp(tl,k);
+  const k=1-Math.exp(-dt*5),kl=1-Math.exp(-dt*(S.look==='klassisch'?5:3.4));camPos.lerp(tp,k);camLook.lerp(tl,kl); // Blickpunkt etwas träger: ruhigere Kamera
   const groundH=finalHeight(camPos.x,camPos.z)+0.8;if(camPos.y<groundH)camPos.y=groundH;
   camera.position.copy(camPos);
   // Tempo-Gefühl: leichtes Rubbeln der Straße ab ca. 20 km/h, auf Pflaster deutlich mehr
-  {const kmh=S.v*3.6,t=performance.now()/1000,a=(0.012*sat((kmh-20)/30)+0.015*SND.cobble*sat(kmh/15))*(S.paused?0:1);
+  {const kmh=S.v*3.6,t=performance.now()/1000,cl=S.look==='klassisch'?1:0.5,a=(0.012*sat((kmh-20)/30)+0.015*SND.cobble*sat(kmh/15))*cl*(S.paused?0:1);
     if(a>0.0005){camera.position.y+=a*(Math.sin(t*71)+0.6*Math.sin(t*113+1.3));camera.position.x+=a*0.5*Math.sin(t*89+0.7);camera.position.z+=a*0.5*Math.sin(t*97+2.1);}}
   camera.lookAt(camLook);
   // Sichtfeld weitet sich mit dem Tempo (bei 50 km/h ca. 9°, bei 65 km/h ca. 13° mehr)
@@ -4272,7 +4300,7 @@ function frame(now){
   if(S.riding&&!S.paused)stepPhysics(dt);
   placeRider(player,S.dist,0.8,S.v);animRider(player,S.legPhase,S.wheel,{v:S.v,w:(T.pedaling?S.power:0)/S.mass,g:gradeAt(S.dist)});
   for(const b of BOTS){if(!b.active)continue;placeRider(b.obj,b.dist,b.lat,b.v);const d2=b.obj.position.distanceToSquared(camera.position);b.obj.visible=d2<320*320&&camFade(b.obj);if(d2<200*200)animRider(b.obj,b.phase,b.wheel,{v:b.v,w:b.wkg,g:gradeAt(b.dist)});if(b.obj.userData.label)b.obj.userData.label.visible=d2>36;}
-  stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepGags(S.riding&&!S.paused?dt:0);stepWeather(dt);stepLife(dt,t);stepLand(dt);stepWet(dt);stepMist(dt,t);for(const c of clouds){c.position.x+=dt*(3+4*curWx().mix);if(c.position.x-camera.position.x>9000)c.position.x-=18000;}
+  if(S.started)stepWheelBlur();stepGhost(S.riding&&!S.paused?dt:0);stepFly(S.riding&&!S.paused?dt:0);stepGags(S.riding&&!S.paused?dt:0);stepWeather(dt);stepLife(dt,t);stepLand(dt);stepWet(dt);stepMist(dt,t);for(const c of clouds){c.position.x+=dt*(3+4*curWx().mix);if(c.position.x-camera.position.x>9000)c.position.x-=18000;}
   netStep(dt,now);updateCamera(dt);updateEnv(dt,t);{const w=curWx();WIND.t.value=t%3600;WIND.w.value=0.45+w.mix*0.45+(+w.rain||0)*0.5;}stepRain(dt);animExtras(dt,t);updateGrass();updateCull();if(S.started)updateMap(now);if(S.started)updateHud(now);
   if(++PERF.sf%2===0||!S.started)renderer.shadowMap.needsUpdate=true;
   renderFrame();
@@ -4408,7 +4436,7 @@ function wireUi(){
   $('iFps').value=String(S.fps);$('iFps').onchange=()=>{S.fps=+$('iFps').value;saveSettings();};
   $('iFeel').value=S.feel;$('iFeel').onchange=()=>{S.feel=$('iFeel').value;applyFeel();saveSettings();};
   $('iShiftFeel').value=S.shiftFeel;$('iShiftFeel').onchange=()=>{S.shiftFeel=$('iShiftFeel').value;saveSettings();};
-  $('iLook').value=LOOKS[S.look]?S.look:'modern';$('iLook').onchange=()=>{S.look=$('iLook').value;saveSettings();applyLook();drawProfile();};applyFpClean();$('iFpClean').onchange=()=>{S.fpClean=$('iFpClean').checked;applyFpClean();saveSettings();};$('iToon').value=S.toon?'1':'0';$('iToon').onchange=()=>{S.toon=$('iToon').value==='1';saveSettings();};
+  $('iLook').value=LOOKS[S.look]?S.look:'warm';$('iLook').onchange=()=>{S.look=$('iLook').value;saveSettings();applyLook();drawProfile();if(!REBUILD)rebuildWorld(WORLD,ROUTE.id,'Bild-Stil wird umgestellt …');}; /* Beschriftungen und Laub hängen am Stil → Welt neu bauen */applyFpClean();$('iFpClean').onchange=()=>{S.fpClean=$('iFpClean').checked;applyFpClean();saveSettings();};$('iToon').value=S.toon?'1':'0';$('iToon').onchange=()=>{S.toon=$('iToon').value==='1';saveSettings();};
   $('iFtp').value=S.ftp;$('iErgW').value=S.ergW;$('iErg').checked=S.erg;
   $('iWo').innerHTML=WORKOUTS.map(w=>`<option value="${w.id}">${w.cat}: ${w.name} (${Math.round(woDuration(w)/60)} min)</option>`).join('');
   const prev=()=>{const wo=WORKOUTS.find(w=>w.id===$('iWo').value);$('vWo').textContent=wo.desc;drawWorkoutOn($('woPreview'),wo,null,0);};
@@ -5125,7 +5153,7 @@ function disposeTree(o){o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.i
 function clearWorld(){
   for(const o of scene.children.slice()){if(SCENE_BASE.has(o))continue;scene.remove(o);disposeTree(o);}
   HASH.clear();LAPCLIMB=0;MAXH=0;KOM_I=0;RVMAX=null;CLIMBS=[];START_AT=0;GHOST.ride=null;GHOST.obj=null;GHOST.gap=null;FLY.obj={};FLY.act=null;FLY.fx=null;FLY.bub=null;if(GAG.act&&GAG.act.stop)GAG.act.stop();GAG.act=null;GAG.bub=null;GAG.rp=null;
-  BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;
+  BOTS=[];smoke=[];boats=[];clouds=[];lavaMat=lavaLight=sky=water=player=null;WB.mesh=null;
   CULLS.length=0;GRASS_CHUNKS.length=0;TERR=null;heightTex=null;FACATLAS=null;
   RIV=null;RIVW=null;RIVG=null;LAKES=[];LAKEG=null;CAMOCC.clear();VR=[];VRHASH=new Map();RNAME=null;LANDMARK_FOOT=[];MAPBLD.length=0;OCC.clear();MAPPOLY.length=0;
   LABELS=[];FANS=[];BALLOONS=[];BIRDS=[];MAP.labels=[];MAP.bg=null;

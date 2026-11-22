@@ -282,6 +282,35 @@ body.ui2 #toast{background:var(--g-bg);border:1px solid var(--g-bd);box-shadow:0
 body.ui2 #komBanner,body.ui2 #badgePop{background:var(--g-bg);border:1px solid var(--g-bd);box-shadow:0 10px 40px rgba(0,0,0,.35);color:var(--g-tx);font-family:var(--g-font);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 body.ui2 .kb-time{color:#fff;-webkit-text-stroke:0;text-shadow:none;font-weight:600}body.ui2 #badgePop small{color:var(--g-acc)}body.ui2 #badgePop span{color:var(--g-mut)}
 body.ui2 #hud .top .m span,body.ui2 #gearNum,body.ui2 #grade,body.ui2 #draftBox b,body.ui2 #ergBox .ev span{transition:color .3s}
+
+/* ---------- Menüs & Fenster im neuen Stil (body.ui2): hell, ruhig, feine Rahmen, weiche Schatten, Systemschrift ---------- */
+body.ui2{--font:system-ui,-apple-system,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--paper:#f7f4ef;--paper2:#efeae2;--mut:#6f6878;--line-s:rgba(30,15,58,.13)}
+body.ui2 #setup,body.ui2 #devDlg,body.ui2 #welDlg,body.ui2 #statsView{background:rgba(12,10,20,.46);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body.ui2 .card{border:0;border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.06)}
+body.ui2 .ch{background:linear-gradient(180deg,#2a1f19,#1d1612);color:#fff;border-bottom:0}
+body.ui2 .ch .logo{border:0;box-shadow:none;background:rgba(255,255,255,.1)}
+body.ui2 .card h1{font-weight:650;letter-spacing:-.3px}body.ui2 .card h1 span{color:#ff9a6b;-webkit-text-stroke:0}
+body.ui2 .ch .sub{color:rgba(255,240,228,.7)}
+body.ui2 .cfoot{border-top:1px solid var(--line-s)}
+body.ui2 .mtabs{border-bottom:1px solid var(--line-s);gap:4px}
+body.ui2 .mtabs button{box-shadow:none;border:0;background:transparent;color:#4d4558;font-weight:550}
+body.ui2 .mtabs button:hover{background:rgba(30,15,58,.06)}
+body.ui2 .mtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12),inset 0 -3px 0 #e0784a}
+body.ui2 button{border:1px solid rgba(30,15,58,.18);box-shadow:0 1px 2px rgba(0,0,0,.07);font-weight:550}
+body.ui2 button:active{transform:translateY(1px);box-shadow:none}
+body.ui2 button.primary{background:#e0784a;border-color:#c9643a;text-shadow:none;color:#fff}body.ui2 button.primary:hover{background:#e88a5f}
+body.ui2 input[type=number],body.ui2 input[type=text],body.ui2 select{border:1px solid rgba(30,15,58,.22);border-radius:9px}
+body.ui2 input[type=range],body.ui2 input[type=checkbox]{accent-color:#e0784a}
+body.ui2 details,body.ui2 .dev,body.ui2 .bdg{border:1px solid var(--line-s);box-shadow:none}
+body.ui2 .bdg.on{background:#fff3df;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+body.ui2 .route.on{background:#fbefe6;outline:2px solid #e0784a}body.ui2 .route.on::after{background:#e0784a;border:0}
+body.ui2 h2 b{background:#2a1f19;color:#ffcf9a}
+body.ui2 .mpane>h2:not(:first-child){border-top:1px solid var(--line-s)}
+body.ui2 table.kt th{border-bottom:1px solid var(--line-s)}body.ui2 table.kt td{border-bottom:1px solid rgba(30,15,58,.07)}
+body.ui2 #btLog,body.ui2 #clickLog{border:1px solid var(--line-s)}
+body.ui2 #loading{font-family:var(--font)}
+body.ui2 .chip{border:1px solid var(--line-s);background:#fff;font-weight:550}body.ui2 .world.on{background:#fbefe6;outline:2px solid #e0784a}body.ui2 .warn{border:1px solid #f0b8ad}
+body.ui2 .route canvas{opacity:.9}
 /* ---------- iPhone & kleine Handys: Hochformat ---------- */
 @media (max-width:520px){
  #hud .top,#grade,#gearBox,#profileWrap,#simBox,#ergBox,#woBox,#komBox,#mapBox{border-width:2px;box-shadow:2px 3px 0 var(--ink);border-radius:12px}
@@ -529,7 +558,7 @@ body.ui2 #hud .top .m span,body.ui2 #gearNum,body.ui2 #grade,body.ui2 #draftBox 
           <label class="wide">Grafikqualität<select id="iQual"><option value="high">Hoch – alle Details, Schatten (MacBook, PC)</option><option value="medium">Mittel (ältere Laptops)</option><option value="low">Tablet / iPad / Handy (schnell)</option></select><small id="vFps">Wechsel lädt die Welt neu</small></label>
           <label>Bildrate<select id="iFps"><option value="60">60 Bilder/s (flüssig)</option><option value="30">30 Bilder/s (leise &amp; kühl)</option></select><small>höhere Bildraten bringen beim Radfahren nichts</small></label>
           <label class="chk wide"><input type="checkbox" id="iFpClean"> 🎥 Ich-Sicht ohne Anzeigen – nur Lenker und Radcomputer, wie draußen (Taste H; Kamera mit C bzw. 🎥 wechseln)</label>
-          <label>Bild-Stil<select id="iLook"><option value="modern">Modern &amp; klar</option><option value="warm">Warm &amp; illustriert</option><option value="klassisch">Klassisch (Comic)</option></select></label>
+          <label>Bild-Stil<select id="iLook"><option value="warm">Warm &amp; illustriert</option><option value="modern">Modern &amp; klar</option><option value="klassisch">Klassisch (Comic)</option></select></label>
           <label>Zeichenstil<select id="iToon"><option value="1">Mit Konturen</option><option value="0">Ohne Konturen (schneller)</option></select></label>
         </div>
         <h2>🌦️ Tageszeit, Wetter &amp; Jahreszeit</h2>
